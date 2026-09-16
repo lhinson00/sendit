@@ -9,39 +9,34 @@
 </head>
 <body>
   <header class="top">
-    <p class="eyebrow">Data first · FanDuel second</p>
+    <p class="eyebrow">Research board</p>
     <h1>Volume Board</h1>
-    <p class="sub">2025 + 2026 Week 1. Hits/Games only. Open FanDuel after the list is short.</p>
+    <p class="sub">Last 18 games · 2025 regular season + 2026 Week 1. Tap a name for the box log.</p>
   </header>
 
   <section class="controls">
-    <label>
-      Position
-      <select id="pos"></select>
-    </label>
-    <label>
-      Market
-      <select id="market"></select>
-    </label>
-    <label>
-      Yardage / line
+    <div class="row">
+      <label>Position
+        <select id="pos"></select>
+      </label>
+      <label>Stat
+        <select id="market"></select>
+      </label>
+    </div>
+    <label>Line
       <select id="line"></select>
     </label>
     <div class="row">
-      <label>
-        Min games
-        <input id="minGames" type="number" min="1" max="20" value="10" />
+      <label>Min games
+        <input id="minGames" type="number" min="1" max="18" value="8" />
       </label>
-      <label>
-        Min hits
-        <input id="minHits" type="number" min="1" max="20" value="16" />
+      <label>Min hits
+        <input id="minHits" type="number" min="0" max="18" value="10" />
       </label>
     </div>
-    <label>
-      Search player
-      <input id="q" type="search" placeholder="Name…" autocomplete="off" />
+    <label>Search
+      <input id="q" type="search" placeholder="Player name" autocomplete="off" />
     </label>
-    <div class="presets" id="presets"></div>
   </section>
 
   <section class="summary" id="summary"></section>
@@ -49,8 +44,7 @@
   <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
 
   <footer>
-    <p>Full NFL. Last 18 games from 2025 REG + 2026 Week 1 box scores (nflverse). Not a top-25 list.</p>
-    <p>Not betting advice. Counts are history, not this week’s script.</p>
+    <p>Counts from nflverse weekly box scores. History only — not this week’s script.</p>
   </footer>
 
   <script src="full_stats.js"></script>

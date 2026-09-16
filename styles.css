@@ -138,3 +138,29 @@ footer { color: #6d7a96; font-size: 12px; line-height: 1.45; margin-top: 8px; }
   color: var(--text);
   font-size: 16px;
 }
+
+.sec {
+  margin: 16px 0 6px;
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.tblwrap { overflow-x: auto; margin: 8px 0 12px; }
+table.log {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.log th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 6px 6px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+table.log td {
+  padding: 7px 6px 7px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
