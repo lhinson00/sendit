@@ -264,6 +264,16 @@ table.log td {
 .media { margin: 6px 0; color: var(--gold); font-size: 13px; }
 .mlinks { font-size: 12px; line-height: 1.5; }
 .mlinks a { color: var(--gold); }
+.jump {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: #1c1208;
+  color: var(--gold);
+  font-size: 14px;
+}
 </style>
 </head><body>
 <header class="top">
@@ -285,6 +295,7 @@ table.log td {
       <label>Min games<input id="minGames" type="number" min="1" max="18" value="8" /></label>
       <label>Min hits<input id="minHits" type="number" min="0" max="18" value="10" /></label>
     </div>
+    <label>Game<select id="game"></select></label>
     <label>Search<input id="q" type="search" placeholder="Player name" autocomplete="off" /></label>
   </section>
   <section class="controls" id="teamControls" hidden>
@@ -302,6 +313,7 @@ table.log td {
   <section class="list" id="list"></section>
   <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
   <footer><p>2025 REG + 2026 Week 1. Team ATS / ML / O-U use closing lines from nflverse schedules.</p></footer>
+
 
 
 
@@ -385,6 +397,7 @@ const lineEl = document.getElementById("line");
 const minGamesEl = document.getElementById("minGames");
 const minHitsEl = document.getElementById("minHits");
 const qEl = document.getElementById("q");
+const gameEl = document.getElementById("game");
 const tMarketEl = document.getElementById("tMarket");
 const tSplitEl = document.getElementById("tSplit");
 const tMinGamesEl = document.getElementById("tMinGames");
@@ -433,6 +446,12 @@ fillMarkets("WR", "Receiving Yards");
 fillLines("Receiving Yards", "20+");
 fillSelect(tMarketEl, ["Spread cover", "Moneyline", "Over", "Under"], "Spread cover");
 fillSelect(tSplitEl, ["All", "Home", "Away"], "All");
+(function fillGames(){
+  if (!gameEl) return;
+  const slate = window.SLATE || [];
+  const items = ["All Week 2"].concat(slate.map(g => g.away+" @ "+g.home));
+  fillSelect(gameEl, items, slate.length ? slate[0].away+" @ "+slate[0].home : "All Week 2");
+})();
 
 modeBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -488,7 +507,14 @@ function renderPlayers() {
   const pos = posEl.value, market = marketEl.value, line = lineEl.value;
   const minGames = Number(minGamesEl.value || 0), minHits = Number(minHitsEl.value || 0);
   const q = (qEl.value || "").trim().toLowerCase();
-  const universe = window.VOLUME.filter((r) => (pos === "ALL" || r.pos === pos) && r.market === market && r.threshold === line);
+  const gsel = gameEl ? gameEl.value : "All Week 2";
+  const sides = gsel && gsel !== "All Week 2" ? gsel.split(" @ ") : null;
+  const universe = window.VOLUME.filter((r) => {
+    if (pos !== "ALL" && r.pos !== pos) return false;
+    if (r.market !== market || r.threshold !== line) return false;
+    if (sides && r.team !== sides[0] && r.team !== sides[1]) return false;
+    return true;
+  });
   const rows = universe.filter((r) => r.games >= minGames && r.hits >= minHits && (!q || r.player.toLowerCase().includes(q)))
     .map((r) => {
       const pinfo = window.PLAYER[r.player] || {player:r.player,pos:r.pos,team:r.team,log:[]};
@@ -497,7 +523,7 @@ function renderPlayers() {
       return Object.assign({}, r, { mu, vd });
     })
     .sort((a, b) => (b.mu.score||0) - (a.mu.score||0) || b.hits - a.hits);
-  summaryEl.innerHTML = `<strong>${rows.length}</strong> of ${universe.length} · ${pos} · ${market} ${line} · sorted by spot score<br><span class="hint">Score /100 = volume 35 + last-5 20 + defense 30 + home/total 10 + H2H 5. Favorable needs 68+ with real volume and a soft defense.</span>`;
+  summaryEl.innerHTML = `<strong>${rows.length}</strong> · ${gsel} · ${pos} · ${market} ${line} · sorted by spot score<br><span class="hint">Game filter limits to that matchup. Score /100 = volume 35 + last-5 20 + defense 30 + home/total 10 + H2H 5.</span>`;
   if (!rows.length) { listEl.innerHTML = `<div class="empty">Nobody cleared that cut. Lower Min hits.</div>`; return; }
   listEl.innerHTML = rows.map((r) => {
     const cls = r.hits / r.games >= 0.85 ? "" : "mid";
@@ -763,6 +789,7 @@ function renderSlate() {
         <p class="read">${rd.home.text} Home mark ${h.atsH||0}/${h.atsHg||0}.</p>
         <p class="call">${rd.tot.call}</p>
         <p class="read">${rd.tot.text}</p>
+        <button type="button" class="jump" data-game="${g.away} @ ${g.home}">Players in this game</button>
       </article>`;
     }).join("")}
   </div>`;
@@ -792,6 +819,19 @@ function renderTeams() {
 }
 
 function bindCards() {
+  listEl.querySelectorAll(".jump").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const val = el.dataset.game;
+      document.querySelectorAll("[data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode==="players"));
+      MODE = "players";
+      playerBox.hidden = false;
+      teamBox.hidden = true;
+      if (gameEl) { gameEl.value = val; }
+      render();
+      window.scrollTo(0,0);
+    });
+  });
   listEl.querySelectorAll(".card").forEach((el) => {
     el.addEventListener("click", () => {
       if (el.dataset.kind === "team") openTeam(el.dataset.id);
@@ -937,7 +977,7 @@ function showSheet(html) {
   sheet.onclick = (e) => { if (e.target === sheet) sheet.classList.remove("open"); };
 }
 
-[lineEl, minGamesEl, minHitsEl, qEl, tMarketEl, tSplitEl, tMinGamesEl, tMinHitsEl, tQEl].forEach((el) => {
+[lineEl, minGamesEl, minHitsEl, qEl, gameEl, tMarketEl, tSplitEl, tMinGamesEl, tMinHitsEl, tQEl].forEach((el) => {
   if (!el) return;
   el.addEventListener("change", render);
   el.addEventListener("input", render);
