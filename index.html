@@ -11,7 +11,7 @@
   <header class="top">
     <p class="eyebrow">Data first · FanDuel second</p>
     <h1>Volume Board</h1>
-    <p class="sub">Hits/Games only. Open FanDuel after the list is short.</p>
+    <p class="sub">2025 + 2026 Week 1. Hits/Games only. Open FanDuel after the list is short.</p>
   </header>
 
   <section class="controls">
@@ -23,6 +23,10 @@
       Market
       <select id="market"></select>
     </label>
+    <label>
+      Yardage / line
+      <select id="line"></select>
+    </label>
     <div class="row">
       <label>
         Min games
@@ -33,17 +37,23 @@
         <input id="minHits" type="number" min="1" max="20" value="16" />
       </label>
     </div>
+    <label>
+      Search player
+      <input id="q" type="search" placeholder="Name…" autocomplete="off" />
+    </label>
     <div class="presets" id="presets"></div>
   </section>
 
   <section class="summary" id="summary"></section>
   <section class="list" id="list"></section>
+  <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
 
   <footer>
-    <p>Seeded from DataStreak game logs (updated Sep 15, 2026). 125+ pass yards is not published — 150+ is the closest public count.</p>
+    <p>Full NFL. Last 18 games from 2025 REG + 2026 Week 1 box scores (nflverse). Not a top-25 list.</p>
     <p>Not betting advice. Counts are history, not this week’s script.</p>
   </footer>
 
+  <script src="full_stats.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

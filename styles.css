@@ -96,3 +96,45 @@ select, input {
 }
 
 footer { color: #6d7a96; font-size: 12px; line-height: 1.45; margin-top: 8px; }
+
+.card { cursor: pointer; }
+.card:active { opacity: .85; }
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  align-items: flex-end;
+  z-index: 20;
+}
+.sheet.open { display: flex; }
+.sheet-body {
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-height: 82vh;
+  overflow: auto;
+}
+.sheet-body h2 { margin: 0 0 4px; font-size: 22px; }
+.brk {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.brk .m { color: var(--muted); font-size: 12px; }
+.close {
+  margin-top: 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--btn);
+  color: var(--text);
+  font-size: 16px;
+}
