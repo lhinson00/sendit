@@ -249,6 +249,18 @@ table.log td {
 .mtag.good { background:#163528; color:var(--green); }
 .mtag.bad { background:#3a1c24; color:#ff8ea0; }
 .mtag.ok { background:#1c1c1c; color:var(--muted); }
+.why { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.score {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--gold);
+  min-width: 48px;
+  text-align: right;
+}
+.why .fact { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.why .fact b { color: var(--text); font-weight: 650; margin-right: 6px; }
+.call { margin: 8px 0 2px; color: var(--gold); font-weight: 800; font-size: 14px; }
+.read { margin: 0 0 8px; color: var(--text); font-size: 13px; line-height: 1.4; }
 </style>
 </head><body>
 <header class="top">
@@ -287,6 +299,13 @@ table.log td {
   <section class="list" id="list"></section>
   <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
   <footer><p>2025 REG + 2026 Week 1. Team ATS / ML / O-U use closing lines from nflverse schedules.</p></footer>
+
+
+
+
+
+
+
 
 
 
@@ -464,16 +483,30 @@ function renderPlayers() {
   const q = (qEl.value || "").trim().toLowerCase();
   const universe = window.VOLUME.filter((r) => (pos === "ALL" || r.pos === pos) && r.market === market && r.threshold === line);
   const rows = universe.filter((r) => r.games >= minGames && r.hits >= minHits && (!q || r.player.toLowerCase().includes(q)))
-    .sort((a, b) => b.hits - a.hits || b.games - a.games || a.player.localeCompare(b.player));
-  summaryEl.innerHTML = `<strong>${rows.length}</strong> of ${universe.length} · ${pos} · ${market} · ${line}`;
+    .map((r) => {
+      const pinfo = window.PLAYER[r.player] || {player:r.player,pos:r.pos,team:r.team,log:[]};
+      const mu = scoreSpot(pinfo, market, line, r.hits, r.games);
+      const vd = verdict(pinfo, market, line, r.hits, r.games, mu);
+      return Object.assign({}, r, { mu, vd });
+    })
+    .sort((a, b) => (b.mu.score||0) - (a.mu.score||0) || b.hits - a.hits);
+  summaryEl.innerHTML = `<strong>${rows.length}</strong> of ${universe.length} · ${pos} · ${market} ${line} · sorted by spot score<br><span class="hint">Score /100 = volume 35 + last-5 20 + defense 30 + home/total 10 + H2H 5. Favorable needs 68+ with real volume and a soft defense.</span>`;
   if (!rows.length) { listEl.innerHTML = `<div class="empty">Nobody cleared that cut. Lower Min hits.</div>`; return; }
   listEl.innerHTML = rows.map((r) => {
     const cls = r.hits / r.games >= 0.85 ? "" : "mid";
-    const pinfo = window.PLAYER[r.player] || r;
-    const mu = playerMatchup(pinfo);
+    const mu = r.mu || {};
+    const pill = mu.word ? `<span class="mtag ${mu.cls}">${mu.word}</span>` : "";
+    const sc = mu.score != null ? `<div class="score">${mu.score}</div>` : "";
     return `<article class="card" data-kind="player" data-id="${r.player.replace(/"/g,"")}">
-      <div><h3>${r.player}</h3><p class="meta">${r.pos} · ${r.team} · ${mu.line}</p><div class="mtags">${mu.tags}</div></div>
-      <div><div class="record ${cls}">${r.hits}/${r.games}</div><div class="pass">${market} ${r.threshold}</div></div>
+      <div>
+        <h3>${r.player}</h3>
+        <p class="meta">${r.pos} · ${r.team} · ${mu.line}</p>
+        ${pill}
+        <p class="call">${(r.vd&&r.vd.call)||""}</p>
+        <p class="read">${(r.vd&&r.vd.text)||""}</p>
+        <div class="why">${mu.why||""}</div>
+      </div>
+      ${sc}
     </article>`;
   }).join("");
   bindCards();
@@ -481,37 +514,155 @@ function renderPlayers() {
 
 
 function defOf(team){ return (window.DEF||{})[team] || null; }
+
+
 function weekOf(team){ return (window.THISWEEK||{})[team] || null; }
-function tagRank(label, rk){
-  if (rk == null) return "";
-  let k="ok", word="OK";
-  if (rk >= 24) { k="good"; word="GOOD"; }
-  else if (rk <= 10) { k="bad"; word="POOR"; }
-  return `<span class="mtag ${k}">${label} ${word} · D${rk}</span>`;
+function defOf(team){ return (window.DEF||{})[team] || null; }
+function matchKey(pos, market){
+  if (pos === "QB") return /Rush/.test(market||"") ? "rush" : "pass";
+  if (pos === "RB") return /Receiv/.test(market||"") ? "rec" : "rush";
+  if (pos === "TE") return "recTE";
+  return "recWR";
 }
-function playerMatchup(p){
-  const w = weekOf(p.team);
-  if (!w) return {line:"Not on Week 2 slate", tags:""};
-  const d = defOf(w.opp);
-  if (!d) return {line:`${w.ha==="H"?"vs":"@"} ${w.opp}`, tags:""};
-  const loc = w.ha==="H" ? "vs" : "@";
-  const tags=[];
-  if (p.pos==="QB"){
-    tags.push(tagRank("Pass", d.rk.pass));
-    tags.push(tagRank("Rush", d.rk.rush));
-    tags.push(tagRank("Pass TD", d.rk.passTD));
-  } else if (p.pos==="RB"){
-    tags.push(tagRank("Rush", d.rk.rush));
-    tags.push(tagRank("Rush TD", d.rk.rushTD));
-    tags.push(tagRank("Receiving", d.rk.rec));
-  } else if (p.pos==="TE"){
-    tags.push(tagRank("TE rec", d.rk.recTE));
-    tags.push(tagRank("Rec", d.rk.rec));
-  } else {
-    tags.push(tagRank("WR rec", d.rk.recWR));
-    tags.push(tagRank("Rec", d.rk.rec));
+function leagueAvg(key){
+  const defs = Object.values(window.DEF||{});
+  if (!defs.length) return 0;
+  return defs.reduce((s,d)=>s+(d[key]||0),0)/defs.length;
+}
+function lineNeed(th){
+  const n = parseInt(th, 10);
+  return Number.isFinite(n) ? n : 1;
+}
+function logHit(x, market, th){
+  const n = lineNeed(th);
+  if (market === "Receiving Yards") return (x.ry||0) >= n;
+  if (market === "Receptions") return (x.rec||0) >= n;
+  if (market === "Receiving TDs") return (x.rtd||0) >= 1;
+  if (market === "Rushing Yards") return (x.ru||0) >= n;
+  if (market === "Rushing TDs" || market === "QB Rushing TDs") return (x.rutd||0) >= 1;
+  if (market === "Passing Yards") return (x.py||0) >= n;
+  if (market === "Passing TDs") return (x.ptd||0) >= n;
+  if (market === "Interceptions") return /clean|0/.test(th) ? (x.int||0)===0 : (x.int||0)>=1;
+  return false;
+}
+function lastNRate(p, market, th, n){
+  const log = (p.log||[]).slice(-n);
+  if (!log.length) return null;
+  const hits = log.filter(x => logHit(x, market, th)).length;
+  return { hits, games: log.length, rate: hits/log.length };
+}
+function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+
+
+function nextRung(p, market, th){
+  const order = {
+    "Receiving Yards":["20+","40+","60+","80+","100+"],
+    "Rushing Yards":["20+","40+","60+","80+","100+"],
+    "Passing Yards":["150+","200+","250+","300+","350+"],
+    "Receptions":["2+","3+","4+","5+","6+","7+","8+","10+"],
+    "Passing TDs":["1+","2+"]
+  }[market];
+  if (!order) return null;
+  const i = order.indexOf(th);
+  if (i < 0 || i === order.length-1) return null;
+  const nxt = order[i+1];
+  const row = (window.VOLUME||[]).find(x => x.player===p.player && x.market===market && x.threshold===nxt);
+  return row ? { th:nxt, hits:row.hits, games:row.games } : null;
+}
+function verdict(p, market, th, hits, games, mu){
+  const rate = games ? hits/games : 0;
+  const nxt = nextRung(p, market, th);
+  const bits=[];
+  if (rate >= 16/18 || rate >= 0.88) bits.push("This line is his floor — "+hits+"/"+games+".");
+  else if (rate >= 0.72) bits.push("Usually gets there — "+hits+"/"+games+".");
+  else bits.push("Not stable enough — only "+hits+"/"+games+".");
+  if (nxt && nxt.games){
+    const nr = nxt.hits/nxt.games;
+    if (Math.abs(nr-rate) <= 0.06) bits.push(nxt.th+" is almost the same ("+nxt.hits+"/"+nxt.games+").");
+    else if (nr <= rate-0.2) bits.push("Next step "+nxt.th+" drops off to "+nxt.hits+"/"+nxt.games+".");
+    else bits.push(nxt.th+" is "+nxt.hits+"/"+nxt.games+".");
   }
-  return {line:`${loc} ${w.opp} this week`, tags: tags.join("")};
+  if (mu && mu.word==="Tough") bits.push("Defense is the caution — they rank stingy in this stat.");
+  else if (mu && mu.word==="Favorable") bits.push("Defense actually gives this stat up.");
+  const l5 = lastNRate(p, market, th, 5);
+  if (l5 && l5.games>=4 && l5.rate===1) bits.push("Last 5 all hit.");
+  else if (l5 && l5.rate<=0.4) bits.push("Cold last 5 ("+l5.hits+"/"+l5.games+").");
+  let call="Lean no";
+  if (rate>=0.88 && mu && mu.word!=="Tough") call="Insert";
+  else if (rate>=0.88) call="Insert, respect the defense";
+  else if (rate>=0.72 && mu && mu.word==="Favorable") call="Insert";
+  else if (rate>=0.72) call="Only if you need the leg";
+  return { call, text: bits.join(" ") };
+}
+
+function scoreSpot(p, market, th, seasonHits, seasonGames){
+  const w = weekOf(p.team);
+  const locLine = w ? ((w.ha==="H"?"vs ":"@ ")+w.opp) : "Off slate";
+  if (!w) return { line: locLine, word:"", cls:"hide", score:null, why:"", parts:{} };
+
+  const d = defOf(w.opp) || {};
+  const key = matchKey(p.pos, market);
+  const allowed = d[key];
+  const rk = d.rk && d.rk[key];
+  const avg = leagueAvg(key) || 1;
+  const labels = {pass:"pass yds/g", rush:"rush yds/g", rec:"rec yds/g", recWR:"WR yds/g", recTE:"TE yds/g"};
+
+  // 1) Volume 0-35: season hit rate on this exact line
+  const volRate = seasonGames ? seasonHits/seasonGames : 0;
+  const vol = clamp(volRate, 0, 1) * 35;
+
+  // 2) Form 0-20: last 5 on the same line
+  const l5 = lastNRate(p, market, th, 5);
+  const form = l5 ? clamp(l5.rate,0,1)*20 : 8;
+
+  // 3) Defense 0-30: allowed vs league average
+  let def = 15, defNote = "no def data";
+  if (allowed != null && avg){
+    const ratio = allowed / avg;          // 1.15 = 15% softer
+    def = clamp(15 + (ratio-1)*80, 0, 30); // ±8% ~ 6.4 pts
+    defNote = `${w.opp} ${allowed} ${labels[key]||key} vs lg ${avg.toFixed(0)} (rk ${rk}/32)`;
+  }
+
+  // 4) Situation 0-10: home + implied scoring
+  let sit = 4;
+  if (w.ha === "H") sit += 2;
+  const tot = Number(w.total), spr = Number(w.hSpr);
+  let implied = null;
+  if (Number.isFinite(tot) && Number.isFinite(spr)){
+    implied = w.ha==="H" ? (tot+spr)/2 : (tot-spr)/2;
+    if (implied >= 26) sit += 3;
+    else if (implied >= 23) sit += 1;
+    else if (implied <= 18) sit -= 2;
+  }
+  if ((w.roof||"").includes("dome") || (w.roof||"").includes("closed")) sit += 1;
+  sit = clamp(sit, 0, 10);
+
+  // 5) H2H 0-5
+  const vsLog = (p.log||[]).filter(x => x.opp === w.opp);
+  let h2h = 2.5, h2hNote = "no H2H in sample";
+  if (vsLog.length){
+    const hHits = vsLog.filter(x => logHit(x, market, th)).length;
+    h2h = (hHits/vsLog.length)*5;
+    h2hNote = `H2H ${hHits}/${vsLog.length}`;
+  }
+
+  const score = Math.round(vol + form + def + sit + h2h);
+  let word = "Neutral", cls = "ok";
+  if (score >= 68 && volRate >= 0.7 && def >= 18) { word = "Favorable"; cls = "good"; }
+  else if (score <= 48 || (def <= 10 && volRate < 0.85)) { word = "Tough"; cls = "bad"; }
+
+  const why = `
+    <div class="fact"><b>Volume</b> ${seasonHits}/${seasonGames} games hit ${th}</div>
+    <div class="fact"><b>Last 5</b> ${l5 ? l5.hits+"/"+l5.games : "—"}</div>
+    <div class="fact"><b>Defense</b> ${w.opp} gives ${allowed} ${labels[key]||key} · league ${avg.toFixed(0)} · ${rk ? "#"+rk+" of 32" : ""}</div>
+    <div class="fact"><b>Game</b> ${implied!=null ? "this offense projected "+implied.toFixed(1)+" pts" : "no total"} · ${w.ha==="H"?"home":"away"}</div>
+    <div class="fact"><b>Vs them</b> ${vsLog.length ? (vsLog.filter(x=>logHit(x,market,th)).length+"/"+vsLog.length) : "have not played in this sample"}</div>`;
+
+  return { line: locLine, word, cls, score, why, parts:{vol,form,def,sit,h2h} };
+}
+
+function spotFor(p, market, th, hits, games){
+  return scoreSpot(p, market, th, hits||0, games||p.games||0);
 }
 
 function recOf(code) {
@@ -549,6 +700,40 @@ function leanFlags(g,a,h){
     flags.push({k:"info", t:"No strong split · skip or price shop"});
   return flags;
 }
+
+function last5Team(t, key, val){
+  const log=(t.log||[]).filter(x=>x[key]===0||x[key]===1).slice(-5);
+  if(!log.length) return null;
+  const hits=log.filter(x=>x[key]===val).length;
+  return {hits, games:log.length};
+}
+function teamCall(hits, games, l5, extraTough){
+  const rate=games?hits/games:0;
+  const l5r=l5?l5.hits/l5.games:null;
+  let call="Only if you need the leg", bits=[];
+  bits.push(hits+"/"+games+" last 18.");
+  if(l5) bits.push("Last 5: "+l5.hits+"/"+l5.games+".");
+  if(extraTough) bits.push(extraTough);
+  if(rate>=0.6 && (l5r==null || l5r>=0.4) && !extraTough) call="Insert";
+  else if(rate>=0.6) call="Insert, with caution";
+  else if(rate<=0.4) call="Lean no";
+  return {call, text:bits.join(" ")};
+}
+function gameRead(g,a,h){
+  const aL5=last5Team(a,"cover",1), hL5=last5Team(h,"cover",1);
+  const oL5a=last5Team(a,"ou",1), oL5h=last5Team(h,"ou",1);
+  const awayRoad=a.atsA+"/"+a.atsAg+" on the road";
+  const homeHome=h.atsH+"/"+h.atsHg+" at home";
+  const away = teamCall(a.atsA,a.atsAg,aL5, a.atsA/Math.max(1,a.atsAg)<0.45?"Road ATS is weak.":"");
+  const home = teamCall(h.atsH,h.atsHg,hL5, h.atsH/Math.max(1,h.atsHg)<0.45?"Home ATS is weak.":"");
+  const overRate=( (a.ov/Math.max(1,a.ovg)) + (h.ov/Math.max(1,h.ovg)) )/2;
+  const underRate=( (a.un/Math.max(1,a.ung)) + (h.un/Math.max(1,h.ung)) )/2;
+  let totCall="Neutral total", totText=`${g.away} went over ${a.ov}/${a.ovg}. ${g.home} went over ${h.ov}/${h.ovg}. Line is ${g.total}.`;
+  if(underRate>=0.58 && overRate<=0.45) { totCall="Lean under"; totText+=" Both sides live under."; }
+  else if(overRate>=0.58 && underRate<=0.45) { totCall="Lean over"; totText+=" Both sides live over."; }
+  return {away, home, tot:{call:totCall,text:totText}, awayRoad, homeHome};
+}
+
 function renderSlate() {
   const slate = window.SLATE || [];
   if (!slate.length) return "";
@@ -558,16 +743,17 @@ function renderSlate() {
     ${slate.map((g) => {
       const a = recOf(g.away), h = recOf(g.home);
       const when = (g.wd || "") + " " + (g.time || "");
-      const flags = leanFlags(g,a,h).map(f=>`<span class="flag ${f.k}">${f.t}</span>`).join("");
+      const rd = gameRead(g,a,h);
       return `<article class="game">
         <div class="when">${when}${g.roof? " · "+g.roof:""}</div>
         <div class="match">${g.away} @ ${g.home}</div>
         <div class="lines">${g.home} ${fmtSprHome(g.hSpr)} · ${g.away} ${fmtSprAway(g.hSpr)} · O/U ${g.total}</div>
-        <div class="recs">
-          <span>${g.away} road ATS ${a.atsA||0}/${a.atsAg||0} · all ${a.ats||0}/${a.atsg||0} · U ${a.un||0}/${a.ung||0}</span>
-          <span>${g.home} home ATS ${h.atsH||0}/${h.atsHg||0} · all ${h.ats||0}/${h.atsg||0} · U ${h.un||0}/${h.ung||0}</span>
-        </div>
-        <div class="flags">${flags}</div>
+        <p class="call">${g.away} ATS — ${rd.away.call}</p>
+        <p class="read">${rd.away.text} Road mark ${a.atsA||0}/${a.atsAg||0}.</p>
+        <p class="call">${g.home} ATS — ${rd.home.call}</p>
+        <p class="read">${rd.home.text} Home mark ${h.atsH||0}/${h.atsHg||0}.</p>
+        <p class="call">${rd.tot.call}</p>
+        <p class="read">${rd.tot.text}</p>
       </article>`;
     }).join("")}
   </div>`;
@@ -618,6 +804,9 @@ function openPlayer(name) {
   const p = window.PLAYER[name];
   if (!p) return;
   const g = p.games;
+  const row = (window.VOLUME||[]).find(x => x.player===p.player && x.market===marketEl.value && x.threshold===lineEl.value);
+  const mu = scoreSpot(p, marketEl.value, lineEl.value, row?row.hits:0, row?row.games:g);
+
   const isQB = p.pos === "QB";
   const isRB = p.pos === "RB";
   let blocks = "";
@@ -675,8 +864,9 @@ function openPlayer(name) {
   showSheet(`
     <div class="sheet-head">
       <h2>${p.player}</h2>
-      <p class="meta">${p.pos} · ${p.team} · last ${g} games · ${playerMatchup(p).line}</p>
-      <div class="mtags">${playerMatchup(p).tags}</div>
+      <p class="meta">${p.pos} · ${p.team} · last ${g} games · ${mu.line}</p>
+      <p class="meta">${mu.word||""}${mu.score!=null? " · score "+mu.score+"/100":""}</p>
+      <div class="why">${mu.why||""}</div>
     </div>
     ${blocks}
     <p class="sec">Last 10 games</p>
@@ -708,6 +898,8 @@ function openTeam(code) {
     <div class="sheet-head">
       <h2>${t.team}</h2>
       <p class="meta">Last ${t.games} games · closing lines</p>
+      <p class="call">${teamCall(t.ats,t.atsg,last5Team(t,"cover",1),"").call} on ATS</p>
+      <p class="read">${teamCall(t.ats,t.atsg,last5Team(t,"cover",1),"").text} Over ${t.ov}/${t.ovg}. Under ${t.un}/${t.ung}.</p>
     </div>
     <div class="tiles">
       ${tile("Spread", t.ats, t.atsg)}
