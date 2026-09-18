@@ -259,15 +259,20 @@ function paint(games){
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+games.length;
   if(!games.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
   if(LEAGUE==="ufc"){
-    host.innerHTML = games.map(g=>`
-      <button type="button" class="gcard ufc-card" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
-        <div class="gstat"><span>${g.card||"UFC"}</span><span>${when(g)}</span></div>
-        <div class="gduo">
-          <div class="gteam"><img class="uface" alt="" src="${g.awayImg}"/><b>${g.away}</b><span class="rec">${g.awayRec||""}</span></div>
-          <span class="vs">VS</span>
-          <div class="gteam"><img class="uface" alt="" src="${g.homeImg}"/><b>${g.home}</b><span class="rec">${g.homeRec||""}</span></div>
-        </div>
-      </button>`).join("") + "<div id='ufcRanks'></div>";
+    const events={};
+    games.forEach(g=>{
+      const k=g.card||"UFC";
+      if(!events[k]) events[k]={card:k,start:g.start,venue:g.venue,fights:[]};
+      events[k].fights.push(g);
+    });
+    const evHtml=Object.values(events).map(ev=>`
+      <button type="button" class="gcard" data-event="${ev.card.replace(/"/g,"")}">
+        <div class="gstat"><span>Upcoming card</span><span>${when(ev.fights[0]||{})}</span></div>
+        <div class="mlb-inning">${ev.card}</div>
+        <p class="hint" style="padding:8px 0 0">${ev.fights.length} fights${ev.venue?" · "+ev.venue:""} · tap for the lineup</p>
+      </button>`).join("");
+    host.innerHTML = "<div id='ufcRanks'></div><div id='ufcEvents'>"+evHtml+"</div><div id='ufcLineup'></div>";
+    host.querySelectorAll("[data-event]").forEach(b=>b.onclick=()=>showUfcLineup(b.dataset.event, games));
   } else {
     host.innerHTML = games.map(g=>`
       <button type="button" class="gcard" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
@@ -553,32 +558,76 @@ async function openGame(id, fid){
   await tickGame();
   poll = setInterval(tickGame, 12000);
 }
+function showUfcLineup(card, games){
+  const host=$("ufcLineup");
+  if(!host) return;
+  const fights=games.filter(g=>(g.card||"UFC")===card);
+  host.innerHTML = "<p class='sec' style='padding:8px 0 8px'>Lineup · "+card+"</p>"+fights.map(g=>`
+    <button type="button" class="gcard ufc-card" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
+      <div class="gstat"><span>${g.format||"Bout"}</span><span>${when(g)}</span></div>
+      <div class="gduo">
+        <div class="gteam"><img class="uface" alt="" src="${g.awayImg}"/><b>${g.away}</b><span class="rec">${g.awayRec||""}</span></div>
+        <span class="vs">VS</span>
+        <div class="gteam"><img class="uface" alt="" src="${g.homeImg}"/><b>${g.home}</b><span class="rec">${g.homeRec||""}</span></div>
+      </div>
+    </button>`).join("");
+  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
+  host.scrollIntoView({behavior:"smooth",block:"start"});
+}
+const UFC_OFFICIAL = {
+  asOf: "Sept 15, 2026 — after UFC Fight Night: Silva vs. Delgado",
+  boards: [
+    {name:"Men's pound-for-pound", rows:[
+      [1,"Islam Makhachev","29-1","WW C"],
+      [2,"Alexander Volkanovski","28-4","FW C"],
+      [3,"Petr Yan","20-5","BW C"],
+      [4,"Justin Gaethje","28-5","LW C"],
+      [5,"Ilia Topuria","17-1","LW #1"],
+      [6,"Tom Aspinall","15-3","HW #1"],
+      [7,"Sean Strickland","31-7","MW C"],
+      [8,"Merab Dvalishvili","21-5","BW #1"],
+      [9,"Alex Pereira","13-4","LHW #2"],
+      [10,"Ciryl Gane","14-2","HW C"],
+      [11,"Joshua Van","17-2","FLW C"],
+      [12,"Khamzat Chimaev","15-1","MW #1"],
+      [13,"Alexandre Pantoja","30-6","FLW #1"],
+      [14,"Arman Tsarukyan","23-3","LW #2"],
+      [15,"Charles Oliveira","37-11","LW #3"]
+    ]},
+    {name:"Division champions", rows:[
+      ["C","Ciryl Gane","14-2","Heavyweight"],
+      ["C","Sean Strickland","31-7","Middleweight"],
+      ["C","Islam Makhachev","29-1","Welterweight"],
+      ["C","Justin Gaethje","28-5","Lightweight"],
+      ["C","Alexander Volkanovski","28-4","Featherweight"],
+      ["C","Petr Yan","20-5","Bantamweight"],
+      ["C","Joshua Van","17-2","Flyweight"]
+    ]}
+  ]
+};
 async function loadUfcRankings(){
   const host=$("ufcRanks");
   if(!host) return;
-  host.innerHTML="<p class='hint'>Loading division rankings…</p>";
-  try{
-    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/mma/ufc/rankings",{cache:"no-store"});
-    if(!res.ok) throw new Error("rankings");
-    const data=await res.json();
-    const boards=(data.rankings||[]).filter(b=>/pound-for-pound|rankings/i.test(b.name||b.shortName||""));
-    host.innerHTML = "<div class='rankwrap'>"+boards.map(b=>{
-      const rows=(b.ranks||[]).slice(0,8).map(r=>{
-        const a=r.athlete||{};
-        const id=a.id||"";
-        const img="https://a.espncdn.com/i/headshots/mma/players/full/"+id+".png";
-        const acc=r.hasAccolade?" · C":"";
-        return "<div class='rrow prow' data-pid='"+id+"' data-pname='"+String(a.displayName||"").replace(/"/g,"")+"'><span class='rk'>"+(r.current||"—")+"</span><img alt='' src='"+img+"'/><div><b>"+(a.displayName||"")+"</b><em>"+(r.recordSummary||"")+acc+"</em></div><em>"+(r.trend||"")+"</em></div>";
+  const ids={};
+  (window.LIVE_GAMES||[]).forEach(g=>{ if(g.away) ids[g.away]=g.awayId; if(g.home) ids[g.home]=g.homeId; });
+  host.innerHTML = "<div class='rankwrap'><p class='hint'>Official UFC rankings · "+UFC_OFFICIAL.asOf+". ESPN's ranking feed is years stale — not used.</p>"+
+    UFC_OFFICIAL.boards.map(b=>{
+      const rows=b.rows.map(r=>{
+        const name=r[1], rec=r[2], note=r[3], rk=r[0];
+        const pid=ids[name]||"";
+        const img = pid ? "https://a.espncdn.com/i/headshots/mma/players/full/"+pid+".png" : "";
+        return "<div class='rrow prow' data-pid='"+pid+"' data-pname='"+name.replace(/"/g,"")+"'><span class='rk'>"+rk+"</span>"+(img?"<img alt='' src='"+img+"'/>":"<span></span>")+"<div><b>"+name+"</b><em>"+rec+(note?" · "+note:"")+"</em></div></div>";
       }).join("");
-      return "<div class='rankdiv'><h3>"+(b.shortName||b.name)+"</h3>"+rows+"</div>";
+      return "<div class='rankdiv'><h3>"+b.name+"</h3>"+rows+"</div>";
     }).join("")+"</div>";
-  }catch(e){
-    host.innerHTML="<p class='hint'>Rankings did not load.</p>";
-  }
 }
 async function openFighter(pid, name){
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
+  if(!pid){
+    $("playerRoom").innerHTML="<div class='phero'><div class='phero-copy' style='padding:16px'><p class='kicker'>Fighter</p><h2>"+name+"</h2><p>No ESPN id on this ranking row. Open them from a fight card for the full book.</p></div></div>";
+    return;
+  }
   try{
     const [coreRes, ovRes] = await Promise.all([
       fetch("https://sports.core.api.espn.com/v2/sports/mma/athletes/"+pid,{cache:"no-store"}),
@@ -723,7 +772,7 @@ async function openPlayer(pid, name){
   }
 }
 document.addEventListener("click", ev=>{
-  const row = ev.target.closest && ev.target.closest("tr.prow[data-pid]");
+  const row = ev.target.closest && ev.target.closest(".prow[data-pid]");
   if(row && row.dataset.pid){
     ev.preventDefault();
     if(LEAGUE==="ufc") openFighter(row.dataset.pid, row.dataset.pname||"Fighter");
