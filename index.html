@@ -1460,7 +1460,13 @@ render();
     }
     ["sPos","sMkt","sLine"].forEach(id=>{
       const el=$(id); if(!el) return;
-      el.onchange=()=>{ readFilt(); if(id==="sPos"||id==="sMkt"){ /* reset line via html rebuild */ } OPEN_TAB="sauce"; loadGame(g.id); };
+      el.onchange=()=>{
+        readFilt();
+        OPEN_TAB="sauce";
+        const pane=$("gtab-sauce");
+        const sum=LAST_SUM||window.SUM_CACHE[String(g.id)]||{};
+        if(pane){ pane.innerHTML=sauceHtml(g, sum); bindSauce(g, sum); }
+      };
     });
     box.querySelectorAll(".rung").forEach(sel=>{
       sel.onclick=(e)=>e.stopPropagation();
