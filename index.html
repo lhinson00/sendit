@@ -158,6 +158,21 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .sauce em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
 
 .bigscore{font-family:"Bebas Neue",sans-serif;font-size:40px;line-height:1;color:var(--orange);text-shadow:0 0 18px rgba(255,122,24,.35)}
+
+.sauce[data-openp]{cursor:pointer}
+.sliptop{position:sticky;top:168px;z-index:3;background:#05060a;padding-bottom:8px}
+
+.dock{grid-template-columns:1fr 1fr 1fr}
+#slipCount{font-style:normal;margin-left:4px;color:#140800}
+.rung{max-width:88px;padding:8px;background:#0a0b10;color:var(--text);border:1px solid #2a241c;font-size:13px}
+
+.wire{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 12px 14px}
+.wirecol{background:#101218;border:1px solid #2a241c;padding:10px 12px}
+.wirecol b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);margin-bottom:8px}
+.wirecol a{display:block;color:#efe6d8;text-decoration:none;font-size:13px;padding:4px 0;border-bottom:1px solid #1c1c22}
+.wirecol a:last-child{border:0}
+.mlinks{font-size:12px;line-height:1.6}
+.mlinks a{color:var(--ember)}
 </style>
 </head><body>
 <header class="top">
@@ -175,11 +190,17 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 
 <section id="viewLive">
   <div class="livetop"><span id="liveMeta">Loading slate…</span></div>
+  <div id="wire" class="wire"></div>
   <div id="liveList"></div>
 </section>
 
 <section id="viewGame" hidden>
   <div id="gameRoom"></div>
+</section>
+
+<section id="viewSlip" hidden>
+  <p class="sec">Board slip</p>
+  <div id="slipBoard"></div>
 </section>
 
 <section id="viewResearch" hidden>
@@ -218,7 +239,8 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 
 <nav class="dock">
   <button type="button" class="on" data-nav="live">Live</button>
-  <button type="button" data-nav="research">Research</button>
+  <button type="button" data-nav="research">Desk</button>
+  <button type="button" data-nav="slip">Slip <i id="slipCount"></i></button>
 </nav>
 <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
 
@@ -977,11 +999,42 @@ render();
   function nowCT() {
     return new Date().toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }) + " CT";
   }
+  
+  const WIRE = [
+    {g:"Picks", items:[
+      ["Prisco", "https://www.cbssports.com/nfl/priscos-picks/"],
+      ["CBS experts", "https://www.cbssports.com/nfl/news/nfl-week-2-odds-predictions-expert-picks/"],
+      ["CBS model", "https://www.cbssports.com/betting/news/week-2-2026-nfl-odds-picks-predictions-lines-spreads-best-bets/"],
+      ["ESPN picks", "https://www.espn.com/nfl/picks"],
+      ["NFL.com picks", "https://www.nfl.com/news/"]
+    ]},
+    {g:"Injuries", items:[
+      ["ESPN injuries", "https://www.espn.com/nfl/injuries"],
+      ["NFL.com IR", "https://www.nfl.com/injuries/"]
+    ]},
+    {g:"Weather", items:[
+      ["NFL Weather", "https://nflweather.com/"],
+      ["Cleatz forecast", "https://cleatz.com/nfl/weather-report/"]
+    ]},
+    {g:"Market", items:[
+      ["Covers odds", "https://www.covers.com/sport/football/nfl/odds"],
+      ["FanDuel NFL", "https://sportsbook.fanduel.com/navigation/nfl"],
+      ["Action Network", "https://www.actionnetwork.com/nfl/odds"]
+    ]}
+  ];
+  function paintWire(){
+    const host=$("wire");
+    if(!host) return;
+    host.innerHTML=WIRE.map(sec=>`<div class="wirecol"><b>${sec.g}</b>${sec.items.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`).join("");
+  }
+
   function showView(name) {
     VIEW = name;
     if ($("viewLive")) $("viewLive").hidden = name !== "live";
     if ($("viewResearch")) $("viewResearch").hidden = name !== "research";
     if ($("viewGame")) $("viewGame").hidden = name !== "game";
+    if ($("viewSlip")) $("viewSlip").hidden = name !== "slip";
+    if (name==="slip") paintBoardSlip();
     document.querySelectorAll("[data-nav]").forEach((b) =>
       b.classList.toggle("on", b.dataset.nav === name || (name === "game" && b.dataset.nav === "live"))
     );
@@ -1037,7 +1090,7 @@ render();
           <div class="gscore">${g.state==="pre"?"VS":g.awayScore+"<em>-</em>"+g.homeScore}</div>
           <div class="gteam right"><b>${g.home}</b><img alt="" src="${logo(g.home)}"/></div>
         </div>
-        <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}</div>
+        <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}${loadSlip(g.id).length? " · "+loadSlip(g.id).length+" on slip":""}</div>
       </button>`;
     }
     host.innerHTML =
@@ -1105,11 +1158,33 @@ render();
       return `<div class="play ${p.scoringPlay ? "score" : ""}"><span>Q${q} ${clk}</span><p>${p.text || ""}</p></div>`;
     }).join("");
   }
-  function oddsBlock(sum) {
+  function teamOf(code){ return (window.TEAMS||[]).find(x=>x.team===code)||{}; }
+  function oddsBlock(sum, g) {
+    g=g||{};
     const o = (sum.pickcenter || sum.odds || [])[0] || {};
     const spread = o.spread != null ? o.spread : (o.details && o.details.spread);
     const ou = o.overUnder != null ? o.overUnder : (o.details && o.details.overUnder);
-    return `<div class="odds"><div class="tile"><span>Spread</span><b>${spread != null ? spread : "—"}</b></div><div class="tile"><span>Total</span><b>${ou != null ? ou : "—"}</b></div></div><p class="hint">Snapshot from the game feed — not live sportsbook juice.</p>`;
+    const a=teamOf(g.away), h=teamOf(g.home);
+    const line=Number(ou);
+    function vsLine(t, n){
+      const log=t.log||[];
+      if(!log.length || !Number.isFinite(n)) return "";
+      const over=log.filter(x=>x.total>n).length;
+      const under=log.filter(x=>x.total<n).length;
+      return `vs ${n}: over ${over}/${log.length} · under ${under}/${log.length}`;
+    }
+    return `<div class="odds">
+      <div class="tile"><span>Spread</span><b>${spread != null ? spread : "—"}</b></div>
+      <div class="tile"><span>Total</span><b>${ou != null ? ou : "—"}</b></div>
+      <div class="tile"><span>${g.away||"Away"} ATS</span><b>${a.ats||0}/${a.atsg||0}</b></div>
+      <div class="tile"><span>${g.home||"Home"} ATS</span><b>${h.ats||0}/${h.atsg||0}</b></div>
+      <div class="tile"><span>${g.away||"Away"} O/U</span><b>${a.ov||0}-${a.un||0}</b></div>
+      <div class="tile"><span>${g.home||"Home"} O/U</span><b>${h.ov||0}-${h.un||0}</b></div>
+    </div>
+    <p class="hint">${vsLine(a,line)}</p>
+    <p class="hint">${vsLine(h,line)}</p>
+    <p class="sec">Wire</p>
+    <p class="mlinks">${WIRE.map(sec=>sec.items.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join(" · ")).join(" · ")}</p>`;
   }
 
   
@@ -1133,6 +1208,53 @@ render();
   }
   function saveSlip(id, rows){
     try { localStorage.setItem(slipKey(id), JSON.stringify(rows)); } catch(e){}
+    badgeSlip();
+  }
+  function allSlips(){
+    const out=[];
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(!k||k.indexOf("ss_slip_")!==0) continue;
+        const gid=k.slice(8);
+        const rows=JSON.parse(localStorage.getItem(k)||"[]");
+        rows.forEach((r,idx)=>out.push(Object.assign({gid,idx},r)));
+      }
+    }catch(e){}
+    return out;
+  }
+  function badgeSlip(){
+    const n=allSlips().length;
+    const el=$("slipCount");
+    if(el) el.textContent=n?String(n):"";
+  }
+  function paintBoardSlip(){
+    const host=$("slipBoard");
+    if(!host) return;
+    const rows=allSlips();
+    if(!rows.length){ host.innerHTML="<p class='hint'>No legs yet. Open a game → Sauce → Add.</p>"; return; }
+    const games=window.LIVE_GAMES||[];
+    host.innerHTML=rows.map(r=>{
+      const g=games.find(x=>x.id===String(r.gid));
+      const label=g? (g.away+" @ "+g.home) : "Game "+r.gid;
+      return `<div class="sliprow">
+        <div><b>${r.player}</b><span>${r.market} ${r.th} · ${label}</span></div>
+        <div class="sright">
+          <button type="button" data-openg="${r.gid}">Open</button>
+          <button type="button" data-kill="${r.gid}|${r.idx}">×</button>
+        </div>
+      </div>`;
+    }).join("");
+    host.querySelectorAll("[data-openg]").forEach(b=>b.onclick=()=>openGame(b.dataset.openg));
+    host.querySelectorAll("[data-kill]").forEach(b=>{
+      b.onclick=()=>{
+        const [gid,idx]=b.dataset.kill.split("|");
+        const slip=loadSlip(gid);
+        slip.splice(Number(idx),1);
+        saveSlip(gid,slip);
+        paintBoardSlip();
+      };
+    });
   }
   function lineNeed(th){
     const n=parseInt(th,10);
@@ -1227,26 +1349,36 @@ render();
       const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
       return `<i class="prog ${st.cls}">${st.txt}</i>`;
     }
-    const list=rows.map(r=>{
+    function rowCard(r){
       const p=window.PLAYER[r.player]||{};
-      let mu={}, l5=null, call="";
+      let mu={}, l5=null, call="", nxt=null;
       try{
         if(typeof lastNRate==="function") l5=lastNRate(p,r.market,r.th,5);
         if(typeof scoreSpot==="function") mu=scoreSpot(p,r.market,r.th,r.hits,r.games)||{};
         if(typeof verdict==="function") call=(verdict(p,r.market,r.th,r.hits,r.games,mu)||{}).call||"";
+        if(typeof nextRung==="function") nxt=nextRung(p,r.market,r.th);
       }catch(e){}
       const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
-      const sc=mu.score!=null?mu.score:"";
-      return `<article class="sauce cardish">
+      const sc=mu.score!=null?mu.score:"—";
+      return `<article class="sauce cardish" data-openp="${r.player}">
         <div><b>${r.player}</b>
-          <span>${r.pos} · ${r.team} · ${r.market} ${r.th} · ${r.hits}/${r.games}${l5?` · L5 ${l5.hits}/${l5.games}`:""}${mu.word?` · ${mu.word}`:""} · live ${st.txt}</span>
+          <span>${r.pos} · ${r.team} · ${r.hits}/${r.games} on ${r.th}${l5?` · L5 ${l5.hits}/${l5.games}`:""}${nxt?` · next ${nxt.th} ${nxt.hits}/${nxt.games}`:""}${mu.word?` · ${mu.word}`:""} · live ${st.txt}</span>
           ${call?`<div class="scall">${call}</div>`:""}
         </div>
         <div class="sright"><em class="bigscore">${sc}</em>
+          <select class="rung" data-p="${r.player}">${((window.LINES_BY_MARKET&&window.LINES_BY_MARKET[r.market])||[r.th]).map(v=>`<option ${v===r.th?"selected":""}>${v}</option>`).join("")}</select>
           <button type="button" class="addleg" data-p="${r.player}" data-m="${r.market}" data-th="${r.th}" data-pos="${r.pos}" data-team="${r.team}">Add</button>
         </div>
       </article>`;
-    }).join("") || "<p class='hint'>Nobody cleared that cut on these two rosters. Drop Min G / Min H.</p>";
+    }
+    const away=rows.filter(r=>r.team===g.away);
+    const home=rows.filter(r=>r.team===g.home);
+    const other=rows.filter(r=>r.team!==g.away && r.team!==g.home);
+    const list=(
+      (away.length?`<p class="sec">${g.away} · ${away.length}</p>`+away.map(rowCard).join(""):"")+
+      (home.length?`<p class="sec">${g.home} · ${home.length}</p>`+home.map(rowCard).join(""):"")+
+      (other.length?`<p class="sec">Other</p>`+other.map(rowCard).join(""):"")
+    ) || "<p class='hint'>Nobody cleared that cut on these two rosters. Drop Min G / Min H.</p>";
     const saved=slip.map((r,i)=>{
       const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
       return `<div class="sliprow"><div><b>${r.player}</b><span>${r.market} ${r.th} · live ${st.txt}</span></div><div class="sright"><i class="prog ${st.cls}">${st.cls==="wait"?"":st.txt}</i><button type="button" data-drop="${i}">×</button></div></div>`;
@@ -1258,8 +1390,8 @@ render();
       <label>Min G<input id="sMinG" type="number" min="1" max="18" value="${f.minG}"/></label>
       <label>Min H<input id="sMinH" type="number" min="0" max="18" value="${f.minH}"/></label>
     </div>
-    <div class="sliptop"><p class="sec">Slip · live vs line</p>${saved}</div>
-    <p class="sec">${rows.length} players · ${f.market} ${f.line}</p>${list}`;
+    <div class="sliptop"><p class="sec">Slip · ${slip.length} legs · ${f.market} ${f.line}</p>${saved}</div>
+    ${list}`;
   }
   function bindSauce(g, sum){
     const box=$("gameRoom");
@@ -1277,6 +1409,14 @@ render();
     ["sPos","sMkt","sLine","sMinG","sMinH"].forEach(id=>{
       const el=$(id); if(!el) return;
       el.onchange=()=>{ readFilt(); if(id==="sPos"||id==="sMkt"){ /* reset line via html rebuild */ } OPEN_TAB="sauce"; loadGame(g.id); };
+    });
+    box.querySelectorAll(".rung").forEach(sel=>{
+      sel.onclick=(e)=>e.stopPropagation();
+      sel.onchange=(e)=>{
+        e.stopPropagation();
+        const btn=sel.parentElement && sel.parentElement.querySelector(".addleg");
+        if(btn) btn.dataset.th=sel.value;
+      };
     });
     box.querySelectorAll(".addleg").forEach(b=>{
       b.onclick=(e)=>{
@@ -1303,6 +1443,7 @@ render();
 function paintGame(g, sum) {
     const box = $("gameRoom");
     if (!box) return;
+    if (typeof captureFilt === "function") captureFilt();
     const hex = window.TEAM_HEX || {};
     const awC = hex[g.away] || "#888";
     const hmC = hex[g.home] || "#ff7a18";
@@ -1333,7 +1474,7 @@ function paintGame(g, sum) {
       <div id="gtab-scoring" class="gtab">${scoringList(sum || {})}</div>
       <div id="gtab-box" class="gtab">${boxTables(sum || {})}</div>
       <div id="gtab-plays" class="gtab">${playList(sum || {})}</div>
-      <div id="gtab-odds" class="gtab">${oddsBlock(sum || {})}</div>
+      <div id="gtab-odds" class="gtab">${oddsBlock(sum || {}, g)}</div>
       <div id="gtab-sauce" class="gtab">${sauceHtml(g, sum)}</div>`;
     const tab = OPEN_TAB || "scoring";
     box.querySelectorAll("[data-gtab]").forEach((x) => x.classList.toggle("on", x.dataset.gtab === tab));
@@ -1342,6 +1483,7 @@ function paintGame(g, sum) {
       if (n) n.hidden = k !== tab;
     });
     $("gameBack").onclick = () => showView("live");
+  badgeSlip();
     box.querySelectorAll("[data-gtab]").forEach((b) => {
       b.onclick = () => {
         OPEN_TAB = b.dataset.gtab;
@@ -1350,6 +1492,13 @@ function paintGame(g, sum) {
           const n = $("gtab-" + k);
           if (n) n.hidden = k !== OPEN_TAB;
         });
+      };
+    });
+    bindSauce(g, sum);
+    box.querySelectorAll("[data-openp]").forEach((b) => {
+      b.onclick = (e) => {
+        if (e.target.closest(".addleg")) return;
+        if (typeof openPlayer === "function") openPlayer(b.dataset.openp);
       };
     });
   }
@@ -1419,6 +1568,7 @@ function paintGame(g, sum) {
     b.addEventListener("click", () => showView(b.dataset.nav));
   });
   showView("live");
+  badgeSlip();
   tick();
   pullInjuries().catch(() => {});
   setInterval(tick, 30000);
