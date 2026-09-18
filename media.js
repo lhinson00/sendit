@@ -1,0 +1,1 @@
+window.MEDIA_SCORES={};window.MEDIA_LINKS=[["CBS Week 2 picks","https://www.cbssports.com/nfl/news/nfl-week-2-picks-score-predictions/"],["ESPN expert grid","https://www.espn.com/nfl/picks/_/week/2/seasontype/2"]];
