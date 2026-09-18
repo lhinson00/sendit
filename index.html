@@ -1281,7 +1281,7 @@ render();
     });
     pullSlipBoxes();
   }
-  async function pullSlipBoxes(){
+  async async function pullSlipBoxes(){
     const ids=[...new Set(allSlips().map(r=>String(r.gid)))];
     await Promise.all(ids.map(async id=>{
       try{
@@ -1656,7 +1656,13 @@ function paintGame(g, sum) {
     try { await pullScores(); }
     catch (e) {
       const host = $("liveList");
-      if (host) host.innerHTML = `<p class="hint">Could not load slate (${e.message})</p>`;
+      const fb = (window.THISWEEK||window.SLATE||[]).map(g=>({
+        id:String(g.eid||g.id||g.away+"-"+g.home),
+        away:g.away, home:g.home, awayScore:"", homeScore:"",
+        state:"pre", detail:"", start:g.kick||g.start||"", completed:false
+      }));
+      if(fb.length){ window.LIVE_GAMES=fb; paintSlate(fb); }
+      else if (host) host.innerHTML = `<p class="hint">Could not load slate (${e.message})</p>`;
     }
   }
 
