@@ -153,6 +153,35 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .leagues button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 body.nodock .dock{display:none}
 body.nodock{padding-bottom:16px}
+
+#viewHome.homehero{position:relative;min-height:calc(100dvh - 88px);overflow:hidden;padding:12px 0 40px}
+.hero-bg{pointer-events:none;position:absolute;inset:-20% -10% 20%;background:
+  radial-gradient(800px 400px at 10% 0%, rgba(255,122,24,.28), transparent 55%),
+  radial-gradient(600px 320px at 90% 10%, rgba(255,200,80,.12), transparent 50%),
+  repeating-linear-gradient(90deg, rgba(255,122,24,.05) 0 1px, transparent 1px 72px);
+  animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-2%,3%,0) scale(1.05)}}
+.hero-copy{position:relative;padding:18px var(--pad) 8px;max-width:720px}
+.hero-copy .kicker{letter-spacing:.22em;text-transform:uppercase;font-size:10px;color:var(--orange);margin:0 0 10px}
+.hero-copy h2{font-size:clamp(28px,6vw,52px);line-height:.95;margin:0 0 12px;letter-spacing:-.03em}
+.hero-copy .lede{color:var(--muted);font-size:15px;max-width:36em;margin:0}
+.markrow{display:flex;gap:14px;align-items:center;padding:18px var(--pad) 0;opacity:.9}
+.markrow img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+.hub{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:22px var(--pad) 8px}
+.hubcard{position:relative;text-align:left;padding:22px 18px 18px;border-radius:18px;border:1px solid rgba(255,122,24,.25);background:linear-gradient(180deg,rgba(28,20,12,.92),rgba(10,10,12,.96));color:#fff;min-height:128px;overflow:hidden}
+.hubcard:before{content:"";position:absolute;inset:auto -20% -40% auto;width:160px;height:160px;border-radius:50%;background:rgba(255,122,24,.18);filter:blur(8px)}
+.hubcard em{display:block;font-style:normal;font-size:10px;letter-spacing:.18em;color:var(--orange);margin-bottom:8px}
+.lgmark{width:42px;height:42px;object-fit:contain;margin-bottom:10px;display:block}
+.hubcard b{display:block;font-size:clamp(20px,3vw,28px);margin-bottom:8px;letter-spacing:-.02em}
+.hubcard span{font-size:12px;color:#c9c2b8}
+.hubcard:hover,.hubcard:focus{border-color:var(--orange);transform:translateY(-2px);transition:.2s ease}
+.hubcard.nfl{background:linear-gradient(160deg,#2a1a0c,#0d0d10)}
+.hubcard.cfb{background:linear-gradient(160deg,#3a1608,#120c08)}
+.hubcard.mlb{background:linear-gradient(160deg,#1a2030,#0c0d12)}
+.hubcard.ufc{background:linear-gradient(160deg,#2a1010,#0c0c0c)}
+#goHome{cursor:pointer}
+.livebar .back{margin:8px var(--pad) 0}
+
 .gcard .linechip{margin-top:6px;font-size:11px;color:var(--ember);letter-spacing:.04em}
 .logoplate{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:2px solid #333;flex:0 0 36px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .logoplate img{width:26px;height:26px;object-fit:contain;background:transparent!important}
@@ -171,7 +200,7 @@ body.nodock{padding-bottom:16px}
 </style>
 </head><body>
 <header class="top">
-  <div class="brand">
+  <div class="brand" id="goHome" role="button">
     <div class="word">
       <div class="mark">S</div>
       <div>
@@ -183,7 +212,34 @@ body.nodock{padding-bottom:16px}
   </div>
 </header>
 
-<section id="viewLive">
+<section id="viewHome" class="homehero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-copy">
+    <p class="kicker">Sports Sauce</p>
+    <h2>The board is live.<br>The tape is underneath it.</h2>
+    <p class="lede">Scores as they happen. Research before you write the number down.</p>
+  </div>
+  <div class="hub">
+    <button type="button" class="hubcard nfl" data-enter="nfl">
+      <img class="lgmark" alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/>
+      <b>NFL</b><span>Sunday slate + player tape</span>
+    </button>
+    <button type="button" class="hubcard cfb" data-enter="cfb">
+      <img class="lgmark" alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football.png"/>
+      <b>College</b><span>Saturday slate + the number</span>
+    </button>
+    <button type="button" class="hubcard mlb" data-enter="mlb">
+      <img class="lgmark" alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png"/>
+      <b>MLB</b><span>Tonight’s scores + box</span>
+    </button>
+    <button type="button" class="hubcard ufc" data-enter="ufc">
+      <img class="lgmark" alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/>
+      <b>UFC</b><span>The card, fight by fight</span>
+    </button>
+  </div>
+</section>
+
+<section id="viewLive" hidden>
   <div class="livetop"><span id="liveMeta">Loading slate…</span></div>
   <div class="leagues">
     <button type="button" class="on" data-lg="nfl">NFL</button>
@@ -1026,9 +1082,9 @@ render();
     const kind=cfg().logos;
     const id = side==="away" ? g.awayId : g.homeId;
     const ab = side==="away"?g.away:g.home;
+    if(kind==="mma" && id) return "https://a.espncdn.com/i/headshots/mma/players/full/"+id+".png";
     if(kind==="ncaa" && id) return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+id+".png";
     if(kind==="mlb") return "https://a.espncdn.com/i/teamlogos/mlb/500/"+String(ab||"").toLowerCase()+".png";
-    if(kind==="mma") return "https://a.espncdn.com/i/teamlogos/mma/500/"+String(ab||"").toLowerCase()+".png";
     return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png";
   }
   function teamLabel(g, side){
@@ -1091,12 +1147,27 @@ render();
     host.innerHTML=WIRE.map(sec=>`<div class="wirecol"><b>${sec.g}</b>${sec.items.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`).join("");
   }
 
-  function showView(name) {
+  
+  function enterLeague(lg){
+    window.LEAGUE=lg;
+    window.LIVE_GAMES=[];
+    document.body.classList.toggle("nodock", lg!=="nfl");
+    document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x.dataset.lg===lg));
+    showView("live");
+    const host=$("liveList");
+    if(host) host.innerHTML="<p class='hint'>Loading "+lg.toUpperCase()+" slate…</p>";
+    if($("liveMeta")) $("liveMeta").textContent=lg.toUpperCase();
+    paintWire();
+    pullScores(lg).catch(()=>{ if(host) host.innerHTML="<p class='hint'>Could not load "+lg+" slate</p>"; });
+  }
+  window.enterLeague=enterLeague;
+function showView(name) {
     VIEW = name;
     if ($("viewLive")) $("viewLive").hidden = name !== "live";
     if ($("viewResearch")) $("viewResearch").hidden = name !== "research";
     if ($("viewGame")) $("viewGame").hidden = name !== "game";
     if ($("viewSlip")) $("viewSlip").hidden = name !== "slip";
+    if ($("viewHome")) $("viewHome").hidden = name !== "home";
     if (name==="slip") paintBoardSlip();
     document.querySelectorAll("[data-nav]").forEach((b) =>
       b.classList.toggle("on", b.dataset.nav === name || (name === "game" && b.dataset.nav === "live"))
@@ -1123,8 +1194,8 @@ render();
       home: (home.team && home.team.abbreviation) || (home.athlete && (home.athlete.abbreviation || (home.athlete.displayName||"").split(" ").pop())) || "",
       awayName: (away.team && (away.team.shortDisplayName || away.team.displayName)) || (away.athlete && away.athlete.displayName) || "",
       homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || (home.athlete && home.athlete.displayName) || "",
-      awayId: away.team && away.team.id,
-      homeId: home.team && home.team.id,
+      awayId: (away.team && away.team.id) || away.id,
+      homeId: (home.team && home.team.id) || home.id,
       awayLogo: (away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || (away.athlete && (away.athlete.headshot || away.athlete.flag)) || "",
       homeLogo: (home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || (home.athlete && (home.athlete.headshot || home.athlete.flag)) || "",
       awayColor: (away.team && away.team.color) ? "#"+away.team.color : "#1a1c22",
@@ -1153,6 +1224,7 @@ render();
   }
   window.TEAM_HEX = window.TEAM_HEX || {ARI:"#97233F",ATL:"#A71930",BAL:"#241773",BUF:"#00338D",CAR:"#0085CA",CHI:"#0B162A",CIN:"#FB4F14",CLE:"#311D00",DAL:"#041E42",DEN:"#FB4F14",DET:"#0076B6",GB:"#203731",HOU:"#03202F",IND:"#002C5F",JAX:"#006778",KC:"#E31837",LAC:"#0080C6",LAR:"#003594",LV:"#A5ACAF",MIA:"#008E97",MIN:"#4F2683",NE:"#002244",NO:"#D3BC8D",NYG:"#0B2265",NYJ:"#125740",PHI:"#004C54",PIT:"#FFB612",SEA:"#002244",SF:"#AA0000",TB:"#D50A0A",TEN:"#0C2340",WAS:"#5A1414",WSH:"#5A1414"};
   function paintSlate(games) {
+    games = (games||[]).filter(g=>!g.league || g.league===window.LEAGUE);
     const live = games.filter((g) => g.state === "in");
     const pre = games.filter((g) => g.state === "pre");
     const post = games.filter((g) => g.state === "post" || g.completed);
@@ -1163,7 +1235,7 @@ render();
       if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · 0 live";
       return;
     }
-    if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · " + live.length + " live · poll "+(((games||[]).some(x=>x.state==="in"))?"12s":"45s");
+    if ($("liveMeta")) $("liveMeta").textContent = (window.LEAGUE||"").toUpperCase()+" · "+nowCT()+" · "+live.length+" live";
     function card(g) {
       const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
       const stripe = (window.TEAM_HEX||{})[g.home] || "#ff7a18";
@@ -1219,7 +1291,10 @@ function eventsFrom(data){
     });
     return out;
   }
-  async function pullScores() {
+  async function pullScores(forLg) {
+    if(forLg) window.LEAGUE=forLg;
+    const lg=window.LEAGUE||"nfl";
+    if($("liveMeta")) $("liveMeta").textContent="Loading "+lg.toUpperCase()+"…";
     let data={}, events=[];
     try {
       const res = await fetch(scoreUrl(), { cache: "no-store" });
@@ -1233,8 +1308,10 @@ function eventsFrom(data){
         events = eventsFrom(data);
       } catch(e){}
     }
-    const games = events.map(mapEvent);
+    const games = events.map(mapEvent).filter(g=>g && (g.away||g.home||g.awayName||g.homeName));
+    games.forEach(g=>g.league=lg);
     window.LIVE_GAMES = games;
+    window.SLATE_LEAGUE = lg;
     const week = games.find((g) => g.week) && games.find((g) => g.week).week;
     if (week) window.CUR_WEEK = week;
     window.SLATE = (window.SLATE || []).filter((g) => {
@@ -1947,7 +2024,8 @@ function paintGame(g, sum) {
   }
 
   async function tick() {
-    try { await pullScores(); }
+    if(VIEW && VIEW!=="live" && VIEW!=="game") return;
+    try { await pullScores(window.LEAGUE); }
     catch (e) {
       const host = $("liveList");
       if(window.LEAGUE==="nfl" || window.LEAGUE==="cfb"){
@@ -1969,10 +2047,8 @@ function paintGame(g, sum) {
     const b = ev.target.closest && ev.target.closest("[data-lg]");
     if(!b) return;
     {
-      window.LEAGUE=b.dataset.lg;
-      document.body.classList.toggle("nodock", window.LEAGUE!=="nfl");
-      document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x===b));
-      if(window.LEAGUE!=="nfl") showView("live");
+      enterLeague(b.dataset.lg);
+      return;
       const pc=$("playerControls"), tc=$("teamControls");
       if(window.LEAGUE!=="nfl"){
         if(pc) pc.hidden=true;
@@ -1993,10 +2069,15 @@ function paintGame(g, sum) {
     }
   });
 
-  showView("live");
+  showView("home");
   paintWire();
   badgeSlip();
-  tick();
+  document.getElementById("goHome") && document.getElementById("goHome").addEventListener("click", ()=>showView("home"));
+  document.getElementById("slateHome") && document.getElementById("slateHome").addEventListener("click", ()=>showView("home"));
+  document.addEventListener("click",(ev)=>{
+    const h=ev.target.closest && ev.target.closest("[data-enter]");
+    if(h) enterLeague(h.dataset.enter);
+  });
   pullInjuries().catch(() => {});
   window._slatePoll=setInterval(tick, 45000);
   setInterval(()=>{ if(VIEW==="slip" || (window.LIVE_GAMES||[]).some(g=>g.state==="in")) pullSlipBoxes(); }, 12000);
