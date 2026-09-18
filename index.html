@@ -70,6 +70,29 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .scorebug .gteam b{font-size:28px;color:var(--orange)}
 .hist{margin:0 var(--pad) 16px}
 .chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
+.phero{margin:0 var(--pad) 16px;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d10}
+.phero-top{display:grid;grid-template-columns:120px 1fr;min-height:150px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 55%)}
+.phero-top img{width:120px;height:150px;object-fit:cover;object-position:top;background:#16120e}
+.phero-copy{padding:16px 14px 12px}
+.phero-copy .kicker{margin:0 0 6px}
+.phero-copy h2{font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,7vw,44px);line-height:.9;margin:0 0 8px}
+.phero-copy p{margin:0;color:var(--muted);font-size:12px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px}
+@media(max-width:520px){.tiles{grid-template-columns:repeat(3,1fr)}}
+.tile{background:#14110e;border:1px solid #2a241c;padding:10px 8px}
+.tile em{display:block;font-style:normal;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tile b{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;line-height:1;margin-top:4px;color:#fff}
+.career{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 14px}
+.career span{font-size:11px;color:#c9c2b8;background:#14110e;border:1px solid #2a241c;padding:6px 8px}
+.career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
+.glog{display:grid;gap:8px;padding:0 var(--pad) 24px}
+.glog h3{margin:0 0 4px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+.grow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#101218;border:1px solid #2a241c;padding:10px 12px}
+.grow .dec{font-family:"Bebas Neue",sans-serif;font-size:22px;width:28px}
+.grow .dec.W{color:#3ee0a0}.grow .dec.L{color:#ff8a8a}
+.grow .opp{font-weight:800}
+.grow .opp span{display:block;color:var(--muted);font-size:11px;font-weight:500}
+.grow .line{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:#efe6d8}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -437,15 +460,36 @@ async function openPlayer(pid, name){
       return "<tr><td>"+String(info.gameDate||"").slice(0,10)+"</td><td>"+dec+" "+opp+"</td><td>"+line+"</td></tr>";
     }).join("");
     const shot = "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
+    const season = (st.splits||[]).find(s=>/regular/i.test(s.displayName||"")) || (st.splits||[])[0] || {stats:[]};
+    const career = (st.splits||[]).find(s=>/career/i.test(s.displayName||"")) || null;
+    const tiles = labels.map((lab,i)=>"<div class='tile'><em>"+lab+"</em><b>"+(season.stats[i]||"—")+"</b></div>").join("");
+    const careerBits = career ? labels.map((lab,i)=>"<span>"+lab+"<b>"+(career.stats[i]||"—")+"</b></span>").join("") : "";
+    const cards = list.map(ev=>{
+      const info = (!Array.isArray(meta) && meta && ev.eventId) ? (meta[ev.eventId]||{}) : {};
+      const opp = (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || info.atVs || "Opp";
+      const dec = (info.gameResult||"").trim();
+      const dt = String(info.gameDate||"").slice(0,10);
+      const bits = (ev.stats||[]).slice(0,6);
+      const line = bits.map((v,i)=>(gLabels[i]||"")+" "+v).filter(Boolean).join("  ");
+      return "<div class='grow'><div class='dec "+dec+"'>"+(dec||"·")+"</div><div class='opp'>"+opp+"<span>"+dt+"</span></div><div class='line'>"+line+"</div></div>";
+    }).join("");
     $("playerRoom").innerHTML = `
-      <div class="scorebug mlb-bug">
-        <div class="gduo">
-          <div class="gteam"><span class="logoplate"><img alt="" src="${shot}"/></span>${name}</div>
+      <div class="phero">
+        <div class="phero-top">
+          <img alt="" src="${shot}"/>
+          <div class="phero-copy">
+            <p class="kicker">${st.displayName||"Player"}</p>
+            <h2>${name}</h2>
+            <p>Tap back for the box. Numbers are ESPN season / career.</p>
+          </div>
         </div>
-        <div class="mlb-inning">${st.displayName||"Season"}</div>
+        <div class="tiles">${tiles}</div>
+        ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
       </div>
-      <div class="box"><h3>Season / career</h3><table class="bx"><thead><tr><th></th>${labels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead><tbody>${splits||"<tr><td>No splits</td></tr>"}</tbody></table></div>
-      <div class="box"><h3>Recent</h3><table class="bx"><thead><tr><th>Date</th><th>Opp</th><th>${gLabels.slice(0,7).join(" / ")||"Line"}</th></tr></thead><tbody>${rows||"<tr><td colspan='3'>No log posted</td></tr>"}</tbody></table></div>`;
+      <div class="glog">
+        <h3>Recent</h3>
+        ${cards||"<p class='hint'>No log posted</p>"}
+      </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
