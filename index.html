@@ -2,285 +2,186 @@
 <html lang="en"><head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<meta name="theme-color" content="#0a0a0a"/>
-<title>Volume Board</title>
+<meta name="theme-color" content="#07080a"/>
+<title>Sports Sauce</title>
 <style>:root {
-  --bg: #0a0a0a;
-  --card: #161616;
-  --line: #3a2a16;
-  --text: #fff4e8;
-  --muted: #c4b09a;
-  --gold: #ff8200;
-  --green: #3dd68c;
-  --yellow: #ffb347;
-  --btn: #1c1208;
+  --bg: #07080a;
+  --bg2: #101318;
+  --card: #14181f;
+  --line: #2a3340;
+  --text: #f4f7fb;
+  --muted: #8b97a8;
+  --orange: #ff6a00;
+  --orange2: #ffb347;
+  --green: #2ee59d;
+  --red: #ff5a6a;
+  --live: #ff2d2d;
 }
-
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(1200px 400px at 50% -80px, rgba(255,106,0,.18), transparent 60%),
+    linear-gradient(180deg, #0c1016 0%, #07080a 28%);
   color: var(--text);
-  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
-  max-width: 520px;
+  padding: 0 0 calc(18px + env(safe-area-inset-bottom));
+  max-width: 640px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
-.top { margin-bottom: 16px; }
-.eyebrow {
-  margin: 0;
-  color: var(--gold);
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.top {
+  padding: 18px 16px 10px;
+  background: linear-gradient(180deg, rgba(255,106,0,.12), transparent);
 }
-h1 { margin: 4px 0 6px; font-size: 28px; }
-.sub { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mark {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--orange); color: #111;
+  font-weight: 900; display: grid; place-items: center;
+  letter-spacing: -.04em;
+}
+.eyebrow { margin: 0; color: var(--orange); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
+h1 { margin: 2px 0 0; font-size: 26px; letter-spacing: -.03em; }
+.sub { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+.livepill {
+  font-size: 11px; font-weight: 800; letter-spacing: .08em;
+  background: #2a0d0d; color: #ff6b6b; border: 1px solid #5a1a1a;
+  padding: 5px 8px; border-radius: 999px;
+}
 
-.controls, .summary, .card {
+.livebar {
+  margin: 0 12px 12px; padding: 10px;
+  border: 1px solid #3a2410; border-radius: 14px;
+  background: #0e0f12;
+}
+.livehead { display:flex; justify-content:space-between; gap:8px; font-size:11px; color:#c9a36a; margin-bottom:8px; text-transform:uppercase; letter-spacing:.08em; }
+.livehead strong { color: var(--orange); }
+.liverow { display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px; }
+.lgame {
+  min-width: 158px; padding: 10px;
+  border-radius: 12px; background: #161b22;
+  border: 1px solid #2a3340; font-size: 12px; flex-shrink: 0;
+}
+.lgame b { display:block; color:#fff; font-size:13px; }
+.lgame span { display:block; color:#eee; margin-top:4px; font-variant-numeric: tabular-nums; font-weight:700; font-size:15px; }
+.lgame em { display:block; color:#8a7a64; font-style:normal; margin-top:3px; font-size:11px; }
+.lgame.on { border-color: var(--orange); box-shadow: 0 0 0 1px rgba(255,106,0,.35); }
+.lgame.on em { color: var(--live); font-weight: 800; }
+.lgame.done { opacity:.62; }
+
+.tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin: 0 12px 10px;
+}
+.tabs button {
+  border: 1px solid var(--line); background: #12161c; color: var(--muted);
+  border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 700;
+}
+.tabs button.on { background: var(--orange); color: #140a00; border-color: var(--orange); }
+
+.controls, .summary, .card, .game {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
-  margin-bottom: 12px;
+  margin: 0 12px 10px;
 }
-
-label {
-  display: block;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
+label { display:block; font-size:11px; color:var(--muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.06em; }
 select, input {
-  width: 100%;
-  margin-top: 6px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 16px;
+  width: 100%; margin-top: 6px; padding: 11px 12px;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: #0c0f14; color: var(--text); font-size: 16px;
 }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-.presets { display: flex; flex-wrap: wrap; gap: 8px; }
-.presets button, .week {
-  border: 1px solid var(--line);
-  background: var(--btn);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.summary { font-size: 14px; color: var(--muted); }
+.summary { font-size: 13px; color: var(--muted); }
 .summary strong { color: var(--text); }
 
 .card {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 12px;
-  align-items: center;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 6px 12px; align-items: start; cursor: pointer;
 }
-.card h3 { margin: 0; font-size: 17px; }
-.meta { margin: 0; color: var(--muted); font-size: 13px; }
-.record {
-  font-variant-numeric: tabular-nums;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--green);
-  text-align: right;
+.card:active { transform: scale(.99); }
+.card h3 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.meta { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+.score {
+  font-size: 28px; font-weight: 800; color: var(--orange);
+  font-variant-numeric: tabular-nums; line-height: 1;
 }
-.record.mid { color: var(--yellow); }
-.pass { font-size: 12px; color: var(--muted); text-align: right; }
+.record { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 800; color: var(--green); text-align: right; }
+.record.mid { color: var(--orange2); }
+.pass { font-size: 11px; color: var(--muted); text-align: right; text-transform: uppercase; letter-spacing: .06em; }
+.call { margin: 8px 0 4px; color: var(--orange); font-weight: 800; font-size: 14px; }
+.read { margin: 0; color: #d5dbe4; font-size: 13px; line-height: 1.4; }
+.why { margin-top: 8px; display: grid; gap: 4px; }
+.fact { font-size: 12px; color: #c5ced8; background: #0c0f14; border-radius: 8px; padding: 6px 8px; }
+.fact b { color: #fff; margin-right: 6px; }
+.mtag, .itag {
+  display: inline-block; margin: 6px 6px 0 0; padding: 3px 8px;
+  border-radius: 999px; font-size: 11px; font-weight: 800;
+}
+.mtag.good { background: #123528; color: var(--green); }
+.mtag.ok { background: #2a2410; color: var(--orange2); }
+.mtag.bad { background: #3a1218; color: #ff8a8a; }
+.itag { background: #3a1010; color: #ff8a8a; }
 
-.empty {
-  padding: 28px 12px;
-  text-align: center;
-  color: var(--muted);
+.game .match { font-size: 20px; font-weight: 800; margin-top: 4px; }
+.game .when, .game .lines, .game .media { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.game .lines { color: var(--orange2); font-weight: 700; }
+.jump {
+  margin-top: 10px; width: 100%; padding: 10px;
+  border: 0; border-radius: 10px; background: var(--orange); color: #140a00; font-weight: 800;
 }
 
-footer { color: #6d7a96; font-size: 12px; line-height: 1.45; margin-top: 8px; }
+.empty { padding: 28px 12px; text-align: center; color: var(--muted); }
+footer { color: #667085; font-size: 11px; margin: 8px 16px 0; line-height: 1.45; }
 
-.card { cursor: pointer; }
-.card:active { opacity: .85; }
-
-.sheet {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
-  display: none;
-  align-items: flex-end;
-  z-index: 20;
-}
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.62); display: none; align-items: flex-end; z-index: 20; }
 .sheet.open { display: flex; }
 .sheet-body {
-  background: var(--card);
-  border-top: 1px solid var(--line);
+  background: #12161c; border-top: 2px solid var(--orange);
   border-radius: 20px 20px 0 0;
   padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
-  width: 100%;
-  max-height: 82vh;
-  overflow: auto;
+  width: 100%; max-height: 86vh; overflow: auto;
 }
-.sheet-body h2 { margin: 0 0 4px; font-size: 22px; }
-.brk {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 14px;
-}
-.brk .m { color: var(--muted); font-size: 12px; }
-.close {
-  margin-top: 12px;
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--btn);
-  color: var(--text);
-  font-size: 16px;
-}
-
-.sec {
-  margin: 16px 0 6px;
-  color: var(--gold);
-  font-size: 11px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.tblwrap { overflow-x: auto; margin: 8px 0 12px; }
-table.log {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-table.log th {
-  text-align: left;
-  color: var(--muted);
-  font-weight: 600;
-  padding: 6px 6px 6px 0;
-  border-bottom: 1px solid var(--line);
-}
-table.log td {
-  padding: 7px 6px 7px 0;
-  border-bottom: 1px solid var(--line);
-  white-space: nowrap;
-}
-
-.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.tabs button {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--btn);
-  color: var(--text);
-  font-size: 16px;
-}
-.tabs button.on { background: #2a3b63; border-color: var(--gold); color: var(--gold); }
-
-.sheet-head h2 { margin: 0 0 4px; }
-.tiles {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 12px 0 16px;
-}
-.tile {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-.tile span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-.tile b { display: block; margin-top: 4px; font-size: 20px; }
+.sheet-head h2 { margin: 0; }
+.sec { margin: 16px 0 8px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--orange); font-weight: 800; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { background: #0c0f14; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.tile span { display:block; color: var(--muted); font-size: 11px; }
+.tile b { font-size: 18px; }
 .tile.good b { color: var(--green); }
-.tile.soft b { color: var(--yellow); }
-.chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.chip.win { background: #163528; color: var(--green); }
-.chip.loss { background: #3a1c24; color: #ff8ea0; }
-.chip.push { background: #2a2a20; color: var(--yellow); }
-.tiny { color: var(--muted); font-size: 11px; margin-top: 2px; }
-.hint { color: var(--muted); font-size: 12px; line-height: 1.4; }
-.sheet-body { padding-bottom: 28px; }
-
-.slate { margin-bottom: 16px; }
-.game {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 8px;
-}
-.game .when { color: var(--gold); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-.game .match { font-size: 18px; font-weight: 700; margin: 4px 0; }
-.game .lines { color: var(--text); font-size: 14px; }
-.game .recs { margin-top: 8px; display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
-
-.flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.flag {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  line-height: 1.3;
-}
-.flag.hot { background: #2a1608; color: var(--gold); border: 1px solid #ff8200; }
-.flag.dog { background: #1a1a1a; color: #ffb347; border: 1px solid #6a4a20; }
-.flag.under { background: #121a22; color: #8ec8ff; border: 1px solid #3a5a7a; }
-.flag.over { background: #221010; color: #ff8ea0; border: 1px solid #5a3038; }
-.flag.info { background: #141414; color: var(--muted); border: 1px solid var(--line); }
-
-.mtags { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-.mtag {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-.mtag.good { background:#163528; color:var(--green); }
-.mtag.bad { background:#3a1c24; color:#ff8ea0; }
-.mtag.ok { background:#1c1c1c; color:var(--muted); }
-.why { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
-.score {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--gold);
-  min-width: 48px;
-  text-align: right;
-}
-.why .fact { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
-.why .fact b { color: var(--text); font-weight: 650; margin-right: 6px; }
-.call { margin: 8px 0 2px; color: var(--gold); font-weight: 800; font-size: 14px; }
-.read { margin: 0 0 8px; color: var(--text); font-size: 13px; line-height: 1.4; }
-.media { margin: 6px 0; color: var(--gold); font-size: 13px; }
-.mlinks { font-size: 12px; line-height: 1.5; }
-.mlinks a { color: var(--gold); }
-.jump {
-  margin-top: 10px;
-  width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid var(--gold);
-  background: #1c1208;
-  color: var(--gold);
-  font-size: 14px;
-}
-.itag { display:inline-block; margin-left:6px; padding:2px 7px; border-radius:999px; background:#3a1010; color:#ff8a8a; font-size:11px; font-weight:700; }
+.tblwrap { overflow: auto; }
+table.log { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.log th { text-align: left; color: var(--muted); font-size: 11px; padding: 6px 4px; }
+table.log td { padding: 7px 4px; border-top: 1px solid #243040; }
+.chip { display:inline-block; padding: 2px 6px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.chip.win { background:#123528; color:var(--green); }
+.chip.loss { background:#3a1218; color:#ff8a8a; }
+.chip.push { background:#2a2410; color:var(--orange2); }
+.close { width:100%; margin-top:14px; padding:12px; border:0; border-radius:12px; background:var(--orange); color:#140a00; font-weight:800; }
+.hint { color: var(--muted); font-size: 12px; }
+.mlinks a { color: var(--orange2); }
+.slate { margin: 0 0 10px; }
+.sec { padding: 0 12px; }
 </style>
 </head><body>
 <header class="top">
-    <p class="eyebrow">Research board</p>
-    <h1>Volume Board</h1>
-    <p class="sub">Players and teams are separate tabs. Team lines are closing numbers, not live FanDuel.</p>
+    <div class="brand">
+      <div>
+        <p class="eyebrow">NFL desk</p>
+        <h1>Sports Sauce</h1>
+      </div>
+      <span class="livepill">LIVE</span>
+    </div>
+    
   </header>
   <div class="tabs">
     <button type="button" class="on" data-mode="players">Players</button>
@@ -314,6 +215,8 @@ table.log td {
   <section class="list" id="list"></section>
   <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
   <footer><p>2025 REG + 2026 Week 1. Team ATS / ML / O-U use closing lines from nflverse schedules.</p></footer>
+
+
 
 
 
@@ -835,6 +738,27 @@ function gameRead(g,a,h){
   return {away, home, tot:{call:totCall,text:totText}, awayRoad, homeHome};
 }
 
+
+function kickoffCT(g){
+  if (!g) return "";
+  const day = g.day || "";
+  let time = g.time || "";
+  if (!day) return (g.wd || "") + (time ? " " + time : "");
+  if (time && time.length === 5) time = time + ":00";
+  // nflverse gametime is Eastern
+  const iso = day + "T" + (time || "13:00:00") + "-04:00";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return (g.wd || "") + " " + (g.time || "");
+  return d.toLocaleString("en-US", {
+    timeZone: "America/Chicago",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }) + " CT";
+}
+
 function renderSlate() {
   const slate = window.SLATE || [];
   if (!slate.length) return "";
@@ -844,7 +768,7 @@ function renderSlate() {
     <p class="mlinks">${(window.MEDIA_LINKS||[]).map(x=>`<a href="${x[1]}" target="_blank" rel="noopener">${x[0]}</a>`).join(" · ")}</p>
     ${slate.map((g) => {
       const a = recOf(g.away), h = recOf(g.home);
-      const when = (g.wd || "") + " " + (g.time || "");
+      const when = kickoffCT(g);
       const rd = gameRead(g,a,h);
       return `<article class="game">
         <div class="when">${when}${g.roof? " · "+g.roof:""}</div>
@@ -1052,6 +976,146 @@ function showSheet(html) {
   el.addEventListener("input", () => { rememberMins(); render(); });
 });
 render();
+
+(function () {
+  const SCORE_URL = "https://cdn.espn.com/core/nfl/scoreboard?xhr=1";
+  const INJ_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/injuries";
+  const POLL_MS = 30000;
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function ensureBar() {
+    let bar = el("liveBar");
+    if (bar) return bar;
+    bar = document.createElement("section");
+    bar.id = "liveBar";
+    bar.className = "livebar";
+    const header = document.querySelector("header.top");
+    if (header && header.parentNode) header.parentNode.insertBefore(bar, header.nextSibling);
+    else document.body.prepend(bar);
+    return bar;
+  }
+
+  function mapEvent(ev) {
+    const c = (ev.competitions || [])[0] || {};
+    const comps = c.competitors || [];
+    const home = comps.find((x) => x.homeAway === "home") || {};
+    const away = comps.find((x) => x.homeAway === "away") || {};
+    const st = (c.status || {}).type || {};
+    const clock = c.status || {};
+    const start = ev.date || c.date || c.startDate || "";
+    return {
+      id: ev.id || c.id,
+      name: ev.name,
+      week: (ev.week && ev.week.number) || null,
+      away: (away.team && away.team.abbreviation) || "",
+      home: (home.team && home.team.abbreviation) || "",
+      awayScore: away.score != null ? String(away.score) : "",
+      homeScore: home.score != null ? String(home.score) : "",
+      state: st.state || "pre",
+      detail: st.shortDetail || st.detail || st.description || "",
+      start: start,
+      completed: !!st.completed,
+      period: clock.period,
+      clock: clock.displayClock || "",
+      broadcast: c.broadcast || "",
+    };
+  }
+
+  function fmtCT(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit"
+    }) + " CT";
+  }
+
+  function paint(games) {
+    const bar = ensureBar();
+    const live = games.filter((g) => g.state === "in");
+    const pre = games.filter((g) => g.state === "pre");
+    const post = games.filter((g) => g.state === "post" || g.completed);
+    const stamp = new Date().toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "2-digit" }) + " CT";
+    function card(g) {
+      const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
+      const score =
+        g.state === "pre"
+          ? (fmtCT(g.start) || g.detail)
+          : `${g.away} ${g.awayScore || "0"} – ${g.homeScore || "0"} ${g.home}`;
+      return `<div class="lgame ${cls}" data-away="${g.away}" data-home="${g.home}">
+        <b>${g.away} @ ${g.home}</b>
+        <span>${score}</span>
+        <em>${g.state === "in" ? "LIVE " + (g.clock || "") + " Q" + (g.period || "") : (g.completed ? g.detail : (fmtCT(g.start) || g.detail))}</em>
+      </div>`;
+    }
+    bar.innerHTML = `
+      <div class="livehead">
+        <strong>Live slate</strong>
+        <span>Updated ${stamp} · ${live.length} in progress</span>
+      </div>
+      <div class="liverow">
+        ${live.map(card).join("") || ""}
+        ${pre.map(card).join("")}
+        ${post.map(card).join("")}
+      </div>`;
+  }
+
+  async function pullScores() {
+    const res = await fetch(SCORE_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("scoreboard " + res.status);
+    const data = await res.json();
+    const events = (((data.content || {}).sbData || {}).events) || [];
+    const games = events.map(mapEvent);
+    window.LIVE_GAMES = games;
+    const week = games.find((g) => g.week)?.week;
+    if (week) window.CUR_WEEK = week;
+    // Keep research slate to games not yet final
+    window.SLATE = (window.SLATE || []).filter((g) => {
+      const hit = games.find((x) => x.away === g.away && x.home === g.home);
+      return !hit || !hit.completed;
+    });
+    paint(games);
+    if (typeof render === "function") render();
+    return games;
+  }
+
+  async function pullInjuries() {
+    const res = await fetch(INJ_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("injuries " + res.status);
+    const data = await res.json();
+    const out = {};
+    (data.injuries || []).forEach((team) => {
+      (team.injuries || []).forEach((x) => {
+        const name = x.athlete && x.athlete.displayName;
+        const st = x.status || "";
+        if (!name || st === "Active") return;
+        out[name] = { status: st, note: (x.shortComment || "").slice(0, 140), date: x.date || "" };
+      });
+    });
+    window.INJ = out;
+    if (typeof render === "function") render();
+  }
+
+  async function tick() {
+    try {
+      await pullScores();
+    } catch (e) {
+      const bar = ensureBar();
+      bar.innerHTML = `<div class="livehead"><strong>Live slate</strong><span>Could not reach ESPN (${e.message})</span></div>`;
+    }
+  }
+
+  tick();
+  pullInjuries().catch(() => {});
+  setInterval(tick, POLL_MS);
+  setInterval(() => pullInjuries().catch(() => {}), 15 * 60 * 1000);
+})();
 
 </script>
 </body></html>
