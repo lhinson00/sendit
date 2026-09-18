@@ -33,7 +33,7 @@ body{
 h1{margin:0;font-family:"Bebas Neue",sans-serif;font-size:var(--title);letter-spacing:.04em;line-height:1}
 .livepill{font-size:10px;font-weight:800;letter-spacing:.14em;color:#ff8a8a;border:1px solid #ff3b3b;padding:5px 8px;border-radius:99px;background:#2a0c0c;white-space:nowrap}
 .livetop,.sec{padding:var(--pad) var(--pad) 8px;margin:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--orange);font-weight:800}
-.livetop{color:var(--muted)}
+ .livetop .back{margin:0 10px 0 0} .livetop{color:var(--muted)}
 #liveList{display:grid;grid-template-columns:1fr;gap:10px;padding:0 var(--pad) 12px}
 .gcard{display:block;width:100%;margin:0;text-align:left;color:inherit;font:inherit;
   background:#101218;border:1px solid #2a241c;border-radius:6px;padding:12px 12px 10px 14px;position:relative}
@@ -240,7 +240,7 @@ body.nodock{padding-bottom:16px}
 </section>
 
 <section id="viewLive" hidden>
-  <div class="livetop"><span id="liveMeta">Loading slate…</span></div>
+  <div class="livetop"><button type="button" class="back" id="slateHome">← Home</button><span id="liveMeta">Pick a board</span></div>
   <div class="leagues">
     <button type="button" class="on" data-lg="nfl">NFL</button>
     <button type="button" data-lg="cfb">College</button>
@@ -1363,7 +1363,19 @@ function eventsFrom(data){
         if(host) host.innerHTML="<p class='hint'>No "+lg.toUpperCase()+" events posted right now.</p>";
         return;
       }
-      paintSlate(games);
+      host.innerHTML = games.map(function(g){
+        var aw=g.awayName||g.away||"";
+        var hm=g.homeName||g.home||"";
+        var when = g.state==="in" ? ("LIVE "+(g.detail||"")) : (g.completed||g.state==="post") ? (g.detail||"Final") : (g.start||"");
+        var sc = (g.awayScore||g.homeScore) ? (g.awayScore+" - "+g.homeScore) : "";
+        var aimg = (lg==="ufc"&&g.awayId) ? ("https://a.espncdn.com/i/headshots/mma/players/full/"+g.awayId+".png") : "";
+        var himg = (lg==="ufc"&&g.homeId) ? ("https://a.espncdn.com/i/headshots/mma/players/full/"+g.homeId+".png") : "";
+        if(!aimg) aimg = "https://a.espncdn.com/i/teamlogos/mlb/500/"+String(g.away||"").toLowerCase()+".png";
+        if(!himg) himg = "https://a.espncdn.com/i/teamlogos/mlb/500/"+String(g.home||"").toLowerCase()+".png";
+        return '<button type="button" class="gcard" data-gid="'+g.id+'"><div class="gstat"><span>'+when+'</span></div><div class="gduo"><div class="gteam"><span class="logoplate"><img alt="" src="'+aimg+'"></span><b>'+aw+'</b></div><span class="vs">VS</span><div class="gteam right"><b>'+hm+'</b><span class="logoplate"><img alt="" src="'+himg+'"></span></div></div>'+(sc?'<div class="linechip">'+sc+'</div>':'')+'</button>';
+      }).join("");
+      if($("liveMeta")) $("liveMeta").textContent = lg.toUpperCase()+" · "+games.length;
+      host.querySelectorAll("[data-gid]").forEach(function(b){ b.onclick=function(){ openGame(b.getAttribute("data-gid")); }; });
     }catch(err){
       if(to) clearTimeout(to);
       if(host) host.innerHTML="<p class='hint'>"+lg.toUpperCase()+" did not load. "+(err&&err.message||"")+"</p>";
@@ -2164,6 +2176,7 @@ function paintGame(g, sum) {
   document.addEventListener("click",(ev)=>{
     const h=ev.target.closest && ev.target.closest("[data-enter]");
     if(h) enterLeague(h.dataset.enter);
+    if(ev.target.closest && ev.target.closest("#slateHome")) showView("home");
   });
   pullInjuries().catch(() => {});
   window._slatePoll=setInterval(tick, 45000);
