@@ -100,6 +100,26 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .wireblurb{margin:0 12px 12px;padding:12px;background:#14110e;border-left:3px solid var(--orange);font-size:13px;line-height:1.45;color:#ddd4c8}
 .nextchip{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember)}
 .lr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 14px}
+.fbtiles{padding:12px 0 0}
+.leadrow{padding:10px 12px;border-top:1px solid #1c1c22}
+.leadrow em{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.leadrow b{display:block;font-size:15px}
+.leadrow span{color:var(--ember);font-size:13px}
+.ufc-card .gduo{grid-template-columns:1fr auto 1fr;padding:8px 0}
+.uface{width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid #3a2a18;background:#1a120c;display:block}
+.ufc-card .gteam{flex-direction:column;text-align:center;font-size:16px;gap:6px}
+.ufc-card .gteam.right{align-items:flex-end}
+.ufc-card .gteam span.rec{font-family:Manrope,sans-serif;font-size:11px;color:var(--muted);letter-spacing:.06em}
+.titlechip{display:inline-block;margin-left:6px;padding:1px 6px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:#3a2a10;color:var(--ember);font-weight:800}
+.rankwrap{padding:8px var(--pad) 28px}
+.rankdiv{margin-bottom:16px}
+.rankdiv h3{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+.rrow{display:grid;grid-template-columns:28px 44px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #1c1c22;cursor:pointer}
+.rrow img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#1a120c}
+.rrow b{display:block}
+.rrow em{font-style:normal;color:var(--muted);font-size:11px}
+.rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
+.fface{width:100%;max-height:280px;object-fit:cover;object-position:top;display:block;background:#120e0c}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -210,6 +230,8 @@ function mapComp(ev, lg){
       fightId: String(c.id||""),
       awayId: String(away.id||""), homeId: String(home.id||""),
       away: nameOf(away), home: nameOf(home),
+      awayAb: (away.team && away.team.abbreviation) || nameOf(away),
+      homeAb: (home.team && home.team.abbreviation) || nameOf(home),
       awayImg: face(away,lg), homeImg: face(home,lg),
       awayScore: scoreOf(away), homeScore: scoreOf(home),
       awayRec: rec(away), homeRec: rec(home),
@@ -236,17 +258,30 @@ function paint(games){
   const host=$("liveList");
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+games.length;
   if(!games.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
-  host.innerHTML = games.map(g=>`
-    <button type="button" class="gcard" data-gid="${LEAGUE==="ufc"?(g.fightId||g.id):g.eventId}" data-fid="${g.fightId||""}">
-      <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
-      <div class="gduo">
-        <div class="gteam"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
-        <span class="vs">VS</span>
-        <div class="gteam right">${g.home}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
-      </div>
-      ${g.awayScore||g.homeScore?`<div class="linechip">${g.awayScore} — ${g.homeScore}</div>`:""}
-    </button>`).join("");
+  if(LEAGUE==="ufc"){
+    host.innerHTML = games.map(g=>`
+      <button type="button" class="gcard ufc-card" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
+        <div class="gstat"><span>${g.card||"UFC"}</span><span>${when(g)}</span></div>
+        <div class="gduo">
+          <div class="gteam"><img class="uface" alt="" src="${g.awayImg}"/><b>${g.away}</b><span class="rec">${g.awayRec||""}</span></div>
+          <span class="vs">VS</span>
+          <div class="gteam"><img class="uface" alt="" src="${g.homeImg}"/><b>${g.home}</b><span class="rec">${g.homeRec||""}</span></div>
+        </div>
+      </button>`).join("") + "<div id='ufcRanks'></div>";
+  } else {
+    host.innerHTML = games.map(g=>`
+      <button type="button" class="gcard" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+        <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
+        <div class="gduo">
+          <div class="gteam"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
+          <span class="vs">VS</span>
+          <div class="gteam right">${g.home}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+        </div>
+        ${g.awayScore||g.homeScore?`<div class="linechip">${g.awayScore} — ${g.homeScore}</div>`:""}
+      </button>`).join("");
+  }
   host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
+  if(LEAGUE==="ufc") loadUfcRankings();
 }
 async function loadLeague(lg){
   LEAGUE=lg;
@@ -272,9 +307,17 @@ async function loadLeague(lg){
 function boxHtml(sum){
   const sides = ((sum.boxscore||{}).players)||[];
   if(!sides.length) return "<p class='hint'>Box not up yet.</p>";
+  const prefer = (LEAGUE==="nfl"||LEAGUE==="cfb")
+    ? ["passing","rushing","receiving","kicking"]
+    : null;
   return sides.map(side=>{
     const team = (side.team && (side.team.abbreviation||side.team.displayName)) || "";
-    return (side.statistics||[]).filter(g=>g && (g.athletes||[]).length).map(grp=>{
+    let groups = (side.statistics||[]).filter(g=>g && (g.athletes||[]).length);
+    if(prefer){
+      const rank = n => { const i=prefer.indexOf(n); return i<0?99:i; };
+      groups = groups.filter(g=>rank(g.name)<99).sort((a,b)=>rank(a.name)-rank(b.name));
+    }
+    return groups.map(grp=>{
       const labels = (grp.labels||grp.names||[]).slice(0,8);
       const head = "<tr><th>"+(grp.label||grp.displayName||grp.name||team)+"</th>"+labels.map(l=>"<th>"+l+"</th>").join("")+"</tr>";
       const rows = (grp.athletes||[]).map(a=>{
@@ -308,7 +351,72 @@ function findAthlete(sum, id){
   }
   return "";
 }
+function tstat(sum, ab, name){
+  const teams=((sum.boxscore||{}).teams)||[];
+  const t=teams.find(x=>(x.team&&(x.team.abbreviation===ab || x.team.displayName===ab)));
+  const s=((t&&t.statistics)||[]).find(x=>x.name===name);
+  return s ? (s.displayValue||s.value||"—") : "—";
+}
+function renderFootball(g, sum){
+  const hdr = ((sum.header||{}).competitions||[])[0]||{};
+  const comps = hdr.competitors || [];
+  const home = comps.find(x=>x.homeAway==="home") || {};
+  const away = comps.find(x=>x.homeAway==="away") || {};
+  const st = ((hdr.status||{}).type||{}).detail || g.detail || "";
+  const as = scoreOf(away) || g.awayScore || "0";
+  const hs = scoreOf(home) || g.homeScore || "0";
+  const aw = g.awayAb || g.away, hm = g.homeAb || g.home;
+  const wp = (sum.winprobability||[]).slice(-1)[0];
+  const homePct = wp ? Math.round((wp.homeWinPercentage||0)*100) : null;
+  const gi = sum.gameInfo || {};
+  const venue = (gi.venue && gi.venue.fullName) || "";
+  const scores = (sum.scoringPlays||[]).slice().reverse();
+  const lastScore = scores[0];
+  const leads = (sum.leaders||[]).map(block=>{
+    const team=(block.team&&block.team.abbreviation)||"";
+    const bits=(block.leaders||[]).slice(0,3).map(L=>{
+      const a=((L.leaders||[])[0]||{});
+      const nm=(a.athlete&&a.athlete.displayName)||"";
+      const pid=a.athlete&&a.athlete.id||"";
+      const val=a.displayValue||"";
+      return "<div class='leadrow"+(pid?" prow":"")+"' data-pid='"+pid+"' data-pname='"+String(nm).replace(/"/g,"")+"'><em>"+(L.displayName||L.name)+"</em><b>"+nm+"</b><span>"+val+"</span></div>";
+    }).join("");
+    return "<div class='box'><h3>"+team+" leaders</h3>"+bits+"</div>";
+  }).join("");
+  const scoreList = scores.slice(0,10).map(p=>{
+    const q = (p.period&&p.period.number) ? ("Q"+p.period.number) : "";
+    const clk = (p.clock&&p.clock.displayValue)||"";
+    const tm = (p.team&&p.team.abbreviation)||"";
+    return "<div class='play'><span>"+tm+" · "+q+" "+clk+" · "+p.awayScore+"-"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
+  }).join("");
+  $("gameRoom").innerHTML = `
+    <div class="scorebug mlb-bug">
+      <div class="mlb-inning">${st||"Pregame"}</div>
+      <div class="mlb-score">
+        <div class="mlb-side"><em>${aw}</em><b>${as}</b></div>
+        <span class="vs">@</span>
+        <div class="mlb-side r"><em>${hm}</em><b>${hs}</b></div>
+      </div>
+      <div class="tiles fbtiles">
+        <div class="tile"><em>${aw} yds</em><b>${tstat(sum,aw,"totalYards")}</b></div>
+        <div class="tile"><em>${hm} yds</em><b>${tstat(sum,hm,"totalYards")}</b></div>
+        <div class="tile"><em>${aw} pass</em><b>${tstat(sum,aw,"netPassingYards")}</b></div>
+        <div class="tile"><em>${hm} pass</em><b>${tstat(sum,hm,"netPassingYards")}</b></div>
+        <div class="tile"><em>${aw} rush</em><b>${tstat(sum,aw,"rushingYards")}</b></div>
+        <div class="tile"><em>${hm} rush</em><b>${tstat(sum,hm,"rushingYards")}</b></div>
+        <div class="tile"><em>${aw} 3rd</em><b>${tstat(sum,aw,"thirdDownEff")}</b></div>
+        <div class="tile"><em>${hm} 3rd</em><b>${tstat(sum,hm,"thirdDownEff")}</b></div>
+      </div>
+      ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
+    </div>
+    ${lastScore?`<div class="play hot"><span>Last score · ${(lastScore.team&&lastScore.team.abbreviation)||""}</span><p>${lastScore.text||""}</p></div>`:""}
+    ${venue?`<p class="hint">${venue}</p>`:""}
+    ${leads}
+    ${scoreList?`<p class="hint">Scoring</p>`+scoreList:""}
+    ${boxHtml(sum)}`;
+}
 function renderGame(g, sum){
+  if(LEAGUE==="nfl" || LEAGUE==="cfb"){ renderFootball(g,sum); return; }
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
   const home = comps.find(x=>x.homeAway==="home") || {};
@@ -353,25 +461,26 @@ function renderGame(g, sum){
 }
 function renderFight(g){
   $("gameRoom").innerHTML = `
-    <div class="scorebug">
-      <div class="gstat"><span>${g.card||"UFC"}</span><span>${when(g)}</span></div>
-      <div class="gduo">
-        <div class="gteam"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
+    <div class="scorebug mlb-bug">
+      <div class="mlb-inning">${g.card||"UFC"}</div>
+      <div class="gduo" style="margin-top:12px">
+        <button type="button" class="gteam prow" data-pid="${g.awayId||""}" data-pname="${String(g.away||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
+          <img class="uface" alt="" src="${g.awayImg}"/>
+          <b>${g.away}</b>
+          <span class="rec">${g.awayRec||""}</span>
+        </button>
         <span class="vs">VS</span>
-        <div class="gteam right">${g.home}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+        <button type="button" class="gteam prow" data-pid="${g.homeId||""}" data-pname="${String(g.home||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
+          <img class="uface" alt="" src="${g.homeImg}"/>
+          <b>${g.home}</b>
+          <span class="rec">${g.homeRec||""}</span>
+        </button>
       </div>
+      <div class="outs">${when(g)}</div>
     </div>
-    <div class="box">
-      <h3>${g.format||"The fight"}</h3>
-      <table class="bx">
-        <tr><th></th><th>${g.away}</th><th>${g.home}</th></tr>
-        <tr><td>Record</td><td>${g.awayRec||"—"}</td><td>${g.homeRec||"—"}</td></tr>
-        <tr><td>Tonight</td><td>${g.awayWin?"WIN":(g.state==="post"?"—":"TBD")}</td><td>${g.homeWin?"WIN":(g.state==="post"?"—":"TBD")}</td></tr>
-      </table>
-    </div>
-    <p class="hint">${[g.venue,g.broadcast,g.detail].filter(Boolean).join(" · ")}</p>
-    <div class="hist" id="histA"><p class="hint">Loading ${g.away} history…</p></div>
-    <div class="hist" id="histB"><p class="hint">Loading ${g.home} history…</p></div>`;
+    <p class="hint">${[g.venue,g.broadcast,g.detail].filter(Boolean).join(" · ")} · tap a face</p>
+    <div class="hist" id="histA"><p class="hint">Loading ${g.away}…</p></div>
+    <div class="hist" id="histB"><p class="hint">Loading ${g.home}…</p></div>`;
   if(g.awayId) loadFightHistory(g.awayId, g.away, "histA");
   if(g.homeId) loadFightHistory(g.homeId, g.home, "histB");
 }
@@ -403,10 +512,16 @@ async function loadFightHistory(aid, name, hostId){
         const tag = win ? "<span class='chipwin'>W</span>" : (me && me.winner===false ? "<span class='chiploss'>L</span>" : "—");
         const wt = (c.type && (c.type.text||c.type.abbreviation)) || "";
         const dt = (c.date||"").slice(0,10);
-        return "<tr><td>"+dt+"</td><td>"+oppName+"</td><td>"+wt+"</td><td>"+tag+"</td></tr>";
+        const title = /5 rnd/i.test(c.description||"") || /title|champ/i.test(c.description||"");
+        let evName = "";
+        try{
+          const er=await fetch("https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/"+p.e,{cache:"no-store"});
+          if(er.ok){ const ev=await er.json(); evName=ev.shortName||ev.name||""; }
+        }catch(e){}
+        return "<tr><td>"+dt+"</td><td>"+evName+(title?" <span class='titlechip'>Title</span>":"")+"</td><td>"+oppName+"</td><td>"+wt+"</td><td>"+tag+"</td></tr>";
       }catch(e){ return ""; }
     }));
-    host.innerHTML="<div class='box'><h3>"+name+" · last fights</h3><table class='bx'><thead><tr><th>Date</th><th>Opp</th><th>Class</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>";
+    host.innerHTML="<div class='box'><h3>"+name+" · last fights</h3><table class='bx'><thead><tr><th>Date</th><th>Event</th><th>Opp</th><th>Class</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>";
   }catch(e){
     host.innerHTML="<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history.</p></div>";
   }
@@ -438,18 +553,80 @@ async function openGame(id, fid){
   await tickGame();
   poll = setInterval(tickGame, 12000);
 }
+async function loadUfcRankings(){
+  const host=$("ufcRanks");
+  if(!host) return;
+  host.innerHTML="<p class='hint'>Loading division rankings…</p>";
+  try{
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/mma/ufc/rankings",{cache:"no-store"});
+    if(!res.ok) throw new Error("rankings");
+    const data=await res.json();
+    const boards=(data.rankings||[]).filter(b=>/pound-for-pound|rankings/i.test(b.name||b.shortName||""));
+    host.innerHTML = "<div class='rankwrap'>"+boards.map(b=>{
+      const rows=(b.ranks||[]).slice(0,8).map(r=>{
+        const a=r.athlete||{};
+        const id=a.id||"";
+        const img="https://a.espncdn.com/i/headshots/mma/players/full/"+id+".png";
+        const acc=r.hasAccolade?" · C":"";
+        return "<div class='rrow prow' data-pid='"+id+"' data-pname='"+String(a.displayName||"").replace(/"/g,"")+"'><span class='rk'>"+(r.current||"—")+"</span><img alt='' src='"+img+"'/><div><b>"+(a.displayName||"")+"</b><em>"+(r.recordSummary||"")+acc+"</em></div><em>"+(r.trend||"")+"</em></div>";
+      }).join("");
+      return "<div class='rankdiv'><h3>"+(b.shortName||b.name)+"</h3>"+rows+"</div>";
+    }).join("")+"</div>";
+  }catch(e){
+    host.innerHTML="<p class='hint'>Rankings did not load.</p>";
+  }
+}
+async function openFighter(pid, name){
+  show("player");
+  $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
+  try{
+    const [coreRes, ovRes] = await Promise.all([
+      fetch("https://sports.core.api.espn.com/v2/sports/mma/athletes/"+pid,{cache:"no-store"}),
+      fetch("https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/"+pid+"/overview",{cache:"no-store"})
+    ]);
+    const a = coreRes.ok ? await coreRes.json() : {};
+    const ov = ovRes.ok ? await ovRes.json() : {};
+    const shot=(a.headshot&&a.headshot.href)||("https://a.espncdn.com/i/headshots/mma/players/full/"+pid+".png");
+    const rec=((a.records&&a.records.$ref)?"":"");
+    let recSum="";
+    try{
+      const rr=await fetch("https://sports.core.api.espn.com/v2/sports/mma/athletes/"+pid+"/records",{cache:"no-store"});
+      if(rr.ok){ const rd=await rr.json(); recSum=((rd.items||[])[0]||{}).summary||""; }
+    }catch(e){}
+    $("playerRoom").innerHTML = `
+      <div class="phero">
+        <img class="fface" alt="" src="${shot}"/>
+        <div class="phero-copy" style="padding:16px">
+          <p class="kicker">${(a.weightClass&&a.weightClass.text)||"Fighter"}</p>
+          <h2>${a.displayName||name}</h2>
+          <p>${recSum} · ${a.displayHeight||""} · ${a.displayReach?("reach "+a.displayReach):""} · ${a.stance||""} · ${a.citizenship||""}</p>
+        </div>
+        <div class="tiles">
+          <div class="tile"><em>Age</em><b>${a.age||"—"}</b></div>
+          <div class="tile"><em>Weight</em><b>${a.displayWeight||"—"}</b></div>
+          <div class="tile"><em>Gym</em><b>${a.association||"—"}</b></div>
+          <div class="tile"><em>Style</em><b>${(a.styles||"—")}</b></div>
+        </div>
+      </div>
+      <div class="hist" id="histF"><p class="hint">Loading fight history…</p></div>`;
+    loadFightHistory(pid, a.displayName||name, "histF");
+  }catch(e){
+    $("playerRoom").innerHTML="<p class='hint'>No book for "+name+".</p>";
+  }
+}
 async function openPlayer(pid, name){
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
-    const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/overview",{cache:"no-store"});
+    const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : "baseball/mlb";
+    const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/overview",{cache:"no-store"});
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
     let log = {}, splitsPack = {};
     try{
       const [logRes, splitRes] = await Promise.all([
-        fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/gamelog",{cache:"no-store"}),
-        fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/splits",{cache:"no-store"})
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/gamelog",{cache:"no-store"}),
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/splits",{cache:"no-store"})
       ]);
       if(logRes.ok) log = await logRes.json();
       if(splitRes.ok) splitsPack = await splitRes.json();
@@ -470,7 +647,11 @@ async function openPlayer(pid, name){
       const line = (ev.stats||[]).slice(0,7).join(" · ");
       return "<tr><td>"+String(info.gameDate||"").slice(0,10)+"</td><td>"+dec+" "+opp+"</td><td>"+line+"</td></tr>";
     }).join("");
-    const shot = "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
+    const shot = LEAGUE==="nfl"
+      ? "https://a.espncdn.com/i/headshots/nfl/players/full/"+pid+".png"
+      : LEAGUE==="cfb"
+        ? "https://a.espncdn.com/i/headshots/college-football/players/full/"+pid+".png"
+        : "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
     const season = (st.splits||[]).find(s=>/regular/i.test(s.displayName||"")) || (st.splits||[])[0] || {stats:[]};
     const career = (st.splits||[]).find(s=>/career/i.test(s.displayName||"")) || null;
     const tiles = labels.map((lab,i)=>"<div class='tile'><em>"+lab+"</em><b>"+(season.stats[i]||"—")+"</b></div>").join("");
@@ -490,7 +671,14 @@ async function openPlayer(pid, name){
       return -1;
     }
     const isPitch = /pitch/i.test(st.displayName||"") || labels.includes("ERA") || labels.includes("IP");
-    const leadKeys = isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]] : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]];
+    const isPass = /pass/i.test(st.displayName||"") || labels.includes("CMP") || labels.includes("CMP%");
+    const isRush = /rush/i.test(st.displayName||"");
+    const isRec = /receiv/i.test(st.displayName||"");
+    const leadKeys = isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
+      : isRush ? [["YDS","YDS"],["TD","TD"],["AVG","AVG"]]
+      : isRec ? [["YDS","YDS"],["REC","REC"],["TD","TD"]]
+      : isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]]
+      : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]];
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
         const w=idx(labels,["W"]), l=idx(labels,["L"]);
@@ -536,7 +724,11 @@ async function openPlayer(pid, name){
 }
 document.addEventListener("click", ev=>{
   const row = ev.target.closest && ev.target.closest("tr.prow[data-pid]");
-  if(row && row.dataset.pid){ ev.preventDefault(); openPlayer(row.dataset.pid, row.dataset.pname||"Player"); }
+  if(row && row.dataset.pid){
+    ev.preventDefault();
+    if(LEAGUE==="ufc") openFighter(row.dataset.pid, row.dataset.pname||"Fighter");
+    else openPlayer(row.dataset.pid, row.dataset.pname||"Player");
+  }
 });
 $("toGame") && ($("toGame").onclick = ()=>show("game"));
 $("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
