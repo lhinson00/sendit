@@ -146,6 +146,8 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .leagues{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 var(--pad) 8px}
 .leagues button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .leagues button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
+body.cfb .dock{display:none}
+body.cfb{padding-bottom:16px}
 .gcard .linechip{margin-top:6px;font-size:11px;color:var(--ember);letter-spacing:.04em}
 
 @media (min-width:720px){
@@ -982,6 +984,7 @@ render();
 
 (function () {
   window.LEAGUE = window.LEAGUE || "nfl";
+  document.body.classList.toggle("cfb", window.LEAGUE==="cfb");
   function scoreUrl(){
     return window.LEAGUE==="cfb"
       ? "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300"
@@ -1788,7 +1791,9 @@ function paintGame(g, sum) {
   document.querySelectorAll("[data-lg]").forEach((b)=>{
     b.addEventListener("click", ()=>{
       window.LEAGUE=b.dataset.lg;
+      document.body.classList.toggle("cfb", window.LEAGUE==="cfb");
       document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x===b));
+      if(window.LEAGUE==="cfb") showView("live");
       const pc=$("playerControls"), tc=$("teamControls");
       if(window.LEAGUE==="cfb"){
         if(pc) pc.hidden=true;
