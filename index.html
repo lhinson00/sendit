@@ -70,7 +70,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;font-size:36px;letter-spacing:.0
 .wp em:first-of-type{left:0}.wp em:last-of-type{right:0}
 .lastplay{font-size:13px;color:#efe6d8;border-top:1px solid #2a241c;padding-top:10px}
 
-.gtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 12px 12px;position:sticky;top:132px;z-index:5;background:#05060a;padding:6px 0}
+.gtabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:0 12px 12px;position:sticky;top:132px;z-index:5;background:#05060a;padding:6px 0}
 .gtabs button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:11px 4px;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 .gtabs button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .gtab{margin:0 12px 16px}
@@ -132,6 +132,26 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
   background:#101218;border:1px solid #3a2a18;z-index:12}
 .dock button{border:0;background:transparent;color:var(--muted);padding:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .dock button.on{background:var(--orange);color:#140800}
+
+.sauce,.sliprow{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  background:#101218;border:1px solid #2a241c;padding:10px 12px;margin-bottom:8px}
+.sauce b{display:block}
+.sauce span{color:var(--muted);font-size:11px}
+.sright{display:flex;align-items:center;gap:8px}
+.sright em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
+.addleg,.sliprow button{border:0;background:var(--orange);color:#140800;font-weight:800;padding:8px 10px;letter-spacing:.08em;text-transform:uppercase;font-size:10px}
+.sliprow button{background:#3a1218;color:#ff8a8a}
+.sliptop{margin-bottom:12px}
+
+.sfilt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px;background:#101218;border:1px solid #2a241c;padding:12px}
+.sfilt label{margin:0}
+.prog{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.04em}
+.prog.hit{color:var(--green)}
+.prog.run{color:var(--ember)}
+.prog.miss{color:#ff8a8a}
+.prog.wait{color:var(--muted)}
+.sliprow b{display:block}
+.sliprow span{color:var(--muted);font-size:11px}
 </style>
 </head><body>
 <header class="top">
@@ -1084,7 +1104,163 @@ render();
     return `<div class="odds"><div class="tile"><span>Spread</span><b>${spread != null ? spread : "—"}</b></div><div class="tile"><span>Total</span><b>${ou != null ? ou : "—"}</b></div></div><p class="hint">Snapshot from the game feed — not live sportsbook juice.</p>`;
   }
 
-  function paintGame(g, sum) {
+  
+  
+  let SAUCE_FILT = { pos:"ALL", market:"Receiving Yards", line:"20+", minG:6, minH:0 };
+
+  function slipKey(id){ return "ss_slip_"+id; }
+  function loadSlip(id){
+    try { return JSON.parse(localStorage.getItem(slipKey(id))||"[]"); } catch(e){ return []; }
+  }
+  function saveSlip(id, rows){
+    try { localStorage.setItem(slipKey(id), JSON.stringify(rows)); } catch(e){}
+  }
+  function lineNeed(th){
+    const n=parseInt(th,10);
+    return Number.isFinite(n)?n:1;
+  }
+  function boxMap(sum){
+    const out={};
+    (((sum||{}).boxscore||{}).players||[]).forEach(side=>{
+      (side.statistics||[]).forEach(grp=>{
+        const labels=grp.labels||grp.names||[];
+        const yi=labels.indexOf("YDS");
+        const ti=labels.indexOf("TD");
+        const ri=labels.indexOf("REC");
+        const ii=labels.indexOf("INT");
+        (grp.athletes||[]).forEach(a=>{
+          const name=a.athlete && a.athlete.displayName;
+          if(!name) return;
+          const st=a.stats||[];
+          const rec=out[name]||{py:0,ptd:0,pint:0,ru:0,rutd:0,rec:0,ry:0,rtd:0};
+          const y=yi>=0?Number(st[yi])||0:0;
+          const td=ti>=0?Number(st[ti])||0:0;
+          if(grp.name==="passing"){ rec.py=y; rec.ptd=td; rec.pint=ii>=0?Number(st[ii])||0:0; }
+          if(grp.name==="rushing"){ rec.ru=y; rec.rutd=td; }
+          if(grp.name==="receiving"){ rec.ry=y; rec.rtd=td; rec.rec=ri>=0?Number(st[ri])||0:0; }
+          out[name]=rec;
+        });
+      });
+    });
+    return out;
+  }
+  function liveNow(box, market){
+    if(!box) return null;
+    if(market==="Receiving Yards") return box.ry;
+    if(market==="Receptions") return box.rec;
+    if(market==="Receiving TDs") return box.rtd;
+    if(market==="Rushing Yards") return box.ru;
+    if(market==="Rushing TDs" || market==="QB Rushing TDs") return box.rutd;
+    if(market==="Passing Yards") return box.py;
+    if(market==="Passing TDs") return box.ptd;
+    if(market==="Interceptions") return box.pint;
+    return null;
+  }
+  function liveStatus(now, th, market){
+    if(now==null) return {cls:"wait", txt:"pre"};
+    if(market==="Interceptions" && /clean|0/.test(th)){
+      return now===0?{cls:"hit",txt:"clean"}:{cls:"miss",txt:now+" INT"};
+    }
+    const need=lineNeed(th);
+    if(now>=need) return {cls:"hit", txt:now+" / "+need+" HIT"};
+    return {cls:"run", txt:now+" / "+need};
+  }
+  function marketsFor(pos){
+    const m=window.MARKETS_BY_POS;
+    if(m && m[pos]) return m[pos];
+    if(pos==="QB") return ["Passing Yards","Rushing Yards","Passing TDs","QB Rushing TDs","Interceptions"];
+    if(pos==="RB") return ["Rushing Yards","Rushing TDs","Receiving Yards","Receptions","Receiving TDs"];
+    return ["Receiving Yards","Receptions","Receiving TDs"];
+  }
+  function sauceList(g){
+    const teams=[g.away,g.home];
+    const vol=window.VOLUME||[];
+    const f=SAUCE_FILT;
+    const rows=[];
+    vol.forEach(r=>{
+      if(!teams.includes(r.team)) return;
+      if(f.pos!=="ALL" && r.pos!==f.pos) return;
+      if(r.market!==f.market || r.threshold!==f.line) return;
+      if(r.games<Number(f.minG||0) || r.hits<Number(f.minH||0)) return;
+      rows.push({player:r.player,pos:r.pos,team:r.team,market:r.market,th:r.threshold,hits:r.hits,games:r.games,rate:r.games?r.hits/r.games:0});
+    });
+    rows.sort((a,b)=>b.rate-a.rate || b.hits-a.hits);
+    return rows;
+  }
+  function opts(list, cur){
+    return list.map(v=>`<option ${v===cur?"selected":""}>${v}</option>`).join("");
+  }
+  function sauceHtml(g, sum){
+    const f=SAUCE_FILT;
+    const mkts=f.pos==="ALL"?["Receiving Yards","Receptions","Receiving TDs","Rushing Yards","Rushing TDs","Passing Yards","Passing TDs","QB Rushing TDs","Interceptions"]:marketsFor(f.pos);
+    if(!mkts.includes(f.market)) f.market=mkts[0];
+    const lines=(window.LINES_BY_MARKET&&window.LINES_BY_MARKET[f.market])||["1+"];
+    if(!lines.includes(f.line)) f.line=lines[0];
+    const live=boxMap(sum);
+    const rows=sauceList(g);
+    const slip=loadSlip(g.id||OPEN_ID);
+    function prog(r){
+      const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
+      return `<i class="prog ${st.cls}">${st.txt}</i>`;
+    }
+    const list=rows.map(r=>`<div class="sauce">
+      <div><b>${r.player}</b><span>${r.pos} · ${r.team} · ${r.hits}/${r.games} hist</span></div>
+      <div class="sright">${prog(r)}<button type="button" class="addleg" data-p="${r.player}" data-m="${r.market}" data-th="${r.th}" data-pos="${r.pos}" data-team="${r.team}">Add</button></div>
+    </div>`).join("") || "<p class='hint'>Nobody on this team slate hit that cut.</p>";
+    const saved=slip.map((r,i)=>{
+      const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
+      return `<div class="sliprow"><div><b>${r.player}</b><span>${r.market} ${r.th}</span></div><div class="sright"><i class="prog ${st.cls}">${st.txt}</i><button type="button" data-drop="${i}">×</button></div></div>`;
+    }).join("") || "<p class='hint'>Empty slip — set a filter, then Add.</p>";
+    return `<div class="sfilt">
+      <label>Pos<select id="sPos">${opts(["ALL","WR","TE","RB","QB"], f.pos)}</select></label>
+      <label>Stat<select id="sMkt">${opts(mkts, f.market)}</select></label>
+      <label>Line<select id="sLine">${opts(lines, f.line)}</select></label>
+      <label>Min G<input id="sMinG" type="number" min="1" max="18" value="${f.minG}"/></label>
+      <label>Min H<input id="sMinH" type="number" min="0" max="18" value="${f.minH}"/></label>
+    </div>
+    <div class="sliptop"><p class="sec">Slip · live vs line</p>${saved}</div>
+    <p class="sec">${f.market} ${f.line} · this game</p>${list}`;
+  }
+  function bindSauce(g, sum){
+    const box=$("gameRoom");
+    if (!box) return;
+    function readFilt(){
+      const pos=$("sPos") && $("sPos").value;
+      const mkt=$("sMkt") && $("sMkt").value;
+      const line=$("sLine") && $("sLine").value;
+      if(pos) SAUCE_FILT.pos=pos;
+      if(mkt) SAUCE_FILT.market=mkt;
+      if(line) SAUCE_FILT.line=line;
+      if($("sMinG")) SAUCE_FILT.minG=Number($("sMinG").value||0);
+      if($("sMinH")) SAUCE_FILT.minH=Number($("sMinH").value||0);
+    }
+    ["sPos","sMkt","sLine","sMinG","sMinH"].forEach(id=>{
+      const el=$(id); if(!el) return;
+      el.onchange=()=>{ readFilt(); if(id==="sPos"||id==="sMkt"){ /* reset line via html rebuild */ } OPEN_TAB="sauce"; loadGame(g.id); };
+    });
+    box.querySelectorAll(".addleg").forEach(b=>{
+      b.onclick=(e)=>{
+        e.stopPropagation();
+        const row={player:b.dataset.p,pos:b.dataset.pos,team:b.dataset.team,market:b.dataset.m,th:b.dataset.th};
+        const slip=loadSlip(g.id);
+        if(!slip.some(x=>x.player===row.player && x.th===row.th && x.market===row.market)) slip.push(row);
+        saveSlip(g.id,slip);
+        OPEN_TAB="sauce";
+        loadGame(g.id);
+      };
+    });
+    box.querySelectorAll("[data-drop]").forEach(b=>{
+      b.onclick=()=>{
+        const slip=loadSlip(g.id);
+        slip.splice(Number(b.dataset.drop),1);
+        saveSlip(g.id,slip);
+        OPEN_TAB="sauce";
+        loadGame(g.id);
+      };
+    });
+  }
+
+function paintGame(g, sum) {
     const box = $("gameRoom");
     if (!box) return;
     const hex = window.TEAM_HEX || {};
@@ -1112,14 +1288,16 @@ render();
         <button type="button" data-gtab="box">Box</button>
         <button type="button" data-gtab="plays">Plays</button>
         <button type="button" data-gtab="odds">Line</button>
+        <button type="button" data-gtab="sauce">Sauce</button>
       </div>
       <div id="gtab-scoring" class="gtab">${scoringList(sum || {})}</div>
       <div id="gtab-box" class="gtab">${boxTables(sum || {})}</div>
       <div id="gtab-plays" class="gtab">${playList(sum || {})}</div>
-      <div id="gtab-odds" class="gtab">${oddsBlock(sum || {})}</div>`;
+      <div id="gtab-odds" class="gtab">${oddsBlock(sum || {})}</div>
+      <div id="gtab-sauce" class="gtab">${sauceHtml(g, sum)}</div>`;
     const tab = OPEN_TAB || "scoring";
     box.querySelectorAll("[data-gtab]").forEach((x) => x.classList.toggle("on", x.dataset.gtab === tab));
-    ["scoring", "box", "plays", "odds"].forEach((k) => {
+    ["scoring", "box", "plays", "odds", "sauce"].forEach((k) => {
       const n = $("gtab-" + k);
       if (n) n.hidden = k !== tab;
     });
@@ -1128,7 +1306,7 @@ render();
       b.onclick = () => {
         OPEN_TAB = b.dataset.gtab;
         box.querySelectorAll("[data-gtab]").forEach((x) => x.classList.toggle("on", x === b));
-        ["scoring", "box", "plays", "odds"].forEach((k) => {
+        ["scoring", "box", "plays", "odds", "sauce"].forEach((k) => {
           const n = $("gtab-" + k);
           if (n) n.hidden = k !== OPEN_TAB;
         });
