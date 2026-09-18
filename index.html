@@ -151,8 +151,8 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .leagues{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 var(--pad) 8px}
 .leagues button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .leagues button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
-body.cfb .dock{display:none}
-body.cfb{padding-bottom:16px}
+body.nodock .dock{display:none}
+body.nodock{padding-bottom:16px}
 .gcard .linechip{margin-top:6px;font-size:11px;color:var(--ember);letter-spacing:.04em}
 .logoplate{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:2px solid #333;flex:0 0 36px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
 .logoplate img{width:26px;height:26px;object-fit:contain;background:transparent!important}
@@ -188,6 +188,8 @@ body.cfb{padding-bottom:16px}
   <div class="leagues">
     <button type="button" class="on" data-lg="nfl">NFL</button>
     <button type="button" data-lg="cfb">College</button>
+    <button type="button" data-lg="mlb">MLB</button>
+    <button type="button" data-lg="ufc">UFC</button>
   </div>
   <div id="wire" class="wire"></div>
   <div id="liveList"></div>
@@ -994,31 +996,39 @@ render();
 
 (function () {
   window.LEAGUE = window.LEAGUE || "nfl";
-  document.body.classList.toggle("cfb", window.LEAGUE==="cfb");
-  function scoreUrl(){
-    return window.LEAGUE==="cfb"
-      ? "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300"
-      : "https://cdn.espn.com/core/nfl/scoreboard?xhr=1";
-  }
-  function scoreUrlAlt(){
-    return window.LEAGUE==="cfb"
-      ? "https://cdn.espn.com/core/college-football/scoreboard?xhr=1&limit=300"
-      : "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
-  }
-  function SUM_URL(id){
-    return window.LEAGUE==="cfb"
-      ? "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+id
-      : "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+id;
-  }
+  document.body.classList.toggle("nodock", window.LEAGUE!=="nfl");
+  const SPORT = {
+    nfl:{ score:"https://cdn.espn.com/core/nfl/scoreboard?xhr=1",
+          alt:"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+          sum:(id)=>"https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+id,
+          logos:"nfl", wire:"nfl" },
+    cfb:{ score:"https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300",
+          alt:"https://cdn.espn.com/core/college-football/scoreboard?xhr=1&limit=300",
+          sum:(id)=>"https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+id,
+          logos:"ncaa", wire:"cfb" },
+    mlb:{ score:"https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
+          alt:"https://cdn.espn.com/core/mlb/scoreboard?xhr=1",
+          sum:(id)=>"https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event="+id,
+          logos:"mlb", wire:"mlb" },
+    ufc:{ score:"https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
+          alt:"https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?limit=20",
+          sum:(id)=>"https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event="+id,
+          logos:"mma", wire:"ufc" }
+  };
+  function cfg(){ return SPORT[window.LEAGUE] || SPORT.nfl; }
+  function scoreUrl(){ return cfg().score; }
+  function scoreUrlAlt(){ return cfg().alt; }
+  function SUM_URL(id){ return cfg().sum(id); }
   const INJ_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/injuries";
   function logoUrl(g, side){
-    if(window.LEAGUE==="cfb"){
-      const id = side==="away" ? g.awayId : g.homeId;
-      if(id) return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+id+".png";
-      const ab = side==="away"?g.away:g.home;
-      return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+String(ab||"").toLowerCase()+".png";
-    }
+    const shot = side==="away"?g.awayLogo:g.homeLogo;
+    if(shot) return shot;
+    const kind=cfg().logos;
+    const id = side==="away" ? g.awayId : g.homeId;
     const ab = side==="away"?g.away:g.home;
+    if(kind==="ncaa" && id) return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+id+".png";
+    if(kind==="mlb") return "https://a.espncdn.com/i/teamlogos/mlb/500/"+String(ab||"").toLowerCase()+".png";
+    if(kind==="mma") return "https://a.espncdn.com/i/teamlogos/mma/500/"+String(ab||"").toLowerCase()+".png";
     return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png";
   }
   function teamLabel(g, side){
@@ -1077,7 +1087,7 @@ render();
   function paintWire(){
     const host=$("wire");
     if(!host) return;
-    const WIRE = window.LEAGUE==="cfb" ? WIRE_CFB : WIRE_NFL;
+    const WIRE = window.LEAGUE==="cfb" ? WIRE_CFB : window.LEAGUE==="mlb" ? WIRE_MLB : window.LEAGUE==="ufc" ? WIRE_UFC : WIRE_NFL;
     host.innerHTML=WIRE.map(sec=>`<div class="wirecol"><b>${sec.g}</b>${sec.items.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`).join("");
   }
 
@@ -1106,12 +1116,14 @@ render();
     return {
       id: String(ev.id || c.id || ""),
       week: (ev.week && ev.week.number) || null,
-      away: (away.team && away.team.abbreviation) || "",
-      home: (home.team && home.team.abbreviation) || "",
-      awayName: (away.team && (away.team.shortDisplayName || away.team.displayName)) || "",
-      homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || "",
+      away: (away.team && away.team.abbreviation) || (away.athlete && away.athlete.abbreviation) || "",
+      home: (home.team && home.team.abbreviation) || (home.athlete && home.athlete.abbreviation) || "",
+      awayName: (away.team && (away.team.shortDisplayName || away.team.displayName)) || (away.athlete && away.athlete.displayName) || "",
+      homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || (home.athlete && home.athlete.displayName) || "",
       awayId: away.team && away.team.id,
       homeId: home.team && home.team.id,
+      awayLogo: (away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || (away.athlete && away.athlete.flag) || "",
+      homeLogo: (home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || (home.athlete && home.athlete.flag) || "",
       awayColor: (away.team && away.team.color) ? "#"+away.team.color : "#1a1c22",
       homeColor: (home.team && home.team.color) ? "#"+home.team.color : "#1a1c22",
       awayAlt: (away.team && away.team.alternateColor) ? "#"+away.team.alternateColor : "#ffffff",
@@ -1143,7 +1155,7 @@ render();
     const post = games.filter((g) => g.state === "post" || g.completed);
     const host = $("liveList");
     if (!host) return;
-    if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · " + live.length + " live";
+    if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · " + live.length + " live · poll "+(((games||[]).some(x=>x.state==="in"))?"12s":"45s");
     function card(g) {
       const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
       const stripe = (window.TEAM_HEX||{})[g.home] || "#ff7a18";
@@ -1168,7 +1180,21 @@ render();
     host.querySelectorAll("[data-gid]").forEach((b) => { b.onclick = () => openGame(b.dataset.gid); });
   }
 
-  function eventsFrom(data){
+  
+  function armSlatePoll(games){
+    if(window._slatePoll) clearInterval(window._slatePoll);
+    const live=(games||[]).some(g=>g.state==="in");
+    window._slatePoll=setInterval(tick, live?12000:45000);
+  }
+  function armGamePoll(g){
+    if(pollGame) clearInterval(pollGame);
+    pollGame=null;
+    if(!OPEN_ID) return;
+    if(g && (g.completed || g.state==="post")) return;
+    const ms=(g && g.state==="in")?12000:45000;
+    pollGame=setInterval(()=>{ if(OPEN_ID) loadGame(OPEN_ID); }, ms);
+  }
+function eventsFrom(data){
     return (((data.content || {}).sbData || {}).events)
       || (data.events)
       || ((((data.content || {}).schedule || {}).events))
@@ -1197,6 +1223,10 @@ render();
       return !hit || !hit.completed;
     });
     paintSlate(games);
+    armSlatePoll(games);
+    if($("liveMeta") && !((games||[]).some(x=>x.state==="in"))) {
+      /* stamp handled in paintSlate */
+    }
     if (typeof render === "function" && VIEW === "research") render();
   }
 
@@ -1372,7 +1402,7 @@ render();
     </div>`;
   }
 function oddsBlock(sum, g) {
-    if(window.LEAGUE==="cfb") return campusLine(sum,g);
+    if(window.LEAGUE==="cfb"||window.LEAGUE==="mlb"||window.LEAGUE==="ufc") return campusLine(sum,g);
 
     g=g||{};
     const o = (sum.pickcenter || sum.odds || [])[0] || {};
@@ -1678,7 +1708,8 @@ function oddsBlock(sum, g) {
         OPEN_TAB="sauce";
         const pane=$("gtab-sauce");
         const sum=LAST_SUM||window.SUM_CACHE[String(g.id)]||{};
-        if(pane){ pane.innerHTML=sauceHtml(g, sum); bindSauce(g, sum); }
+        if(pane){ pane.innerHTML=sauceHtml(g, sum); armGamePoll(g);
+    bindSauce(g, sum); }
       };
     });
     box.querySelectorAll(".rung").forEach(sel=>{
@@ -1743,7 +1774,7 @@ function paintGame(g, sum) {
         <button type="button" data-gtab="box">Box</button>
         <button type="button" data-gtab="plays">Plays</button>
         <button type="button" data-gtab="odds">Line</button>
-        ${window.LEAGUE==="cfb"?"":'<button type="button" data-gtab="sauce">Sauce</button>'}
+        ${window.LEAGUE!=="nfl"?"":'<button type="button" data-gtab="sauce">Sauce</button>'}
       </div>
       <div id="gtab-scoring" class="gtab">${scoringList(sum || {})}</div>
       <div id="gtab-box" class="gtab">${boxTables(sum || {})}</div>
@@ -1769,6 +1800,7 @@ function paintGame(g, sum) {
         });
       };
     });
+    armGamePoll(g);
     bindSauce(g, sum);
     box.querySelectorAll("[data-openp]").forEach((b) => {
       b.onclick = (e) => {
@@ -1862,12 +1894,12 @@ function paintGame(g, sum) {
   }
   function openGame(id) {
     OPEN_ID = String(id);
-    if(window.LEAGUE==="cfb") OPEN_TAB="odds";
+    if(window.LEAGUE!=="nfl") OPEN_TAB="odds";
     showView("game");
     $("gameRoom").innerHTML = "<p class='hint'>Loading game…</p>";
     loadGame(id);
     if (pollGame) clearInterval(pollGame);
-    pollGame = setInterval(() => { if (OPEN_ID) loadGame(OPEN_ID); }, 20000);
+    armGamePoll({state:"pre"});
   }
   window.openGame = openGame;
   document.addEventListener("click", (e) => {
@@ -1915,11 +1947,11 @@ function paintGame(g, sum) {
   document.querySelectorAll("[data-lg]").forEach((b)=>{
     b.addEventListener("click", ()=>{
       window.LEAGUE=b.dataset.lg;
-      document.body.classList.toggle("cfb", window.LEAGUE==="cfb");
+      document.body.classList.toggle("nodock", window.LEAGUE!=="nfl");
       document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x===b));
-      if(window.LEAGUE==="cfb") showView("live");
+      if(window.LEAGUE!=="nfl") showView("live");
       const pc=$("playerControls"), tc=$("teamControls");
-      if(window.LEAGUE==="cfb"){
+      if(window.LEAGUE!=="nfl"){
         if(pc) pc.hidden=true;
         if(tc) tc.hidden=false;
         document.querySelectorAll("[data-mode]").forEach(x=>{
@@ -1941,8 +1973,8 @@ function paintGame(g, sum) {
   badgeSlip();
   tick();
   pullInjuries().catch(() => {});
-  setInterval(tick, 30000);
-  setInterval(()=>{ if(VIEW==="slip" || (window.LIVE_GAMES||[]).some(g=>g.state==="in")) pullSlipBoxes(); }, 20000);
+  window._slatePoll=setInterval(tick, 45000);
+  setInterval(()=>{ if(VIEW==="slip" || (window.LIVE_GAMES||[]).some(g=>g.state==="in")) pullSlipBoxes(); }, 12000);
   setInterval(() => pullInjuries().catch(() => {}), 15 * 60 * 1000);
 })();
 
