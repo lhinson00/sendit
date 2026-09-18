@@ -39,6 +39,25 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .linechip{margin-top:8px;color:var(--ember);font-size:13px}
 .hint{color:var(--muted);padding:0 var(--pad)}
 .scorebug{margin:0 var(--pad) 16px;padding:12px;background:#101218;border:1px solid #3a2a18}
+.mlb-bug{background:linear-gradient(180deg,#1a140c,#0c0d12);border-color:#ff7a18;padding:16px}
+.mlb-inning{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange);letter-spacing:.04em}
+.mlb-score{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-top:10px}
+.mlb-side{display:flex;flex-direction:column;gap:2px}
+.mlb-side.r{text-align:right}
+.mlb-side em{font-style:normal;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.mlb-side b{font-family:"Bebas Neue",sans-serif;font-size:42px;line-height:1;color:#fff}
+.bases{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.bag{width:14px;height:14px;transform:rotate(45deg);background:#2a241c;border:1px solid #3a2a18}
+.bag.on{background:var(--orange);border-color:var(--ember)}
+.outs{text-align:center;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-top:8px}
+tr.prow{cursor:pointer}tr.prow:hover td{background:#1a140c}
+.rhe{margin-top:12px}
+.ab{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:12px;color:#efe6d8}
+.wpbar{position:relative;height:7px;margin:14px 0 18px;background:#222;border-radius:99px}
+.wpbar i{display:block;height:100%;background:var(--orange);margin-left:auto}
+.wpbar em{position:absolute;top:10px;font-size:10px;color:var(--muted);font-style:normal;letter-spacing:.08em;text-transform:uppercase}
+.wpbar em:first-of-type{left:0}.wpbar em:last-of-type{right:0}
+.play.hot{border-color:var(--orange)}
 .box{margin:0 var(--pad) 16px;background:#101218;border:1px solid #2a241c;overflow:auto}
 .box h3{margin:0;padding:10px 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
 table.bx{width:100%;border-collapse:collapse;font-size:12px}
@@ -231,8 +250,8 @@ function boxHtml(sum){
       const rows = (grp.athletes||[]).map(a=>{
         const n=(a.athlete&&a.athlete.displayName)||"";
         const st=a.stats||[];
-        const pid=a.athlete&&a.athlete.id;
-        return "<tr><td>"+(pid?("<button type='button' class='pname' data-pid='"+pid+"' data-pname='"+n.replace(/'/g,"")+"'>"+n+"</button>"):n)+"</td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
+        const pid=a.athlete&&a.athlete.id||"";
+        return "<tr class='prow' data-pid='"+pid+"' data-pname='"+String(n).replace(/"/g,"")+"'><td><span class='pname'>"+n+"</span></td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
       }).join("");
       return "<div class='box'><h3>"+team+" · "+(grp.label||grp.displayName||grp.name||"")+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
     }).join("");
@@ -247,25 +266,58 @@ function playsHtml(sum){
     return "<div class='play'><span>"+clock+"</span><p>"+txt+"</p></div>";
   }).join("");
 }
+function findAthlete(sum, id){
+  if(!id) return "";
+  const sides=((sum.boxscore||{}).players)||[];
+  for(const side of sides){
+    for(const grp of (side.statistics||[])){
+      for(const a of (grp.athletes||[])){
+        if(a.athlete && String(a.athlete.id)===String(id)) return a.athlete.displayName||a.athlete.shortName||"";
+      }
+    }
+  }
+  return "";
+}
 function renderGame(g, sum){
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
   const home = comps.find(x=>x.homeAway==="home") || {};
   const away = comps.find(x=>x.homeAway==="away") || {};
   const st = ((hdr.status||{}).type||{}).detail || g.detail || "";
-  const as = scoreOf(away) || g.awayScore || "";
-  const hs = scoreOf(home) || g.homeScore || "";
+  const as = scoreOf(away) || g.awayScore || "0";
+  const hs = scoreOf(home) || g.homeScore || "0";
   const sit = sum.situation || {};
-  const sitLine = [sit.outs!=null?(sit.outs+" out"):"", sit.onFirst?"1st":"", sit.onSecond?"2nd":"", sit.onThird?"3rd":""].filter(Boolean).join(" · ");
+  const b1=sit.onFirst? "on":"", b2=sit.onSecond?"on":"", b3=sit.onThird?"on":"";
+  const count = (sit.balls!=null && sit.strikes!=null) ? (sit.balls+"-"+sit.strikes+" count") : "";
+  const batter = findAthlete(sum, sit.batter && sit.batter.playerId);
+  const pitcher = findAthlete(sum, sit.pitcher && sit.pitcher.playerId);
+  const note = ((sit.situationNotes||[])[0]||{}).text || "";
+  const wp = (sum.winprobability||[]).slice(-1)[0];
+  const homePct = wp ? Math.round((wp.homeWinPercentage||0)*100) : null;
+  const gi = sum.gameInfo || {};
+  const wx = gi.weather || {};
+  const venue = (gi.venue && gi.venue.fullName) || "";
+  const last = (sum.plays||[]).slice(-1)[0] || {};
   $("gameRoom").innerHTML = `
-    <div class="scorebug">
-      <div class="gstat"><span>${st}${sitLine?" · "+sitLine:""}</span></div>
-      <div class="gduo">
-        <div class="gteam">${g.away} <b>${as}</b></div>
-        <span class="vs">VS</span>
-        <div class="gteam right"><b>${hs}</b> ${g.home}</div>
+    <div class="scorebug mlb-bug">
+      <div class="mlb-inning">${st||"Pregame"}</div>
+      <div class="mlb-score">
+        <div class="mlb-side"><em>${g.away}</em><b>${as}</b></div>
+        <span class="vs">@</span>
+        <div class="mlb-side r"><em>${g.home}</em><b>${hs}</b></div>
       </div>
+      <table class="bx rhe"><tr><th></th><th>R</th><th>H</th><th>E</th></tr>
+        <tr><td>${g.away}</td><td>${as}</td><td>${away.hits!=null?away.hits:"—"}</td><td>${away.errors!=null?away.errors:"—"}</td></tr>
+        <tr><td>${g.home}</td><td>${hs}</td><td>${home.hits!=null?home.hits:"—"}</td><td>${home.errors!=null?home.errors:"—"}</td></tr>
+      </table>
+      <div class="bases"><i class="bag ${b3}"></i><i class="bag ${b2}"></i><i class="bag ${b1}"></i></div>
+      <div class="outs">${sit.outs!=null?sit.outs+" out":""}${count?" · "+count:""}</div>
+      ${batter||pitcher?`<div class="ab">${pitcher?"<span>P  "+pitcher+"</span>":""}${batter?"<span>AB  "+batter+"</span>":""}</div>`:""}
+      ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${g.away} ${100-homePct}%</em><em>${g.home} ${homePct}%</em></div>`:""}
     </div>
+    ${last.text?`<div class="play hot"><span>Last pitch</span><p>${last.text}</p></div>`:""}
+    ${note?`<p class="hint">${note}</p>`:""}
+    ${venue||wx.temperature?`<p class="hint">${venue}${wx.temperature?(" · "+wx.temperature+"° "+(wx.conditionId||"")):""}</p>`:""}
     ${boxHtml(sum)}
     ${playsHtml(sum)}`;
 }
@@ -347,7 +399,6 @@ async function openGame(id, fid){
       const res = await fetch(SUM[LEAGUE](id), {cache:"no-store"});
       const sum = res.ok ? await res.json() : {};
       renderGame(g, sum);
-      document.querySelectorAll(".pname").forEach(b=>b.onclick=()=>openPlayer(b.dataset.pid, b.dataset.pname));
       const state = ((((sum.header||{}).competitions||[])[0]||{}).status||{}).type || {};
       if(state.completed || state.state==="post"){ if(poll) clearInterval(poll); poll=null; }
     }catch(e){
@@ -389,6 +440,10 @@ async function openPlayer(pid, name){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
 }
+document.addEventListener("click", ev=>{
+  const row = ev.target.closest && ev.target.closest("tr.prow[data-pid]");
+  if(row && row.dataset.pid){ ev.preventDefault(); openPlayer(row.dataset.pid, row.dataset.pname||"Player"); }
+});
 $("toGame") && ($("toGame").onclick = ()=>show("game"));
 $("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
