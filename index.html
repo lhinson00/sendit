@@ -1317,14 +1317,32 @@ render();
       if(a==null&&h==null) return "";
       return `<tr><td>${k.replace(" Per Game","/g")}</td><td>${a||"—"}</td><td>${h||"—"}</td></tr>`;
     }).join("");
-    function five(block){
-      const tm=(block.team||{}).abbreviation||"";
-      const evs=(block.events||[]).slice(0,5);
-      if(!evs.length) return "";
-      return `<div class="l5"><em>${tm} last 5</em>`+evs.map(e=>{
-        const opp=(e.opponent&&e.opponent.abbreviation)||"";
-        return `<span class="chip ${e.gameResult==="W"?"win":"loss"}">${e.gameResult||""} ${e.atVs||""} ${opp} ${e.score||""}</span>`;
-      }).join(" ")+"</div>";
+    function seasonBoard(side){
+      const pack=(sum._sched||{})[side];
+      if(!pack) return "<p class='hint'>2026 schedule loading…</p>";
+      const self=pack.abbr;
+      const rows=(pack.events||[]).map(e=>{
+        const c=(e.competitions||[])[0]||{};
+        const comps=c.competitors||[];
+        const me=comps.find(x=>(x.team&&x.team.abbreviation)===self) || {};
+        const opp=comps.find(x=>x!==me) || {};
+        const oa=(opp.team&&opp.team.abbreviation)||"";
+        const ha=me.homeAway==="home"?"vs":"at";
+        const st=((c.status||{}).type)||{};
+        const wk=e.week&&e.week.number;
+        let res="—";
+        let cls="";
+        if(st.completed){
+          const ms=(me.score&&me.score.displayValue)||"";
+          const os=(opp.score&&opp.score.displayValue)||"";
+          res=(me.winner?"W":"L")+" "+ms+"-"+os;
+          cls=me.winner?"win":"loss";
+        } else {
+          res=fmtCT(e.date)||st.shortDetail||"TBD";
+        }
+        return "<tr><td>W"+(wk||"")+"</td><td>"+ha+" "+oa+"</td><td class=\"chip "+cls+"\">"+res+"</td></tr>";
+      }).join("");
+      return '<p class="sec">'+self+' 2026</p><div class="tblwrap"><table class="log"><thead><tr><th>Wk</th><th>Opp</th><th>Result</th></tr></thead><tbody>'+(rows||"<tr><td colspan=3>No 2026 games yet</td></tr>")+"</tbody></table></div>";
     }
     const lean = awP>=hmP
       ? `${awN} ${awP.toFixed(0)}% to win · ESPN model`
@@ -1347,7 +1365,7 @@ render();
       <p class="read">${lean}. ${fav}.</p>
       <p class="sec">Season pace</p>
       <div class="tblwrap"><table class="log"><thead><tr><th></th><th>${g.away}</th><th>${g.home}</th></tr></thead><tbody>${rows||"<tr><td colspan=3>Season stats after kickoff data lands</td></tr>"}</tbody></table></div>
-      ${l5.map(five).join("")}
+      ${seasonBoard("away")+seasonBoard("home")}
       <p class="sec">Work the number</p>
       <div class="wirecol">
         <a href="https://www.covers.com/sport/football/ncaaf/odds" target="_blank" rel="noopener">Covers line shop</a>
@@ -1770,6 +1788,22 @@ function paintGame(g, sum) {
     }
   }
 
+  
+  async function pullCfbSchedules(g){
+    const out={};
+    const pairs=[["away",g.awayId],["home",g.homeId]];
+    await Promise.all(pairs.map(async ([side,id])=>{
+      if(!id) return;
+      try{
+        const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/"+id+"/schedule?season=2026",{cache:"no-store"});
+        if(!res.ok) return;
+        const data=await res.json();
+        out[side]={abbr:(data.team&&data.team.abbreviation)|| (side==="away"?g.away:g.home), events:data.events||[]};
+      }catch(e){}
+    }));
+    return out;
+  }
+
   async function loadGame(id) {
     const games = window.LIVE_GAMES || [];
     const g = Object.assign({}, games.find((x) => x.id === String(id)) || { id, away: "", home: "", state: "pre" });
@@ -1785,6 +1819,8 @@ function paintGame(g, sum) {
         const st = (hdr.status || {}).type || {};
         g.away = (away.team && away.team.abbreviation) || g.away;
         g.home = (home.team && home.team.abbreviation) || g.home;
+        g.awayId = (away.team && away.team.id) || g.awayId;
+        g.homeId = (home.team && home.team.id) || g.homeId;
         g.awayScore = away.score != null ? String(away.score) : g.awayScore;
         g.homeScore = home.score != null ? String(home.score) : g.homeScore;
         g.state = st.state || g.state;
@@ -1794,6 +1830,10 @@ function paintGame(g, sum) {
         g.period = hdr.status && hdr.status.period;
       }
     } catch (e) {}
+    if(window.LEAGUE==="cfb"){
+        sum = sum || {};
+        sum._sched = await pullCfbSchedules(g);
+      }
     LAST_SUM = sum || {};
     window.SUM_CACHE[String(id)] = sum || {};
     if (window._SAUCE_REBUILD) { window._SAUCE_REBUILD=false; paintGame(g, sum); }
@@ -1827,6 +1867,7 @@ function paintGame(g, sum) {
   }
   function openGame(id) {
     OPEN_ID = String(id);
+    if(window.LEAGUE==="cfb") OPEN_TAB="odds";
     showView("game");
     $("gameRoom").innerHTML = "<p class='hint'>Loading game…</p>";
     loadGame(id);
