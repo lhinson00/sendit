@@ -112,9 +112,11 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .ufc-card .gteam span.rec{font-family:Manrope,sans-serif;font-size:11px;color:var(--muted);letter-spacing:.06em}
 .titlechip{display:inline-block;margin-left:6px;padding:1px 6px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;background:#3a2a10;color:var(--ember);font-weight:800}
 .rankwrap{padding:8px var(--pad) 28px}
-.rankdiv{margin-bottom:16px}
+.rankgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:700px){.rankgrid{grid-template-columns:1fr}}
+.rankdiv{margin-bottom:4px;background:#101218;border:1px solid #2a241c;padding:10px}
 .rankdiv h3{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
-.rrow{display:grid;grid-template-columns:28px 44px 1fr auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #1c1c22;cursor:pointer}
+.rrow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #1c1c22;cursor:pointer}
 .rrow img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#1a120c}
 .rrow b{display:block}
 .rrow em{font-style:normal;color:var(--muted);font-size:11px}
@@ -255,6 +257,7 @@ function when(g){
   }catch(e){ return g.detail||""; }
 }
 function paint(games){
+  window.LIVE_GAMES = games;
   const host=$("liveList");
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+games.length;
   if(!games.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
@@ -271,7 +274,7 @@ function paint(games){
         <div class="mlb-inning">${ev.card}</div>
         <p class="hint" style="padding:8px 0 0">${ev.fights.length} fights${ev.venue?" · "+ev.venue:""} · tap for the lineup</p>
       </button>`).join("");
-    host.innerHTML = "<div id='ufcRanks'></div><div id='ufcEvents'>"+evHtml+"</div><div id='ufcLineup'></div>";
+    host.innerHTML = "<div id='ufcEvents'>"+evHtml+"</div><div id='ufcLineup'></div><div id='ufcRanks'></div>";
     host.querySelectorAll("[data-event]").forEach(b=>b.onclick=()=>showUfcLineup(b.dataset.event, games));
   } else {
     host.innerHTML = games.map(g=>`
@@ -594,14 +597,37 @@ const UFC_OFFICIAL = {
       [14,"Arman Tsarukyan","23-3","LW #2"],
       [15,"Charles Oliveira","37-11","LW #3"]
     ]},
-    {name:"Division champions", rows:[
-      ["C","Ciryl Gane","14-2","Heavyweight"],
-      ["C","Sean Strickland","31-7","Middleweight"],
-      ["C","Islam Makhachev","29-1","Welterweight"],
-      ["C","Justin Gaethje","28-5","Lightweight"],
-      ["C","Alexander Volkanovski","28-4","Featherweight"],
-      ["C","Petr Yan","20-5","Bantamweight"],
-      ["C","Joshua Van","17-2","Flyweight"]
+    {name:"Heavyweight", rows:[
+      ["C","Ciryl Gane","14-2","Champion"],
+      [1,"Tom Aspinall","15-3",""],
+      [2,"Alex Pereira","13-4",""]
+    ]},
+    {name:"Light Heavyweight", rows:[
+      [2,"Alex Pereira","13-4",""]
+    ]},
+    {name:"Middleweight", rows:[
+      ["C","Sean Strickland","31-7","Champion"],
+      [1,"Khamzat Chimaev","15-1",""]
+    ]},
+    {name:"Welterweight", rows:[
+      ["C","Islam Makhachev","29-1","Champion"]
+    ]},
+    {name:"Lightweight", rows:[
+      ["C","Justin Gaethje","28-5","Champion"],
+      [1,"Ilia Topuria","17-1",""],
+      [2,"Arman Tsarukyan","23-3",""],
+      [3,"Charles Oliveira","37-11","BMF"]
+    ]},
+    {name:"Featherweight", rows:[
+      ["C","Alexander Volkanovski","28-4","Champion"]
+    ]},
+    {name:"Bantamweight", rows:[
+      ["C","Petr Yan","20-5","Champion"],
+      [1,"Merab Dvalishvili","21-5",""]
+    ]},
+    {name:"Flyweight", rows:[
+      ["C","Joshua Van","17-2","Champion"],
+      [1,"Alexandre Pantoja","30-6",""]
     ]}
   ]
 };
@@ -610,8 +636,9 @@ async function loadUfcRankings(){
   if(!host) return;
   const ids={};
   (window.LIVE_GAMES||[]).forEach(g=>{ if(g.away) ids[g.away]=g.awayId; if(g.home) ids[g.home]=g.homeId; });
-  host.innerHTML = "<div class='rankwrap'><p class='hint'>Official UFC rankings · "+UFC_OFFICIAL.asOf+". ESPN's ranking feed is years stale — not used.</p>"+
-    UFC_OFFICIAL.boards.map(b=>{
+  const p4p = UFC_OFFICIAL.boards.filter(b=>/pound/i.test(b.name));
+  const divs = UFC_OFFICIAL.boards.filter(b=>!/pound/i.test(b.name));
+  const block = boards => boards.map(b=>{
       const rows=b.rows.map(r=>{
         const name=r[1], rec=r[2], note=r[3], rk=r[0];
         const pid=ids[name]||"";
@@ -619,13 +646,27 @@ async function loadUfcRankings(){
         return "<div class='rrow prow' data-pid='"+pid+"' data-pname='"+name.replace(/"/g,"")+"'><span class='rk'>"+rk+"</span>"+(img?"<img alt='' src='"+img+"'/>":"<span></span>")+"<div><b>"+name+"</b><em>"+rec+(note?" · "+note:"")+"</em></div></div>";
       }).join("");
       return "<div class='rankdiv'><h3>"+b.name+"</h3>"+rows+"</div>";
-    }).join("")+"</div>";
+    }).join("");
+  host.innerHTML = "<div class='rankwrap'><p class='hint'>Official UFC rankings · "+UFC_OFFICIAL.asOf+"</p>"+
+    block(p4p)+"<div class='rankgrid'>"+block(divs)+"</div></div>";
 }
 async function openFighter(pid, name){
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
   if(!pid){
-    $("playerRoom").innerHTML="<div class='phero'><div class='phero-copy' style='padding:16px'><p class='kicker'>Fighter</p><h2>"+name+"</h2><p>No ESPN id on this ranking row. Open them from a fight card for the full book.</p></div></div>";
+    let rec="", note="", board="";
+    (UFC_OFFICIAL.boards||[]).forEach(b=> (b.rows||[]).forEach(r=>{
+      if(r[1]===name){ rec=r[2]; note=r[3]; board=b.name; }
+    }));
+    $("playerRoom").innerHTML=`
+      <div class="phero">
+        <div class="phero-copy" style="padding:16px">
+          <p class="kicker">${board||"Ranked"}</p>
+          <h2>${name}</h2>
+          <p>${rec||""} ${note?("· "+note):""}</p>
+        </div>
+        <p class="hint">Full fight book needs an ESPN id. Open this name from the 331 lineup when they're on the card.</p>
+      </div>`;
     return;
   }
   try{
@@ -773,10 +814,11 @@ async function openPlayer(pid, name){
 }
 document.addEventListener("click", ev=>{
   const row = ev.target.closest && ev.target.closest(".prow[data-pid]");
-  if(row && row.dataset.pid){
+  if(row && (row.dataset.pid || row.dataset.pname)){
     ev.preventDefault();
-    if(LEAGUE==="ufc") openFighter(row.dataset.pid, row.dataset.pname||"Fighter");
-    else openPlayer(row.dataset.pid, row.dataset.pname||"Player");
+    ev.stopPropagation();
+    if(LEAGUE==="ufc") openFighter(row.dataset.pid||"", row.dataset.pname||"Fighter");
+    else if(row.dataset.pid) openPlayer(row.dataset.pid, row.dataset.pname||"Player");
   }
 });
 $("toGame") && ($("toGame").onclick = ()=>show("game"));
