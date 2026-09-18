@@ -154,6 +154,11 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 body.cfb .dock{display:none}
 body.cfb{padding-bottom:16px}
 .gcard .linechip{margin-top:6px;font-size:11px;color:var(--ember);letter-spacing:.04em}
+.logoplate{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:2px solid #333;flex:0 0 36px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.logoplate img{width:26px;height:26px;object-fit:contain;background:transparent!important}
+.gteam{display:flex;align-items:center;gap:8px;min-width:0}
+.gteam b{font-size:13px;line-height:1.15}
+
 
 @media (min-width:720px){
   #liveList{grid-template-columns:1fr 1fr}
@@ -1121,6 +1126,10 @@ render();
       homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || "",
       awayId: away.team && away.team.id,
       homeId: home.team && home.team.id,
+      awayColor: (away.team && away.team.color) ? "#"+away.team.color : "#1a1c22",
+      homeColor: (home.team && home.team.color) ? "#"+home.team.color : "#1a1c22",
+      awayAlt: (away.team && away.team.alternateColor) ? "#"+away.team.alternateColor : "#ffffff",
+      homeAlt: (home.team && home.team.alternateColor) ? "#"+home.team.alternateColor : "#ffffff",
       rankAway: (away.curatedRank && away.curatedRank.current) || (away.team && away.team.rank) || "",
       rankHome: (home.curatedRank && home.curatedRank.current) || (home.team && home.team.rank) || "",
       spread: ((c.odds||[])[0] && ((c.odds[0].details) || c.odds[0].spread)) || "",
@@ -1158,9 +1167,9 @@ render();
       return `<button type="button" class="gcard ${cls}" data-gid="${g.id}" style="--stripe:${stripe}">
         <div class="gstat"><span>${statusLine(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="gduo">
-          <div class="gteam"><img alt="" src="${logoUrl(g,"away")}"/><b>${awN}</b></div>
+          <div class="gteam"><span class="logoplate" style="background:${g.awayAlt||'#fff'};border-color:${g.awayColor||'#333'}"><img alt="" src="${logoUrl(g,"away")}"/></span><b>${awN}</b></div>
           <div class="gscore">${g.state==="pre"?"VS":g.awayScore+"<em>-</em>"+g.homeScore}</div>
-          <div class="gteam right"><b>${hmN}</b><img alt="" src="${logoUrl(g,"home")}"/></div>
+          <div class="gteam right"><b>${hmN}</b><span class="logoplate" style="background:${g.homeAlt||'#fff'};border-color:${g.homeColor||'#333'}"><img alt="" src="${logoUrl(g,"home")}"/></span></div>
         </div>
         ${line?`<div class="linechip">${line}</div>`:""}
         <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}${loadSlip(g.id).length? " · "+loadSlip(g.id).length+" on the plate":""}</div>
