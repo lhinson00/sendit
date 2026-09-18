@@ -1109,21 +1109,24 @@ render();
   function mapEvent(ev) {
     const c = (ev.competitions || [])[0] || {};
     const comps = c.competitors || [];
-    const home = comps.find((x) => x.homeAway === "home") || {};
-    const away = comps.find((x) => x.homeAway === "away") || {};
+    let home = comps.find((x) => x.homeAway === "home");
+    let away = comps.find((x) => x.homeAway === "away");
+    if(!home && !away && comps.length>=2){ away=comps[0]; home=comps[1]; }
+    home = home || {};
+    away = away || {};
     const st = (c.status || {}).type || {};
     const clock = c.status || {};
     return {
       id: String(ev.id || c.id || ""),
       week: (ev.week && ev.week.number) || null,
-      away: (away.team && away.team.abbreviation) || (away.athlete && away.athlete.abbreviation) || "",
-      home: (home.team && home.team.abbreviation) || (home.athlete && home.athlete.abbreviation) || "",
+      away: (away.team && away.team.abbreviation) || (away.athlete && (away.athlete.abbreviation || (away.athlete.displayName||"").split(" ").pop())) || "",
+      home: (home.team && home.team.abbreviation) || (home.athlete && (home.athlete.abbreviation || (home.athlete.displayName||"").split(" ").pop())) || "",
       awayName: (away.team && (away.team.shortDisplayName || away.team.displayName)) || (away.athlete && away.athlete.displayName) || "",
       homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || (home.athlete && home.athlete.displayName) || "",
       awayId: away.team && away.team.id,
       homeId: home.team && home.team.id,
-      awayLogo: (away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || (away.athlete && away.athlete.flag) || "",
-      homeLogo: (home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || (home.athlete && home.athlete.flag) || "",
+      awayLogo: (away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || (away.athlete && (away.athlete.headshot || away.athlete.flag)) || "",
+      homeLogo: (home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || (home.athlete && (home.athlete.headshot || home.athlete.flag)) || "",
       awayColor: (away.team && away.team.color) ? "#"+away.team.color : "#1a1c22",
       homeColor: (home.team && home.team.color) ? "#"+home.team.color : "#1a1c22",
       awayAlt: (away.team && away.team.alternateColor) ? "#"+away.team.alternateColor : "#ffffff",
@@ -1155,6 +1158,11 @@ render();
     const post = games.filter((g) => g.state === "post" || g.completed);
     const host = $("liveList");
     if (!host) return;
+    if(!games.length){
+      host.innerHTML = "<p class='hint'>No "+(window.LEAGUE||"").toUpperCase()+" events on the ESPN board right now.</p>";
+      if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · 0 live";
+      return;
+    }
     if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · " + live.length + " live · poll "+(((games||[]).some(x=>x.state==="in"))?"12s":"45s");
     function card(g) {
       const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
@@ -1195,10 +1203,21 @@ render();
     pollGame=setInterval(()=>{ if(OPEN_ID) loadGame(OPEN_ID); }, ms);
   }
 function eventsFrom(data){
-    return (((data.content || {}).sbData || {}).events)
+    const evs = (((data.content || {}).sbData || {}).events)
       || (data.events)
       || ((((data.content || {}).schedule || {}).events))
       || [];
+    if(window.LEAGUE!=="ufc") return evs;
+    const out=[];
+    evs.forEach(ev=>{
+      const fights=ev.competitions||[];
+      if(!fights.length){ out.push(ev); return; }
+      fights.forEach((c,i)=>{
+        const copy=Object.assign({}, ev, { id:String(c.id||ev.id||"")+ (i?("-"+i):""), competitions:[c], name:c.notes && c.notes[0] && c.notes[0].headline || ev.shortName || ev.name });
+        out.push(copy);
+      });
+    });
+    return out;
   }
   async function pullScores() {
     let data={}, events=[];
@@ -1931,21 +1950,25 @@ function paintGame(g, sum) {
     try { await pullScores(); }
     catch (e) {
       const host = $("liveList");
-      const fb = (window.THISWEEK||window.SLATE||[]).map(g=>({
-        id:String(g.eid||g.id||g.away+"-"+g.home),
-        away:g.away, home:g.home, awayScore:"", homeScore:"",
-        state:"pre", detail:"", start:g.kick||g.start||"", completed:false
-      }));
-      if(fb.length){ window.LIVE_GAMES=fb; paintSlate(fb); }
-      else if (host) host.innerHTML = `<p class="hint">Could not load slate (${e.message})</p>`;
+      if(window.LEAGUE==="nfl" || window.LEAGUE==="cfb"){
+        const fb = (window.THISWEEK||window.SLATE||[]).map(g=>({
+          id:String(g.eid||g.id||g.away+"-"+g.home),
+          away:g.away, home:g.home, awayScore:"", homeScore:"",
+          state:"pre", detail:"", start:g.kick||g.start||"", completed:false
+        }));
+        if(fb.length){ window.LIVE_GAMES=fb; paintSlate(fb); return; }
+      }
+      if (host) host.innerHTML = `<p class="hint">Could not load ${window.LEAGUE} slate</p>`;
     }
   }
 
   document.querySelectorAll("[data-nav]").forEach((b) => {
     b.addEventListener("click", () => showView(b.dataset.nav));
   });
-  document.querySelectorAll("[data-lg]").forEach((b)=>{
-    b.addEventListener("click", ()=>{
+  document.addEventListener("click", (ev)=>{
+    const b = ev.target.closest && ev.target.closest("[data-lg]");
+    if(!b) return;
+    {
       window.LEAGUE=b.dataset.lg;
       document.body.classList.toggle("nodock", window.LEAGUE!=="nfl");
       document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x===b));
@@ -1964,8 +1987,10 @@ function paintGame(g, sum) {
       paintWire();
       const host=$("liveList");
       if(host) host.innerHTML="<p class='hint'>Loading slate…</p>";
-      pullScores().catch(()=>{});
-    });
+      pullScores().catch((err)=>{
+        if(host) host.innerHTML="<p class='hint'>Could not load "+window.LEAGUE+" slate</p>";
+      });
+    }
   });
 
   showView("live");
