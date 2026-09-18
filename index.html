@@ -108,6 +108,11 @@ select,input{width:100%;margin-top:6px;padding:11px;border-radius:4px;border:1px
 .game .lines{color:var(--ember);font-weight:700}
 .jump,.close,.addleg{margin-top:10px;width:auto;padding:10px 12px;border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tiles.three{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.tiles.three{grid-template-columns:1fr}}
+.l5{margin:8px 12px;}
+.l5 em{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);margin-bottom:6px}
+.campus .tile b{font-size:clamp(14px,2vw,20px)}
 .tile{background:#0a0b10;border:1px solid #2a241c;padding:12px}
 .tile span{display:block;color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 .tile b{font-family:"Bebas Neue",sans-serif;font-size:var(--score)}
@@ -1058,20 +1063,24 @@ render();
     ]}
   ];
   const WIRE_CFB = [
-    {g:"Picks", items:[
-      ["CBS Week picks", "https://www.cbssports.com/college-football/news/"],
-      ["CBS betting guide", "https://www.cbssports.com/betting/news/how-to-bet-on-2026-week-3-college-football-betting-guide-odds-trends-promos-apps-schedule-previews/"],
-      ["ESPN CFB picks", "https://www.espn.com/college-football/picks"],
-      ["Action Network", "https://www.actionnetwork.com/ncaaf/picks/game"],
+    {g:"Expert boards", items:[
+      ["CBS ATS board", "https://www.cbssports.com/college-football/picks/experts/against-the-spread/"],
+      ["CBS straight up", "https://www.cbssports.com/college-football/picks/experts/straight-up/"],
       ["Covers picks", "https://www.covers.com/picks/ncaaf"],
-      ["Sharp Football", "https://www.sharpfootballanalysis.com/betting/college-football-odds-picks-predictions/"],
-      ["Pickswise", "https://www.pickswise.com/college-football/predictions/"]
+      ["Action picks", "https://www.actionnetwork.com/ncaaf/picks"],
+      ["ESPN CFB", "https://www.espn.com/college-football/"]
     ]},
-    {g:"Lines & consensus", items:[
+    {g:"Models", items:[
+      ["ESPN FPI", "https://www.espn.com/college-football/fpi"],
+      ["ESPN SP+", "https://www.espn.com/college-football/story/_/id/49868647/2026-college-football-sp+-rankings-all-138-fbs-teams"],
+      ["TeamRankings ATS", "https://www.teamrankings.com/ncaaf/trends/ats-trends/"],
+      ["TeamRankings OU", "https://www.teamrankings.com/ncaaf/trends/ou-trends/"]
+    ]},
+    {g:"Lines", items:[
       ["Covers odds", "https://www.covers.com/sport/football/ncaaf/odds"],
-      ["ScoresAndOdds", "https://www.scoresandodds.com/ncaaf/consensus-picks"],
-      ["FanDuel CFB", "https://sportsbook.fanduel.com/navigation/ncaaf"],
-      ["TeamRankings ATS", "https://www.teamrankings.com/ncaaf/trends/ats-trends/"]
+      ["Action odds", "https://www.actionnetwork.com/ncaaf/odds"],
+      ["VegasInsider", "https://www.vegasinsider.com/college-football/odds/"],
+      ["FanDuel NCAAF", "https://sportsbook.fanduel.com/navigation/ncaaf"]
     ]}
   ];
   function paintWire(){
@@ -1272,7 +1281,86 @@ render();
       <p class="hint">ESPN book snapshot — FanDuel highlighted when that book is in the feed. Official juice still lives on FanDuel.</p>
       <p class="mlinks"><a href="https://sportsbook.fanduel.com/navigation/nfl" target="_blank" rel="noopener">Open FanDuel NFL</a></p>`;
   }
-  function oddsBlock(sum, g) {
+  function campusLine(sum, g){
+    g=g||{};
+    const pc=((sum&&sum.pickcenter)||[])[0] || {};
+    const pred=(sum&&sum.predictor)||{};
+    const gi=(sum&&sum.gameInfo)||{};
+    const wx=gi.weather||{};
+    const ven=gi.venue||{};
+    const box=((sum&&sum.boxscore)||{}).teams||[];
+    const l5=(sum&&sum.lastFiveGames)||[];
+    const hdr=((sum&&sum.header)||{}).competitions||[];
+    const comp=hdr[0]||{};
+    const oddsSrc = pc.details ? pc : ((g.spread||g.overUnder)?g:{});
+    const details = pc.details || g.spread || "Line pending";
+    const ou = pc.overUnder != null ? pc.overUnder : g.overUnder;
+    const awayML = (pc.awayTeamOdds&&pc.awayTeamOdds.moneyLine);
+    const homeML = (pc.homeTeamOdds&&pc.homeTeamOdds.moneyLine);
+    function ml(n){ if(n==null||n==="") return "—"; const x=Number(n); if(!isFinite(x)) return String(n); return x>0?("+"+x):String(x); }
+    const awP = Number((pred.awayTeam&&pred.awayTeam.gameProjection)||0);
+    const hmP = Number((pred.homeTeam&&pred.homeTeam.gameProjection)||0);
+    const awN = teamLabel(g,"away");
+    const hmN = teamLabel(g,"home");
+    const city = (ven.address&&(ven.address.city+(ven.address.state?", "+ven.address.state:"")))||"";
+    const wxLine = wx.temperature!=null ? (wx.temperature+"° · rain "+(wx.precipitation!=null?wx.precipitation+"%":"—")+(wx.gust!=null?" · wind "+wx.gust:"")) : "";
+    function statsOf(ab){
+      const row=box.find(t=>((t.team||{}).abbreviation)===ab);
+      const out={};
+      (row&&row.statistics||[]).forEach(s=>{ out[s.label||s.name]=s.displayValue; });
+      return out;
+    }
+    const as=statsOf(g.away), hs=statsOf(g.home);
+    const keys=["Points Per Game","Points Allowed Per Game","Total Yards","Yards Allowed","Yards Passing","Yards Rushing","Pass Yards Allowed","Rush Yards Allowed"];
+    const rows=keys.map(k=>{
+      const a=as[k], h=hs[k];
+      if(a==null&&h==null) return "";
+      return `<tr><td>${k.replace(" Per Game","/g")}</td><td>${a||"—"}</td><td>${h||"—"}</td></tr>`;
+    }).join("");
+    function five(block){
+      const tm=(block.team||{}).abbreviation||"";
+      const evs=(block.events||[]).slice(0,5);
+      if(!evs.length) return "";
+      return `<div class="l5"><em>${tm} last 5</em>`+evs.map(e=>{
+        const opp=(e.opponent&&e.opponent.abbreviation)||"";
+        return `<span class="chip ${e.gameResult==="W"?"win":"loss"}">${e.gameResult||""} ${e.atVs||""} ${opp} ${e.score||""}</span>`;
+      }).join(" ")+"</div>";
+    }
+    const lean = awP>=hmP
+      ? `${awN} ${awP.toFixed(0)}% to win · ESPN model`
+      : `${hmN} ${hmP.toFixed(0)}% to win · ESPN model`;
+    const fav = awP>=70? awN+" look like the side if you are on the number": (hmP>=70? hmN+" look like the side if you are on the number": "Model is closer than a casual look — shop the number");
+    return `<div class="campus">
+      <p class="sec">The number</p>
+      <div class="tiles three">
+        <div class="tile"><span>Spread</span><b>${details}</b></div>
+        <div class="tile"><span>Total</span><b>${ou!=null?ou:"—"}</b></div>
+        <div class="tile"><span>Moneyline</span><b>${g.away} ${ml(awayML)} · ${g.home} ${ml(homeML)}</b></div>
+      </div>
+      <p class="hint">${ven.fullName||""}${city?" · "+city:""}${wxLine?" · "+wxLine:""} · DraftKings via ESPN</p>
+      <p class="sec">ESPN matchup predictor</p>
+      <div class="wp"><i style="width:${Math.max(awP,2)}%;background:#ff7a18"></i></div>
+      <div class="tiles">
+        <div class="tile ${awP>=hmP?"good":""}"><span>${awN}</span><b>${awP?awP.toFixed(1)+"%":"—"}</b></div>
+        <div class="tile ${hmP>awP?"good":""}"><span>${hmN}</span><b>${hmP?hmP.toFixed(1)+"%":"—"}</b></div>
+      </div>
+      <p class="read">${lean}. ${fav}.</p>
+      <p class="sec">Season pace</p>
+      <div class="tblwrap"><table class="log"><thead><tr><th></th><th>${g.away}</th><th>${g.home}</th></tr></thead><tbody>${rows||"<tr><td colspan=3>Season stats after kickoff data lands</td></tr>"}</tbody></table></div>
+      ${l5.map(five).join("")}
+      <p class="sec">Work the number</p>
+      <div class="wirecol">
+        <a href="https://www.covers.com/sport/football/ncaaf/odds" target="_blank" rel="noopener">Covers line shop</a>
+        <a href="https://www.actionnetwork.com/ncaaf/odds" target="_blank" rel="noopener">Action odds</a>
+        <a href="https://www.cbssports.com/college-football/picks/experts/against-the-spread/" target="_blank" rel="noopener">CBS ATS desk</a>
+        <a href="https://www.espn.com/college-football/game/_/gameId/${g.id}" target="_blank" rel="noopener">ESPN gamecast</a>
+        <a href="https://www.teamrankings.com/ncaaf/trends/ats-trends/" target="_blank" rel="noopener">ATS trends</a>
+      </div>
+    </div>`;
+  }
+function oddsBlock(sum, g) {
+    if(window.LEAGUE==="cfb") return campusLine(sum,g);
+
     g=g||{};
     const o = (sum.pickcenter || sum.odds || [])[0] || {};
     const spread = o.spread != null ? o.spread : (o.details && o.details.spread);
