@@ -216,8 +216,8 @@ body.nodock{padding-bottom:16px}
   <div class="hero-bg" aria-hidden="true"></div>
   <div class="hero-copy">
     <p class="kicker">Sports Sauce</p>
-    <h2>The board is live.<br>The tape is underneath it.</h2>
-    <p class="lede">Scores as they happen. Research before you write the number down.</p>
+    <h2>Track it live.<br>Build the bet from the tape.</h2>
+    <p class="lede">Live scores on top. Volume research underneath before you put a number in.</p>
   </div>
   <div class="hub">
     <button type="button" class="hubcard nfl" data-enter="nfl">
@@ -1196,8 +1196,8 @@ function showView(name) {
       homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || (home.athlete && home.athlete.displayName) || "",
       awayId: (away.team && away.team.id) || away.id,
       homeId: (home.team && home.team.id) || home.id,
-      awayLogo: (away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || (away.athlete && (away.athlete.headshot || away.athlete.flag)) || "",
-      homeLogo: (home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || (home.athlete && (home.athlete.headshot || home.athlete.flag)) || "",
+      awayLogo: asHref(away.team && (away.team.logo || (away.team.logos&&away.team.logos[0]))) || asHref(away.athlete && (away.athlete.headshot || away.athlete.flag)) || "",
+      homeLogo: asHref(home.team && (home.team.logo || (home.team.logos&&home.team.logos[0]))) || asHref(home.athlete && (home.athlete.headshot || home.athlete.flag)) || "",
       awayColor: (away.team && away.team.color) ? "#"+away.team.color : "#1a1c22",
       homeColor: (home.team && home.team.color) ? "#"+home.team.color : "#1a1c22",
       awayAlt: (away.team && away.team.alternateColor) ? "#"+away.team.alternateColor : "#ffffff",
@@ -1224,11 +1224,12 @@ function showView(name) {
   }
   window.TEAM_HEX = window.TEAM_HEX || {ARI:"#97233F",ATL:"#A71930",BAL:"#241773",BUF:"#00338D",CAR:"#0085CA",CHI:"#0B162A",CIN:"#FB4F14",CLE:"#311D00",DAL:"#041E42",DEN:"#FB4F14",DET:"#0076B6",GB:"#203731",HOU:"#03202F",IND:"#002C5F",JAX:"#006778",KC:"#E31837",LAC:"#0080C6",LAR:"#003594",LV:"#A5ACAF",MIA:"#008E97",MIN:"#4F2683",NE:"#002244",NO:"#D3BC8D",NYG:"#0B2265",NYJ:"#125740",PHI:"#004C54",PIT:"#FFB612",SEA:"#002244",SF:"#AA0000",TB:"#D50A0A",TEN:"#0C2340",WAS:"#5A1414",WSH:"#5A1414"};
   function paintSlate(games) {
+    const host = $("liveList");
+    try {
     games = (games||[]).filter(g=>!g.league || g.league===window.LEAGUE);
     const live = games.filter((g) => g.state === "in");
     const pre = games.filter((g) => g.state === "pre");
     const post = games.filter((g) => g.state === "post" || g.completed);
-    const host = $("liveList");
     if (!host) return;
     if(!games.length){
       host.innerHTML = "<p class='hint'>No "+(window.LEAGUE||"").toUpperCase()+" events on the ESPN board right now.</p>";
@@ -1258,6 +1259,9 @@ function showView(name) {
       (pre.length ? `<p class="sec">Upcoming</p>` + pre.map(card).join("") : "") +
       (post.length ? `<p class="sec">Final</p>` + post.map(card).join("") : "");
     host.querySelectorAll("[data-gid]").forEach((b) => { b.onclick = () => openGame(b.dataset.gid); });
+    } catch(err){
+      if(host) host.innerHTML="<p class='hint'>Slate error: "+(err&&err.message||err)+"</p>";
+    }
   }
 
   
@@ -1291,27 +1295,41 @@ function eventsFrom(data){
     });
     return out;
   }
+  function asHref(v){
+    if(!v) return "";
+    if(typeof v==="string") return v;
+    if(v.href) return v.href;
+    return "";
+  }
   async function pullScores(forLg) {
     if(forLg) window.LEAGUE=forLg;
     const lg=window.LEAGUE||"nfl";
+    const host=$("liveList");
     if($("liveMeta")) $("liveMeta").textContent="Loading "+lg.toUpperCase()+"…";
-    let data={}, events=[];
-    try {
-      const res = await fetch(scoreUrl(), { cache: "no-store" });
-      if (res.ok) data = await res.json();
-      events = eventsFrom(data);
-    } catch(e){}
-    if(!events.length){
-      try {
-        const res = await fetch(scoreUrlAlt(), { cache: "no-store" });
-        if (res.ok) data = await res.json();
-        events = eventsFrom(data);
-      } catch(e){}
+    let events=[];
+    const urls=[cfg().score, cfg().alt].filter(Boolean);
+    for(const u of urls){
+      try{
+        const res=await fetch(u,{cache:"no-store",mode:"cors"});
+        if(!res.ok) continue;
+        const data=await res.json();
+        events=eventsFrom(data)||[];
+        if(events.length) break;
+      }catch(e){}
     }
-    const games = events.map(mapEvent).filter(g=>g && (g.away||g.home||g.awayName||g.homeName));
+    let games=[];
+    try{
+      games=events.map(ev=>{ try{ return mapEvent(ev); }catch(err){ return null; } })
+        .filter(g=>g && (g.away||g.home||g.awayName||g.homeName));
+    }catch(e){ games=[]; }
     games.forEach(g=>g.league=lg);
     window.LIVE_GAMES = games;
     window.SLATE_LEAGUE = lg;
+    if(!games.length && host){
+      host.innerHTML="<p class='hint'>"+lg.toUpperCase()+" board is empty or blocked ("+events.length+" raw events).</p>";
+      if($("liveMeta")) $("liveMeta").textContent=lg.toUpperCase()+" · 0";
+      return;
+    }
     const week = games.find((g) => g.week) && games.find((g) => g.week).week;
     if (week) window.CUR_WEEK = week;
     window.SLATE = (window.SLATE || []).filter((g) => {
