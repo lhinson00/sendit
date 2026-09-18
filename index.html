@@ -1202,7 +1202,7 @@ render();
     ${bookRows(sum||{})}`;
   }
 
-  function the plateKey(id){ return "ss_slip_"+id; }
+  function slipKey(id){ return "ss_slip_"+id; }
   function loadSlip(id){
     try { return JSON.parse(localStorage.getItem(slipKey(id))||"[]"); } catch(e){ return []; }
   }
@@ -1281,7 +1281,7 @@ render();
     });
     pullSlipBoxes();
   }
-  async async function pullSlipBoxes(){
+  async function pullSlipBoxes(){
     const ids=[...new Set(allSlips().map(r=>String(r.gid)))];
     await Promise.all(ids.map(async id=>{
       try{
