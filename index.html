@@ -122,14 +122,14 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));
   width:min(1120px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:6px;
   background:#101218;border:1px solid #3a2a18;z-index:12}
-.dock button{border:0;background:transparent;color:var(--muted);padding:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.dock button{border:0;background:transparent;color:var(--muted);padding:12px 6px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px}
 .dock button.on{background:var(--orange);color:#140800}
 .sauce,.sliprow{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#101218;border:1px solid #2a241c;padding:10px 12px;margin-bottom:8px}
 .sauce b,.sliprow b{display:block}
 .sauce span,.sliprow span{color:var(--muted);font-size:11px}
-.sright{display:flex;align-items:center;gap:8px}
+.sright{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}.rung{max-width:100%;min-width:0}
 .sliprow button{border:0;background:#3a1218;color:#ff8a8a;font-weight:800;padding:8px 10px;letter-spacing:.08em;text-transform:uppercase;font-size:10px}
-.sfilt{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px;background:#101218;border:1px solid #2a241c;padding:12px}
+.sfilt{display:grid;grid-template-columns:1fr;gap:8px;margin:0 0 12px;background:#101218;border:1px solid #2a241c;padding:12px;width:100%;max-width:100%;overflow:visible}.sfilt select{max-width:100%;min-width:0}
 .sfilt label{margin:0}
 .prog{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:18px}
 .prog.hit{color:var(--green)}.prog.run{color:var(--ember)}.prog.miss{color:#ff8a8a}.prog.wait{color:var(--muted)}
@@ -149,7 +149,7 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
     <div class="word">
       <div class="mark">S</div>
       <div>
-        <p class="eyebrow">NFL desk</p>
+        <p class="eyebrow">The kitchen</p>
         <h1>Sports Sauce</h1>
       </div>
     </div>
@@ -168,12 +168,12 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 </section>
 
 <section id="viewSlip" hidden>
-  <p class="sec">Board slip</p>
+  <p class="sec">Let's eat — the plate you built in the kitchen</p>
   <div id="slipBoard"></div>
 </section>
 
 <section id="viewResearch" hidden>
-  <p class="sec">Betting desk</p>
+  <p class="sec">The kitchen — cook the numbers before you fire the ticket</p>
   <div class="tabs">
     <button type="button" class="on" data-mode="players">Players</button>
     <button type="button" data-mode="teams">Teams</button>
@@ -204,8 +204,8 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 
 <nav class="dock">
   <button type="button" class="on" data-nav="live">Live</button>
-  <button type="button" data-nav="research">Desk</button>
-  <button type="button" data-nav="slip">Slip <i id="slipCount"></i></button>
+  <button type="button" data-nav="research">Kitchen</button>
+  <button type="button" data-nav="slip">Let's Eat <i id="slipCount"></i></button>
 </nav>
 <div class="sheet" id="sheet"><div class="sheet-body" id="sheetBody"></div></div>
 
@@ -1066,7 +1066,7 @@ render();
           <div class="gscore">${g.state==="pre"?"VS":g.awayScore+"<em>-</em>"+g.homeScore}</div>
           <div class="gteam right"><b>${g.home}</b><img alt="" src="${logo(g.home)}"/></div>
         </div>
-        <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}${loadSlip(g.id).length? " · "+loadSlip(g.id).length+" on slip":""}</div>
+        <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}${loadSlip(g.id).length? " · "+loadSlip(g.id).length+" on the plate":""}</div>
       </button>`;
     }
     host.innerHTML =
@@ -1202,7 +1202,7 @@ render();
     ${bookRows(sum||{})}`;
   }
 
-  function slipKey(id){ return "ss_slip_"+id; }
+  function the plateKey(id){ return "ss_slip_"+id; }
   function loadSlip(id){
     try { return JSON.parse(localStorage.getItem(slipKey(id))||"[]"); } catch(e){ return []; }
   }
@@ -1228,18 +1228,42 @@ render();
     const el=$("slipCount");
     if(el) el.textContent=n?String(n):"";
   }
+  window.SUM_CACHE = window.SUM_CACHE || {};
+  function findBox(live, player){
+    if(!live || !player) return null;
+    if(live[player]) return live[player];
+    const want=player.toLowerCase();
+    const keys=Object.keys(live);
+    let hit=keys.find(k=>k.toLowerCase()===want);
+    if(hit) return live[hit];
+    const last=want.split(" ").pop();
+    hit=keys.find(k=>k.toLowerCase().endsWith(" "+last) || k.toLowerCase()===last);
+    return hit?live[hit]:null;
+  }
   function paintBoardSlip(){
     const host=$("slipBoard");
     if(!host) return;
     const rows=allSlips();
-    if(!rows.length){ host.innerHTML="<p class='hint'>No legs yet. Open a game → Sauce → Add.</p>"; return; }
+    if(!rows.length){ host.innerHTML="<p class='hint'>No legs yet. Open a game → Sauce → Add. Live yards/catches track here once the game is on.</p>"; return; }
     const games=window.LIVE_GAMES||[];
     host.innerHTML=rows.map(r=>{
-      const g=games.find(x=>x.id===String(r.gid));
-      const label=g? (g.away+" @ "+g.home) : "Game "+r.gid;
-      return `<div class="sliprow">
-        <div><b>${r.player}</b><span>${r.market} ${r.th} · ${label}</span></div>
+      const g=games.find(x=>x.id===String(r.gid))||{};
+      const label=g.away? (g.away+" @ "+g.home) : "Game "+r.gid;
+      const live=boxMap(window.SUM_CACHE[String(r.gid)]||{});
+      const box=findBox(live, r.player);
+      const now=liveNow(box, r.market);
+      const st=liveStatus(now, r.th, r.market);
+      const need=lineNeed(r.th);
+      const pct=now==null?0:Math.min(100, Math.round((now/Math.max(need,1))*100));
+      const kick=g.state==="pre"?"PRE":(g.state==="in"?"LIVE":(g.completed||g.state==="post"?"FINAL":""));
+      return `<div class="sliprow track ${st.cls}">
+        <div>
+          <b>${r.player}</b>
+          <span>${r.market} ${r.th} · ${label} · ${kick}</span>
+          <div class="trackbar"><i style="width:${pct}%"></i></div>
+        </div>
         <div class="sright">
+          <em class="prog ${st.cls}">${st.txt}</em>
           <button type="button" data-openg="${r.gid}">Open</button>
           <button type="button" data-kill="${r.gid}|${r.idx}">×</button>
         </div>
@@ -1255,6 +1279,38 @@ render();
         paintBoardSlip();
       };
     });
+    pullSlipBoxes();
+  }
+  async function pullSlipBoxes(){
+    const ids=[...new Set(allSlips().map(r=>String(r.gid)))];
+    await Promise.all(ids.map(async id=>{
+      try{
+        const res=await fetch(SUM_URL(id),{cache:"no-store"});
+        if(res.ok) window.SUM_CACHE[id]=await res.json();
+      }catch(e){}
+    }));
+    if(window._paintingSlip) return;
+    window._paintingSlip=true;
+    try{
+      const host=$("slipBoard");
+      if(host && $("viewSlip") && !$("viewSlip").hidden){
+        const games=window.LIVE_GAMES||[];
+        host.querySelectorAll(".sliprow.track").forEach((row,i)=>{
+          const rows=allSlips();
+          const r=rows[i]; if(!r) return;
+          const live=boxMap(window.SUM_CACHE[String(r.gid)]||{});
+          const now=liveNow(findBox(live,r.player), r.market);
+          const st=liveStatus(now, r.th, r.market);
+          const need=lineNeed(r.th);
+          const pct=now==null?0:Math.min(100, Math.round((now/Math.max(need,1))*100));
+          const bar=row.querySelector(".trackbar i");
+          const em=row.querySelector(".prog");
+          if(bar) bar.style.width=pct+"%";
+          if(em){ em.className="prog "+st.cls; em.textContent=st.txt; }
+          row.className="sliprow track "+st.cls;
+        });
+      }
+    } finally { window._paintingSlip=false; }
   }
   function lineNeed(th){
     const n=parseInt(th,10);
@@ -1345,7 +1401,7 @@ render();
     const rows=sauceList(g);
     const slip=loadSlip(g.id||OPEN_ID);
     function prog(r){
-      const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
+      const st=liveStatus(liveNow(findBox(live,r.player), r.market), r.th, r.market);
       return `<i class="prog ${st.cls}">${st.txt}</i>`;
     }
     function rowCard(r){
@@ -1357,7 +1413,7 @@ render();
         if(typeof verdict==="function") call=(verdict(p,r.market,r.th,r.hits,r.games,mu)||{}).call||"";
         if(typeof nextRung==="function") nxt=nextRung(p,r.market,r.th);
       }catch(e){}
-      const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
+      const st=liveStatus(liveNow(findBox(live,r.player), r.market), r.th, r.market);
       const sc=mu.score!=null?mu.score:"—";
       return `<article class="sauce cardish" data-openp="${r.player}">
         <div><b>${r.player}</b>
@@ -1379,15 +1435,15 @@ render();
       (other.length?`<p class="sec">Other</p>`+other.map(rowCard).join(""):"")
     ) || "<p class='hint'>Nobody cleared that cut on these two rosters. Drop Min G / Min H.</p>";
     const saved=slip.map((r,i)=>{
-      const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
+      const st=liveStatus(liveNow(findBox(live,r.player), r.market), r.th, r.market);
       return `<div class="sliprow"><div><b>${r.player}</b><span>${r.market} ${r.th} · live ${st.txt}</span></div><div class="sright"><i class="prog ${st.cls}">${st.cls==="wait"?"":st.txt}</i><button type="button" data-drop="${i}">×</button></div></div>`;
-    }).join("") || "<p class='hint'>Empty slip — set a filter, then Add.</p>";
+    }).join("") || "<p class='hint'>Nothing on the plate yet — set a filter, then Add.</p>";
     return `<div class="sfilt">
       <label>Pos<select id="sPos">${opts(["ALL","WR","TE","RB","QB"], f.pos)}</select></label>
       <label>Stat<select id="sMkt">${opts(mkts, f.market)}</select></label>
       <label>Line<select id="sLine">${opts(lines, f.line)}</select></label>
     </div>
-    <div class="sliptop"><p class="sec">Slip · ${slip.length} legs · ${f.market} ${f.line}</p>${saved}</div>
+    <div class="sliptop"><p class="sec">Let's eat · ${slip.length} legs · ${f.market} ${f.line}</p>${saved}</div>
     ${list}`;
   }
   function bindSauce(g, sum){
@@ -1532,6 +1588,7 @@ function paintGame(g, sum) {
       }
     } catch (e) {}
     LAST_SUM = sum || {};
+    window.SUM_CACHE[String(id)] = sum || {};
     if (window._SAUCE_REBUILD) { window._SAUCE_REBUILD=false; paintGame(g, sum); }
     else if (OPEN_ID === String(id) && $("gameRoom") && $("gameRoom").querySelector(".scorebug")) patchGame(g, sum);
     else paintGame(g, sum);
@@ -1611,6 +1668,7 @@ function paintGame(g, sum) {
   tick();
   pullInjuries().catch(() => {});
   setInterval(tick, 30000);
+  setInterval(()=>{ if(VIEW==="slip" || (window.LIVE_GAMES||[]).some(g=>g.state==="in")) pullSlipBoxes(); }, 20000);
   setInterval(() => pullInjuries().catch(() => {}), 15 * 60 * 1000);
 })();
 
