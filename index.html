@@ -93,6 +93,13 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .grow .opp{font-weight:800}
 .grow .opp span{display:block;color:var(--muted);font-size:11px;font-weight:500}
 .grow .line{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;color:#efe6d8}
+.lead3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 12px}
+.lead{background:#1a120c;border:1px solid #3a2a18;padding:12px 10px;text-align:center}
+.lead em{display:block;font-style:normal;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.lead b{display:block;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:.95;color:var(--orange)}
+.wireblurb{margin:0 12px 12px;padding:12px;background:#14110e;border-left:3px solid var(--orange);font-size:13px;line-height:1.45;color:#ddd4c8}
+.nextchip{margin:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ember)}
+.lr{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 14px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -438,10 +445,14 @@ async function openPlayer(pid, name){
     const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/overview",{cache:"no-store"});
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
-    let log = {};
+    let log = {}, splitsPack = {};
     try{
-      const logRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/gamelog",{cache:"no-store"});
+      const [logRes, splitRes] = await Promise.all([
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/gamelog",{cache:"no-store"}),
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/splits",{cache:"no-store"})
+      ]);
       if(logRes.ok) log = await logRes.json();
+      if(splitRes.ok) splitsPack = await splitRes.json();
     }catch(e){}
     const st = d.statistics || {};
     const labels = st.labels || [];
@@ -473,6 +484,32 @@ async function openPlayer(pid, name){
       const line = bits.map((v,i)=>(gLabels[i]||"")+" "+v).filter(Boolean).join("  ");
       return "<div class='grow'><div class='dec "+dec+"'>"+(dec||"·")+"</div><div class='opp'>"+opp+"<span>"+dt+"</span></div><div class='line'>"+line+"</div></div>";
     }).join("");
+    function idx(labs, names){
+      const L=(labs||[]).map(x=>String(x).toUpperCase());
+      for(const n of names){ const i=L.indexOf(n); if(i>=0) return i; }
+      return -1;
+    }
+    const isPitch = /pitch/i.test(st.displayName||"") || labels.includes("ERA") || labels.includes("IP");
+    const leadKeys = isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]] : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]];
+    const leads = leadKeys.map(pair=>{
+      if(pair[0]==="W-L"){
+        const w=idx(labels,["W"]), l=idx(labels,["L"]);
+        const val = (w>=0||l>=0) ? ((season.stats[w]||"0")+"-"+ (season.stats[l]||"0")) : "—";
+        return "<div class='lead'><em>W-L</em><b>"+val+"</b></div>";
+      }
+      const i=idx(labels, pair.slice(1));
+      return "<div class='lead'><em>"+pair[0]+"</em><b>"+(i>=0?(season.stats[i]||"—"):"—")+"</b></div>";
+    }).join("");
+    const nxt = ((((d.nextGame||{}).league||{}).events)||[])[0] || {};
+    const nextLine = nxt.shortName || nxt.name || "";
+    const roto = (d.rotowire && (d.rotowire.headline||d.rotowire.story)) || "";
+    const lrCat = (splitsPack.splitCategories||[]).find(c=>/right \/ left/i.test(c.displayName||""));
+    const slLabs = splitsPack.labels || [];
+    const avgI = idx(slLabs, ["AVG","BA","OBA"]);
+    const lr = (lrCat && lrCat.splits || []).map(s=>{
+      const v = avgI>=0 ? s.stats[avgI] : (s.stats||[]).slice(-4,-3)[0] || "—";
+      return "<div class='tile'><em>"+s.displayName+"</em><b>"+v+"</b></div>";
+    }).join("");
     $("playerRoom").innerHTML = `
       <div class="phero">
         <div class="phero-top">
@@ -480,10 +517,13 @@ async function openPlayer(pid, name){
           <div class="phero-copy">
             <p class="kicker">${st.displayName||"Player"}</p>
             <h2>${name}</h2>
-            <p>Tap back for the box. Numbers are ESPN season / career.</p>
+            ${nextLine?`<p class="nextchip">${(d.nextGame&&d.nextGame.displayName)||"Game"} · ${nextLine}</p>`:"<p>ESPN season tape</p>"}
           </div>
         </div>
+        <div class="lead3">${leads}</div>
+        ${roto?`<div class="wireblurb">${roto}</div>`:""}
         <div class="tiles">${tiles}</div>
+        ${lr?`<div class="lr">${lr}</div>`:""}
         ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
       </div>
       <div class="glog">
