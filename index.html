@@ -1415,10 +1415,19 @@ render();
       }catch(e){}
       const st=liveStatus(liveNow(findBox(live,r.player), r.market), r.th, r.market);
       const sc=mu.score!=null?mu.score:"—";
+      const today=st.cls==="wait"?"Pregame":st.txt;
+      const lean=call?call.replace(/^Lean\s+/i,"Kitchen lean: "):"";
       return `<article class="sauce cardish" data-openp="${r.player}">
         <div><b>${r.player}</b>
-          <span>${r.pos} · ${r.team} · ${r.hits}/${r.games} on ${r.th}${l5?` · L5 ${l5.hits}/${l5.games}`:""}${nxt?` · next ${nxt.th} ${nxt.hits}/${nxt.games}`:""}${mu.word?` · ${mu.word}`:""} · live ${st.txt}</span>
-          ${call?`<div class="scall">${call}</div>`:""}
+          <span>${r.pos} · ${r.team}</span>
+          <div class="why">
+            <div class="fact"><b>Last 18</b> hit ${r.th} in ${r.hits} of ${r.games} games</div>
+            ${l5?`<div class="fact"><b>Last 5</b> hit ${r.th} in ${l5.hits} of ${l5.games}</div>`:""}
+            ${nxt?`<div class="fact"><b>Next line ${nxt.th}</b> hit in ${nxt.hits} of ${nxt.games}</div>`:""}
+            ${mu.word?`<div class="fact"><b>Matchup</b> ${mu.word}</div>`:""}
+            <div class="fact"><b>This game</b> ${today}</div>
+          </div>
+          ${lean?`<div class="scall">${lean}</div>`:""}
         </div>
         <div class="sright"><em class="bigscore">${sc}</em>
           <select class="rung" data-p="${r.player}">${((window.LINES_BY_MARKET&&window.LINES_BY_MARKET[r.market])||[r.th]).map(v=>`<option ${v===r.th?"selected":""}>${v}</option>`).join("")}</select>
