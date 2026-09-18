@@ -412,30 +412,40 @@ async function openPlayer(pid, name){
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
-    const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/overview",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
-    const d=await res.json();
-    const st=d.statistics||{};
-    const labels=st.labels||[];
-    const splits=(st.splits||[]).map(sp=>{
-      return "<tr><td>"+sp.displayName+"</td>"+(sp.stats||[]).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
-    }).join("");
-    const evs=(((d.gameLog||{}).events)||[]).slice(0,8);
-    const games=evs.map(ev=>{
-      const opp=(ev.opponent&& (ev.opponent.abbreviation||ev.opponent.displayName))||"";
-      const stats=(ev.stats||[]).slice(0,6).join(" · ");
-      return "<tr><td>"+(ev.gameDate||ev.date||"")+"</td><td>"+opp+"</td><td>"+stats+"</td></tr>";
+    const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/overview",{cache:"no-store"});
+    if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
+    const d = await ovrRes.json();
+    let log = {};
+    try{
+      const logRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/gamelog",{cache:"no-store"});
+      if(logRes.ok) log = await logRes.json();
+    }catch(e){}
+    const st = d.statistics || {};
+    const labels = st.labels || [];
+    const splits = (st.splits || []).map(sp =>
+      "<tr><td>"+sp.displayName+"</td>"+(sp.stats||[]).map(v=>"<td>"+v+"</td>").join("")+"</tr>"
+    ).join("");
+    const meta = log.events || {};
+    const gLabels = log.labels || [];
+    const catEvents = ((((log.seasonTypes||[])[0]||{}).categories||[])[0]||{}).events || [];
+    const list = Array.isArray(catEvents) ? catEvents.slice(0,10) : [];
+    const rows = list.map(ev=>{
+      const info = (!Array.isArray(meta) && meta && ev.eventId) ? (meta[ev.eventId]||{}) : {};
+      const opp = (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || info.atVs || "";
+      const dec = info.gameResult || "";
+      const line = (ev.stats||[]).slice(0,7).join(" · ");
+      return "<tr><td>"+String(info.gameDate||"").slice(0,10)+"</td><td>"+dec+" "+opp+"</td><td>"+line+"</td></tr>";
     }).join("");
     const shot = "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
     $("playerRoom").innerHTML = `
-      <div class="scorebug">
+      <div class="scorebug mlb-bug">
         <div class="gduo">
           <div class="gteam"><span class="logoplate"><img alt="" src="${shot}"/></span>${name}</div>
         </div>
-        <div class="gstat"><span>${st.displayName||"Season"}</span></div>
+        <div class="mlb-inning">${st.displayName||"Season"}</div>
       </div>
-      <div class="box"><h3>Splits</h3><table class="bx"><thead><tr><th></th>${labels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead><tbody>${splits}</tbody></table></div>
-      <div class="box"><h3>Recent games</h3><table class="bx"><thead><tr><th>Date</th><th>Opp</th><th></th></tr></thead><tbody>${games||"<tr><td colspan='3'>No log</td></tr>"}</tbody></table></div>`;
+      <div class="box"><h3>Season / career</h3><table class="bx"><thead><tr><th></th>${labels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead><tbody>${splits||"<tr><td>No splits</td></tr>"}</tbody></table></div>
+      <div class="box"><h3>Recent</h3><table class="bx"><thead><tr><th>Date</th><th>Opp</th><th>${gLabels.slice(0,7).join(" / ")||"Line"}</th></tr></thead><tbody>${rows||"<tr><td colspan='3'>No log posted</td></tr>"}</tbody></table></div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
