@@ -139,7 +139,15 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .sfilt label{margin:0}
 .prog{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:18px}
 .prog.hit{color:var(--green)}.prog.run{color:var(--ember)}.prog.miss{color:#ff8a8a}.prog.wait{color:var(--muted)}
-.wire{display:none}
+.wire{display:block;margin:0 var(--pad) 10px;padding:10px 12px;background:#101218;border:1px solid #2a241c}
+.wirecol{margin-bottom:8px}
+.wirecol b{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:4px}
+.wirecol a{display:inline-block;margin:0 10px 6px 0;color:var(--ember);font-size:12px;text-decoration:none;border-bottom:1px solid #3a2a18}
+.leagues{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 var(--pad) 8px}
+.leagues button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.leagues button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
+.gcard .linechip{margin-top:6px;font-size:11px;color:var(--ember);letter-spacing:.04em}
+
 @media (min-width:720px){
   #liveList{grid-template-columns:1fr 1fr}
   .livetop,.sec{grid-column:1/-1}
@@ -165,6 +173,10 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 
 <section id="viewLive">
   <div class="livetop"><span id="liveMeta">Loading slate…</span></div>
+  <div class="leagues">
+    <button type="button" class="on" data-lg="nfl">NFL</button>
+    <button type="button" data-lg="cfb">College</button>
+  </div>
   <div id="wire" class="wire"></div>
   <div id="liveList"></div>
 </section>
@@ -406,9 +418,28 @@ function teamRecord(t) {
 }
 
 function render() {
+  if (window.LEAGUE==="cfb") return renderCampus();
   if (MODE === "teams") return renderTeams();
   renderPlayers();
 }
+function renderCampus(){
+  const games=window.LIVE_GAMES||[];
+  if(summaryEl) summaryEl.innerHTML="<strong>College kitchen</strong> — live lines from ESPN. No player props. Use the wire for ATS / ML / O-U writeups.";
+  if(!listEl) return;
+  if(!games.length){ listEl.innerHTML="<p class='hint'>Load the College slate on Live first.</p>"; return; }
+  listEl.innerHTML=games.map(g=>{
+    const line=[g.spread,g.overUnder?("O/U "+g.overUnder):""].filter(Boolean).join(" · ") || "Line not posted yet";
+    const st=statusLine(g);
+    return `<article class="game">
+      <div class="when">${st}</div>
+      <div class="match">${teamLabel(g,"away")} @ ${teamLabel(g,"home")}</div>
+      <div class="lines">${line}</div>
+      <button type="button" class="jump" data-gid="${g.id}">Open game</button>
+    </article>`;
+  }).join("");
+  listEl.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid));
+}
+
 
 function renderPlayers() {
   if (!window.VOLUME || !window.VOLUME.length) {
@@ -950,9 +981,37 @@ function showSheet(html) {
 render();
 
 (function () {
-  const SCORE_URL = "https://cdn.espn.com/core/nfl/scoreboard?xhr=1";
-  const SUM_URL = (id) => "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=" + id;
+  window.LEAGUE = window.LEAGUE || "nfl";
+  function scoreUrl(){
+    return window.LEAGUE==="cfb"
+      ? "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300"
+      : "https://cdn.espn.com/core/nfl/scoreboard?xhr=1";
+  }
+  function scoreUrlAlt(){
+    return window.LEAGUE==="cfb"
+      ? "https://cdn.espn.com/core/college-football/scoreboard?xhr=1&limit=300"
+      : "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+  }
+  function SUM_URL(id){
+    return window.LEAGUE==="cfb"
+      ? "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+id
+      : "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+id;
+  }
   const INJ_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/injuries";
+  function logoUrl(g, side){
+    if(window.LEAGUE==="cfb"){
+      const id = side==="away" ? g.awayId : g.homeId;
+      if(id) return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+id+".png";
+      const ab = side==="away"?g.away:g.home;
+      return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+String(ab||"").toLowerCase()+".png";
+    }
+    const ab = side==="away"?g.away:g.home;
+    return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png";
+  }
+  function teamLabel(g, side){
+    if(window.LEAGUE==="cfb") return side==="away"?(g.awayName||g.away):(g.homeName||g.home);
+    return side==="away"?g.away:g.home;
+  }
   const TZ = "America/Chicago";
 
   let VIEW = "live";
@@ -982,31 +1041,40 @@ render();
     return new Date().toLocaleTimeString("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }) + " CT";
   }
   
-  const WIRE = [
+  const WIRE_NFL = [
     {g:"Picks", items:[
       ["Prisco", "https://www.cbssports.com/nfl/priscos-picks/"],
       ["CBS experts", "https://www.cbssports.com/nfl/news/nfl-week-2-odds-predictions-expert-picks/"],
-      ["CBS model", "https://www.cbssports.com/betting/news/week-2-2026-nfl-odds-picks-predictions-lines-spreads-best-bets/"],
       ["ESPN picks", "https://www.espn.com/nfl/picks"],
-      ["NFL.com picks", "https://www.nfl.com/news/"]
-    ]},
-    {g:"Injuries", items:[
-      ["ESPN injuries", "https://www.espn.com/nfl/injuries"],
-      ["NFL.com IR", "https://www.nfl.com/injuries/"]
-    ]},
-    {g:"Weather", items:[
-      ["NFL Weather", "https://nflweather.com/"],
-      ["Cleatz forecast", "https://cleatz.com/nfl/weather-report/"]
+      ["NFL.com", "https://www.nfl.com/news/"]
     ]},
     {g:"Market", items:[
-      ["Covers odds", "https://www.covers.com/sport/football/nfl/odds"],
-      ["FanDuel NFL", "https://sportsbook.fanduel.com/navigation/nfl"],
+      ["Covers", "https://www.covers.com/sport/football/nfl/odds"],
+      ["FanDuel", "https://sportsbook.fanduel.com/navigation/nfl"],
       ["Action Network", "https://www.actionnetwork.com/nfl/odds"]
+    ]}
+  ];
+  const WIRE_CFB = [
+    {g:"Picks", items:[
+      ["CBS Week picks", "https://www.cbssports.com/college-football/news/"],
+      ["CBS betting guide", "https://www.cbssports.com/betting/news/how-to-bet-on-2026-week-3-college-football-betting-guide-odds-trends-promos-apps-schedule-previews/"],
+      ["ESPN CFB picks", "https://www.espn.com/college-football/picks"],
+      ["Action Network", "https://www.actionnetwork.com/ncaaf/picks/game"],
+      ["Covers picks", "https://www.covers.com/picks/ncaaf"],
+      ["Sharp Football", "https://www.sharpfootballanalysis.com/betting/college-football-odds-picks-predictions/"],
+      ["Pickswise", "https://www.pickswise.com/college-football/predictions/"]
+    ]},
+    {g:"Lines & consensus", items:[
+      ["Covers odds", "https://www.covers.com/sport/football/ncaaf/odds"],
+      ["ScoresAndOdds", "https://www.scoresandodds.com/ncaaf/consensus-picks"],
+      ["FanDuel CFB", "https://sportsbook.fanduel.com/navigation/ncaaf"],
+      ["TeamRankings ATS", "https://www.teamrankings.com/ncaaf/trends/ats-trends/"]
     ]}
   ];
   function paintWire(){
     const host=$("wire");
     if(!host) return;
+    const WIRE = window.LEAGUE==="cfb" ? WIRE_CFB : WIRE_NFL;
     host.innerHTML=WIRE.map(sec=>`<div class="wirecol"><b>${sec.g}</b>${sec.items.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}</div>`).join("");
   }
 
@@ -1037,6 +1105,14 @@ render();
       week: (ev.week && ev.week.number) || null,
       away: (away.team && away.team.abbreviation) || "",
       home: (home.team && home.team.abbreviation) || "",
+      awayName: (away.team && (away.team.shortDisplayName || away.team.displayName)) || "",
+      homeName: (home.team && (home.team.shortDisplayName || home.team.displayName)) || "",
+      awayId: away.team && away.team.id,
+      homeId: home.team && home.team.id,
+      rankAway: (away.curatedRank && away.curatedRank.current) || (away.team && away.team.rank) || "",
+      rankHome: (home.curatedRank && home.curatedRank.current) || (home.team && home.team.rank) || "",
+      spread: ((c.odds||[])[0] && ((c.odds[0].details) || c.odds[0].spread)) || "",
+      overUnder: ((c.odds||[])[0] && (c.odds[0].overUnder)) || "",
       awayScore: away.score != null ? String(away.score) : "",
       homeScore: home.score != null ? String(home.score) : "",
       state: st.state || "pre",
@@ -1064,14 +1140,17 @@ render();
     function card(g) {
       const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
       const stripe = (window.TEAM_HEX||{})[g.home] || "#ff7a18";
-      const logo = (ab) => `https://a.espncdn.com/i/teamlogos/nfl/500/${String(ab||"").toLowerCase()}.png`;
+      const awN = (g.rankAway && g.rankAway!==99 && g.rankAway!=="99") ? ("#"+g.rankAway+" "+teamLabel(g,"away")) : teamLabel(g,"away");
+      const hmN = (g.rankHome && g.rankHome!==99 && g.rankHome!=="99") ? ("#"+g.rankHome+" "+teamLabel(g,"home")) : teamLabel(g,"home");
+      const line = [g.spread, g.overUnder?("O/U "+g.overUnder):""].filter(Boolean).join(" · ");
       return `<button type="button" class="gcard ${cls}" data-gid="${g.id}" style="--stripe:${stripe}">
         <div class="gstat"><span>${statusLine(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="gduo">
-          <div class="gteam"><img alt="" src="${logo(g.away)}"/><b>${g.away}</b></div>
+          <div class="gteam"><img alt="" src="${logoUrl(g,"away")}"/><b>${awN}</b></div>
           <div class="gscore">${g.state==="pre"?"VS":g.awayScore+"<em>-</em>"+g.homeScore}</div>
-          <div class="gteam right"><b>${g.home}</b><img alt="" src="${logo(g.home)}"/></div>
+          <div class="gteam right"><b>${hmN}</b><img alt="" src="${logoUrl(g,"home")}"/></div>
         </div>
+        ${line?`<div class="linechip">${line}</div>`:""}
         <div class="gopen">${g.state==="pre"?"Open preview":"Open game room"}${loadSlip(g.id).length? " · "+loadSlip(g.id).length+" on the plate":""}</div>
       </button>`;
     }
@@ -1082,11 +1161,26 @@ render();
     host.querySelectorAll("[data-gid]").forEach((b) => { b.onclick = () => openGame(b.dataset.gid); });
   }
 
+  function eventsFrom(data){
+    return (((data.content || {}).sbData || {}).events)
+      || (data.events)
+      || ((((data.content || {}).schedule || {}).events))
+      || [];
+  }
   async function pullScores() {
-    const res = await fetch(SCORE_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error("scoreboard " + res.status);
-    const data = await res.json();
-    const events = (((data.content || {}).sbData || {}).events) || [];
+    let data={}, events=[];
+    try {
+      const res = await fetch(scoreUrl(), { cache: "no-store" });
+      if (res.ok) data = await res.json();
+      events = eventsFrom(data);
+    } catch(e){}
+    if(!events.length){
+      try {
+        const res = await fetch(scoreUrlAlt(), { cache: "no-store" });
+        if (res.ok) data = await res.json();
+        events = eventsFrom(data);
+      } catch(e){}
+    }
     const games = events.map(mapEvent);
     window.LIVE_GAMES = games;
     const week = games.find((g) => g.week) && games.find((g) => g.week).week;
@@ -1534,8 +1628,8 @@ function paintGame(g, sum) {
       <div class="scorebug ${g.state === "in" ? "on" : ""}">
         <div class="sbmeta"><span class="chipstat ${g.state==="in"?"hot":""}">${statusLine(g)}</span></div>
         <div class="sbgrid">
-          <div class="sbteam" style="--c:${awC}"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/${String(g.away||"").toLowerCase()}.png" alt=""/><span>${g.away}</span><b>${g.state==="pre"?"—":g.awayScore}</b></div>
-          <div class="sbteam" style="--c:${hmC}"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/${String(g.home||"").toLowerCase()}.png" alt=""/><span>${g.home}</span><b>${g.state==="pre"?"—":g.homeScore}</b></div>
+          <div class="sbteam" style="--c:${awC}"><img src="${logoUrl(g,"away")}" alt=""/><span>${g.away}</span><b>${g.state==="pre"?"—":g.awayScore}</b></div>
+          <div class="sbteam" style="--c:${hmC}"><img src="${logoUrl(g,"home")}" alt=""/><span>${g.home}</span><b>${g.state==="pre"?"—":g.homeScore}</b></div>
         </div>
         ${wpBar}
         ${lastTxt ? `<div class="lastplay">${lastTxt}</div>` : ""}
@@ -1545,7 +1639,7 @@ function paintGame(g, sum) {
         <button type="button" data-gtab="box">Box</button>
         <button type="button" data-gtab="plays">Plays</button>
         <button type="button" data-gtab="odds">Line</button>
-        <button type="button" data-gtab="sauce">Sauce</button>
+        ${window.LEAGUE==="cfb"?"":'<button type="button" data-gtab="sauce">Sauce</button>'}
       </div>
       <div id="gtab-scoring" class="gtab">${scoringList(sum || {})}</div>
       <div id="gtab-box" class="gtab">${boxTables(sum || {})}</div>
@@ -1559,6 +1653,7 @@ function paintGame(g, sum) {
       if (n) n.hidden = k !== tab;
     });
     $("gameBack").onclick = () => showView("live");
+  paintWire();
   badgeSlip();
     box.querySelectorAll("[data-gtab]").forEach((b) => {
       b.onclick = () => {
@@ -1690,7 +1785,30 @@ function paintGame(g, sum) {
   document.querySelectorAll("[data-nav]").forEach((b) => {
     b.addEventListener("click", () => showView(b.dataset.nav));
   });
+  document.querySelectorAll("[data-lg]").forEach((b)=>{
+    b.addEventListener("click", ()=>{
+      window.LEAGUE=b.dataset.lg;
+      document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x===b));
+      const pc=$("playerControls"), tc=$("teamControls");
+      if(window.LEAGUE==="cfb"){
+        if(pc) pc.hidden=true;
+        if(tc) tc.hidden=false;
+        document.querySelectorAll("[data-mode]").forEach(x=>{
+          x.classList.toggle("on", x.dataset.mode==="teams");
+          if(x.dataset.mode==="players") x.style.display="none";
+        });
+      } else {
+        document.querySelectorAll("[data-mode]").forEach(x=>{ x.style.display=""; });
+      }
+      paintWire();
+      const host=$("liveList");
+      if(host) host.innerHTML="<p class='hint'>Loading slate…</p>";
+      pullScores().catch(()=>{});
+    });
+  });
+
   showView("live");
+  paintWire();
   badgeSlip();
   tick();
   pullInjuries().catch(() => {});
