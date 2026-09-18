@@ -47,6 +47,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .play{margin:0 var(--pad) 8px;padding:10px 12px;background:#101218;border:1px solid #222}
 .play span{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 .play p{margin:4px 0 0;font-size:14px}
+.pname{border:0;background:0;color:var(--ember);font:inherit;font-weight:800;padding:0;text-align:left}
+.scorebug .gteam b{font-size:28px;color:var(--orange)}
+.hist{margin:0 var(--pad) 16px}
+.chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -87,6 +91,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
   <div class="bar"><button class="back" id="toSlate">← Slate</button></div>
   <div id="gameRoom"></div>
 </section>
+<section id="viewPlayer" hidden>
+  <div class="bar"><button class="back" id="toGame">← Game</button></div>
+  <div id="playerRoom"></div>
+</section>
 
 <script>
 const URLS = {
@@ -108,9 +116,10 @@ let poll = null;
 const $ = id => document.getElementById(id);
 function show(name){
   ["viewHome","viewLive","viewGame"].forEach(id => { $(id).hidden = id !== "view"+name[0].toUpperCase()+name.slice(1); });
-  if(name==="home") $("viewHome").hidden=false, $("viewLive").hidden=true, $("viewGame").hidden=true;
-  if(name==="live") $("viewHome").hidden=true, $("viewLive").hidden=false, $("viewGame").hidden=true;
-  if(name==="game") $("viewHome").hidden=true, $("viewLive").hidden=true, $("viewGame").hidden=false;
+  $("viewHome").hidden = name!=="home";
+  $("viewLive").hidden = name!=="live";
+  $("viewGame").hidden = name!=="game";
+  if($("viewPlayer")) $("viewPlayer").hidden = name!=="player";
   window.scrollTo(0,0);
 }
 function face(comp, lg){
@@ -150,6 +159,7 @@ function mapComp(ev, lg){
       id: String(c.id || ev.id || "") + (lg==="ufc" && i ? "-"+i : ""),
       eventId: String(ev.id||c.id||""),
       fightId: String(c.id||""),
+      awayId: String(away.id||""), homeId: String(home.id||""),
       away: nameOf(away), home: nameOf(home),
       awayImg: face(away,lg), homeImg: face(home,lg),
       awayScore: scoreOf(away), homeScore: scoreOf(home),
@@ -178,7 +188,7 @@ function paint(games){
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+games.length;
   if(!games.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
   host.innerHTML = games.map(g=>`
-    <button type="button" class="gcard" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+    <button type="button" class="gcard" data-gid="${LEAGUE==="ufc"?(g.fightId||g.id):g.eventId}" data-fid="${g.fightId||""}">
       <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
       <div class="gduo">
         <div class="gteam"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
@@ -187,7 +197,7 @@ function paint(games){
       </div>
       ${g.awayScore||g.homeScore?`<div class="linechip">${g.awayScore} — ${g.homeScore}</div>`:""}
     </button>`).join("");
-  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid));
+  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
 }
 async function loadLeague(lg){
   LEAGUE=lg;
@@ -221,7 +231,8 @@ function boxHtml(sum){
       const rows = (grp.athletes||[]).map(a=>{
         const n=(a.athlete&&a.athlete.displayName)||"";
         const st=a.stats||[];
-        return "<tr><td>"+n+"</td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
+        const pid=a.athlete&&a.athlete.id;
+        return "<tr><td>"+(pid?("<button type='button' class='pname' data-pid='"+pid+"' data-pname='"+n.replace(/'/g,"")+"'>"+n+"</button>"):n)+"</td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
       }).join("");
       return "<div class='box'><h3>"+team+" · "+(grp.label||grp.displayName||grp.name||"")+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
     }).join("");
@@ -259,8 +270,6 @@ function renderGame(g, sum){
     ${playsHtml(sum)}`;
 }
 function renderFight(g){
-  const awTag = g.awayWin ? " · WIN" : "";
-  const hmTag = g.homeWin ? " · WIN" : "";
   $("gameRoom").innerHTML = `
     <div class="scorebug">
       <div class="gstat"><span>${g.card||"UFC"}</span><span>${when(g)}</span></div>
@@ -271,22 +280,63 @@ function renderFight(g){
       </div>
     </div>
     <div class="box">
-      <h3>The fight</h3>
+      <h3>${g.format||"The fight"}</h3>
       <table class="bx">
         <tr><th></th><th>${g.away}</th><th>${g.home}</th></tr>
         <tr><td>Record</td><td>${g.awayRec||"—"}</td><td>${g.homeRec||"—"}</td></tr>
-        <tr><td>Result</td><td>${g.awayWin?"Winner":(g.state==="post"?"—":"TBD")}${awTag}</td><td>${g.homeWin?"Winner":(g.state==="post"?"—":"TBD")}${hmTag}</td></tr>
+        <tr><td>Tonight</td><td>${g.awayWin?"WIN":(g.state==="post"?"—":"TBD")}</td><td>${g.homeWin?"WIN":(g.state==="post"?"—":"TBD")}</td></tr>
       </table>
     </div>
-    <p class="hint">${g.format||""} ${g.venue?(" · "+g.venue):""} ${g.broadcast?(" · "+g.broadcast):""}</p>
-    <p class="hint">${g.detail||""}</p>`;
+    <p class="hint">${[g.venue,g.broadcast,g.detail].filter(Boolean).join(" · ")}</p>
+    <div class="hist" id="histA"><p class="hint">Loading ${g.away} history…</p></div>
+    <div class="hist" id="histB"><p class="hint">Loading ${g.home} history…</p></div>`;
+  if(g.awayId) loadFightHistory(g.awayId, g.away, "histA");
+  if(g.homeId) loadFightHistory(g.homeId, g.home, "histB");
+}
+async function loadFightHistory(aid, name, hostId){
+  const host=$(hostId);
+  try{
+    const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/"+aid+"/overview",{cache:"no-store"});
+    if(!res.ok) throw new Error("no book");
+    const data=await res.json();
+    const uids=(data.fightHistory||[]).slice(0,8);
+    if(!uids.length){ host.innerHTML="<div class='box'><h3>"+name+" · history</h3><p class='hint'>No ESPN history.</p></div>"; return; }
+    const rows=await Promise.all(uids.map(async uid=>{
+      const p={};
+      uid.split("~").forEach(bit=>{ const kv=bit.split(":"); if(kv[1]) p[kv[0]]=kv[1]; });
+      if(!p.e||!p.c) return "";
+      try{
+        const cr=await fetch("https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events/"+p.e+"/competitions/"+p.c,{cache:"no-store"});
+        if(!cr.ok) return "";
+        const c=await cr.json();
+        const comps=c.competitors||[];
+        const me=comps.find(x=>String(x.id)===String(aid));
+        const opp=comps.find(x=>String(x.id)!==String(aid))||{};
+        let oppName="Opponent";
+        try{
+          const ar=await fetch((opp.athlete&&opp.athlete.$ref||"").replace("http://","https://"));
+          if(ar.ok){ const ad=await ar.json(); oppName=ad.displayName||ad.fullName||oppName; }
+        }catch(e){}
+        const win = me && me.winner===true;
+        const tag = win ? "<span class='chipwin'>W</span>" : (me && me.winner===false ? "<span class='chiploss'>L</span>" : "—");
+        const wt = (c.type && (c.type.text||c.type.abbreviation)) || "";
+        const dt = (c.date||"").slice(0,10);
+        return "<tr><td>"+dt+"</td><td>"+oppName+"</td><td>"+wt+"</td><td>"+tag+"</td></tr>";
+      }catch(e){ return ""; }
+    }));
+    host.innerHTML="<div class='box'><h3>"+name+" · last fights</h3><table class='bx'><thead><tr><th>Date</th><th>Opp</th><th>Class</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>";
+  }catch(e){
+    host.innerHTML="<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history.</p></div>";
+  }
 }
 async function openGame(id, fid){
   OPEN = id;
   if(poll){ clearInterval(poll); poll=null; }
   show("game");
   $("gameRoom").innerHTML = "<p class='hint'>Opening…</p>";
-  const g = GAMES.find(x => (fid && x.fightId===fid) || x.eventId===id) || {};
+  const g = LEAGUE==="ufc"
+    ? (GAMES.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(id)) || {})
+    : (GAMES.find(x => x.eventId===id) || {});
   if(LEAGUE==="ufc"){
     renderFight(g);
     return;
@@ -297,6 +347,7 @@ async function openGame(id, fid){
       const res = await fetch(SUM[LEAGUE](id), {cache:"no-store"});
       const sum = res.ok ? await res.json() : {};
       renderGame(g, sum);
+      document.querySelectorAll(".pname").forEach(b=>b.onclick=()=>openPlayer(b.dataset.pid, b.dataset.pname));
       const state = ((((sum.header||{}).competitions||[])[0]||{}).status||{}).type || {};
       if(state.completed || state.state==="post"){ if(poll) clearInterval(poll); poll=null; }
     }catch(e){
@@ -306,6 +357,39 @@ async function openGame(id, fid){
   await tickGame();
   poll = setInterval(tickGame, 12000);
 }
+async function openPlayer(pid, name){
+  show("player");
+  $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
+  try{
+    const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+pid+"/overview",{cache:"no-store"});
+    if(!res.ok) throw new Error("ESPN "+res.status);
+    const d=await res.json();
+    const st=d.statistics||{};
+    const labels=st.labels||[];
+    const splits=(st.splits||[]).map(sp=>{
+      return "<tr><td>"+sp.displayName+"</td>"+(sp.stats||[]).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
+    }).join("");
+    const evs=(((d.gameLog||{}).events)||[]).slice(0,8);
+    const games=evs.map(ev=>{
+      const opp=(ev.opponent&& (ev.opponent.abbreviation||ev.opponent.displayName))||"";
+      const stats=(ev.stats||[]).slice(0,6).join(" · ");
+      return "<tr><td>"+(ev.gameDate||ev.date||"")+"</td><td>"+opp+"</td><td>"+stats+"</td></tr>";
+    }).join("");
+    const shot = "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
+    $("playerRoom").innerHTML = `
+      <div class="scorebug">
+        <div class="gduo">
+          <div class="gteam"><span class="logoplate"><img alt="" src="${shot}"/></span>${name}</div>
+        </div>
+        <div class="gstat"><span>${st.displayName||"Season"}</span></div>
+      </div>
+      <div class="box"><h3>Splits</h3><table class="bx"><thead><tr><th></th>${labels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead><tbody>${splits}</tbody></table></div>
+      <div class="box"><h3>Recent games</h3><table class="bx"><thead><tr><th>Date</th><th>Opp</th><th></th></tr></thead><tbody>${games||"<tr><td colspan='3'>No log</td></tr>"}</tbody></table></div>`;
+  }catch(e){
+    $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
+  }
+}
+$("toGame") && ($("toGame").onclick = ()=>show("game"));
 $("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toSlate").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("live"); };
