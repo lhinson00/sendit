@@ -1080,7 +1080,7 @@ render();
     if ($("liveMeta")) $("liveMeta").textContent = nowCT() + " · " + live.length + " live";
     function card(g) {
       const cls = g.state === "in" ? "on" : g.completed ? "done" : "";
-      const stripe = (window.TEAM_HEX||TEAM_HEX||{})[g.home] || "#ff7a18";
+      const stripe = (window.TEAM_HEX||{})[g.home] || "#ff7a18";
       const logo = (ab) => `https://a.espncdn.com/i/teamlogos/nfl/500/${String(ab||"").toLowerCase()}.png`;
       return `<button type="button" class="gcard ${cls}" data-gid="${g.id}" style="--stripe:${stripe}">
         <div class="gstat"><span>${statusLine(g)}</span><span>${g.broadcast||""}</span></div>
@@ -1464,6 +1464,7 @@ render();
 function paintGame(g, sum) {
     const box = $("gameRoom");
     if (!box) return;
+    try {
     if (typeof captureFilt === "function") captureFilt();
     const hex = window.TEAM_HEX || {};
     const awC = hex[g.away] || "#888";
@@ -1522,6 +1523,11 @@ function paintGame(g, sum) {
         if (typeof openPlayer === "function") openPlayer(b.dataset.openp);
       };
     });
+    } catch (err) {
+      box.innerHTML = "<p class='hint'>Game room error: "+(err && err.message ? err.message : err)+"</p><button type='button' class='back' id='gameBack'>← Slate</button>";
+      const back=$("gameBack"); if(back) back.onclick=()=>showView("live");
+      console.error(err);
+    }
   }
 
   async function loadGame(id) {
@@ -1587,6 +1593,13 @@ function paintGame(g, sum) {
     pollGame = setInterval(() => { if (OPEN_ID) loadGame(OPEN_ID); }, 20000);
   }
   window.openGame = openGame;
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-gid]");
+    if (!b) return;
+    e.preventDefault();
+    openGame(b.getAttribute("data-gid"));
+  }); // data-gid-delegate
+
 
   async function pullInjuries() {
     const res = await fetch(INJ_URL, { cache: "no-store" });
