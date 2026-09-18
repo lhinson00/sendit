@@ -304,7 +304,7 @@ const summaryEl = document.getElementById("summary");
 
 let MODE = "players";
 
-const MARKETS_BY_POS = {
+window.MARKETS_BY_POS = {
   WR: ["Receiving Yards", "Receptions", "Receiving TDs"],
   TE: ["Receiving Yards", "Receptions", "Receiving TDs"],
   RB: ["Rushing Yards", "Rushing TDs", "Receiving Yards", "Receptions", "Receiving TDs"],
@@ -331,7 +331,7 @@ function fillSelect(el, items, preferred) {
   else if (items.length) el.value = items[0];
 }
 function fillMarkets(pos, preferred) {
-  fillSelect(marketEl, MARKETS_BY_POS[pos] || MARKETS_BY_POS.ALL, preferred);
+  fillSelect(marketEl, window.MARKETS_BY_POS[pos] || window.MARKETS_BY_POS.ALL, preferred);
 }
 function fillLines(market, preferred) {
   fillSelect(lineEl, (window.LINES_BY_MARKET && window.LINES_BY_MARKET[market]) || [], preferred || DEFAULT_LINE[market]);
@@ -383,9 +383,11 @@ function restoreMins(){
 restoreMins();
 
 posEl.addEventListener("change", () => {
-  const keepMarket = marketEl.value;
-  fillMarkets(posEl.value, keepMarket);
-  fillLines(marketEl.value, lineEl.value);
+  const pos = posEl.value;
+  const mkts = window.MARKETS_BY_POS[pos] || window.MARKETS_BY_POS.ALL;
+  const defM = {WR:"Receiving Yards",TE:"Receiving Yards",RB:"Rushing Yards",QB:"Passing Yards",ALL:"Receiving Yards"}[pos] || mkts[0];
+  fillMarkets(pos, defM);
+  fillLines(marketEl.value, DEFAULT_LINE[marketEl.value]);
   render();
 });
 marketEl.addEventListener("change", () => {
@@ -1116,7 +1118,7 @@ render();
   try { const saved=JSON.parse(localStorage.getItem("ss_sauce_filt")||"null"); if(saved) SAUCE_FILT=Object.assign(SAUCE_FILT,saved); } catch(e){}
   function persistFilt(){ try{ localStorage.setItem("ss_sauce_filt", JSON.stringify(SAUCE_FILT)); } catch(e){} }
   function captureFilt(){
-    if(!$("sPos")) return;
+    if(VIEW!=="game" || OPEN_TAB!=="sauce" || !$("sPos")) return;
     SAUCE_FILT.pos=$("sPos").value;
     SAUCE_FILT.market=$("sMkt").value;
     SAUCE_FILT.line=$("sLine").value;
@@ -1190,16 +1192,21 @@ render();
     return ["Receiving Yards","Receptions","Receiving TDs"];
   }
   function sauceList(g){
-    const teams=[g.away,g.home];
+    const teams=[g.away,g.home].filter(Boolean);
     const vol=window.VOLUME||[];
     const f=SAUCE_FILT;
+    const allowed=f.pos==="ALL"?null:marketsFor(f.pos);
     const rows=[];
     vol.forEach(r=>{
-      if(!teams.includes(r.team)) return;
-      if(f.pos!=="ALL" && r.pos!==f.pos) return;
+      const p=window.PLAYER[r.player]||{};
+      const pos=r.pos||p.pos;
+      const team=r.team||p.team;
+      if(teams.length && !teams.includes(team)) return;
+      if(f.pos!=="ALL" && pos!==f.pos) return;
+      if(allowed && !allowed.includes(r.market)) return;
       if(r.market!==f.market || r.threshold!==f.line) return;
       if(r.games<Number(f.minG||0) || r.hits<Number(f.minH||0)) return;
-      rows.push({player:r.player,pos:r.pos,team:r.team,market:r.market,th:r.threshold,hits:r.hits,games:r.games,rate:r.games?r.hits/r.games:0});
+      rows.push({player:r.player,pos,team,market:r.market,th:r.threshold,hits:r.hits,games:r.games,rate:r.games?r.hits/r.games:0});
     });
     rows.sort((a,b)=>b.rate-a.rate || b.hits-a.hits);
     return rows;
