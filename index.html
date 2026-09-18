@@ -152,6 +152,10 @@ table.log td{padding:8px 6px;border-top:1px solid #1c1c22;font-variant-numeric:t
 .prog.wait{color:var(--muted)}
 .sliprow b{display:block}
 .sliprow span{color:var(--muted);font-size:11px}
+
+.cardish{align-items:flex-start}
+.scall{margin-top:6px;color:var(--orange);font-weight:800;font-size:13px}
+.sauce em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
 </style>
 </head><body>
 <header class="top">
@@ -1106,7 +1110,18 @@ render();
 
   
   
-  let SAUCE_FILT = { pos:"ALL", market:"Receiving Yards", line:"20+", minG:6, minH:0 };
+  let SAUCE_FILT = { pos:"ALL", market:"Receiving Yards", line:"20+", minG:4, minH:0 };
+  try { const saved=JSON.parse(localStorage.getItem("ss_sauce_filt")||"null"); if(saved) SAUCE_FILT=Object.assign(SAUCE_FILT,saved); } catch(e){}
+  function persistFilt(){ try{ localStorage.setItem("ss_sauce_filt", JSON.stringify(SAUCE_FILT)); } catch(e){} }
+  function captureFilt(){
+    if(!$("sPos")) return;
+    SAUCE_FILT.pos=$("sPos").value;
+    SAUCE_FILT.market=$("sMkt").value;
+    SAUCE_FILT.line=$("sLine").value;
+    SAUCE_FILT.minG=Number($("sMinG").value||0);
+    SAUCE_FILT.minH=Number($("sMinH").value||0);
+    persistFilt();
+  }
 
   function slipKey(id){ return "ss_slip_"+id; }
   function loadSlip(id){
@@ -1203,10 +1218,34 @@ render();
       const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
       return `<i class="prog ${st.cls}">${st.txt}</i>`;
     }
-    const list=rows.map(r=>`<div class="sauce">
-      <div><b>${r.player}</b><span>${r.pos} · ${r.team} · ${r.hits}/${r.games} hist</span></div>
-      <div class="sright">${prog(r)}<button type="button" class="addleg" data-p="${r.player}" data-m="${r.market}" data-th="${r.th}" data-pos="${r.pos}" data-team="${r.team}">Add</button></div>
-    </div>`).join("") || "<p class='hint'>Nobody on this team slate hit that cut.</p>";
+    const list=rows.map(r=>{
+      const p=window.PLAYER[r.player]||{};
+      let extra="";
+      try{
+        if(typeof lastNRate==="function"){
+          const l5=lastNRate(p,r.market,r.th,5);
+          extra += l5?` · L5 ${l5.hits}/${l5.games}`:"";
+        }
+        if(typeof scoreSpot==="function"){
+          const mu=scoreSpot(p,r.market,r.th,r.hits,r.games);
+          extra += mu&&mu.score!=null?` · score ${mu.score}`:"";
+          extra += mu&&mu.word?` · ${mu.word}`:"";
+        }
+        if(typeof verdict==="function"){
+          const vd=verdict(p,r.market,r.th,r.hits,r.games, typeof scoreSpot==="function"?scoreSpot(p,r.market,r.th,r.hits,r.games):{});
+          extra += vd&&vd.call?`<div class="scall">${vd.call}</div>`:"";
+        }
+      }catch(e){}
+      return `<article class="sauce cardish">
+        <div><b>${r.player}</b>
+          <span>${r.pos} · ${r.team} · ${r.hits}/${r.games} on ${r.th}${extra.replace(/<div class="scall">.*$/,"")}</span>
+          ${extra.includes("scall")?extra.slice(extra.indexOf("<div")):""}
+        </div>
+        <div class="sright">${prog(r)}<em>${r.hits}/${r.games}</em>
+          <button type="button" class="addleg" data-p="${r.player}" data-m="${r.market}" data-th="${r.th}" data-pos="${r.pos}" data-team="${r.team}">Add</button>
+        </div>
+      </article>`;
+    }).join("") || "<p class='hint'>Nobody cleared that cut on these two rosters. Drop Min G / Min H.</p>";
     const saved=slip.map((r,i)=>{
       const st=liveStatus(liveNow(live[r.player], r.market), r.th, r.market);
       return `<div class="sliprow"><div><b>${r.player}</b><span>${r.market} ${r.th}</span></div><div class="sright"><i class="prog ${st.cls}">${st.txt}</i><button type="button" data-drop="${i}">×</button></div></div>`;
@@ -1219,7 +1258,7 @@ render();
       <label>Min H<input id="sMinH" type="number" min="0" max="18" value="${f.minH}"/></label>
     </div>
     <div class="sliptop"><p class="sec">Slip · live vs line</p>${saved}</div>
-    <p class="sec">${f.market} ${f.line} · this game</p>${list}`;
+    <p class="sec">${rows.length} players · ${f.market} ${f.line}</p>${list}`;
   }
   function bindSauce(g, sum){
     const box=$("gameRoom");
