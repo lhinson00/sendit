@@ -1155,10 +1155,11 @@ render();
     document.querySelectorAll("[data-lg]").forEach(x=>x.classList.toggle("on", x.dataset.lg===lg));
     showView("live");
     const host=$("liveList");
-    if(host) host.innerHTML="<p class='hint'>Loading "+lg.toUpperCase()+" slate…</p>";
+    if(host) host.innerHTML="<p class='hint'>Loading "+lg.toUpperCase()+"…</p>";
     if($("liveMeta")) $("liveMeta").textContent=lg.toUpperCase();
     paintWire();
-    pullScores(lg).catch(()=>{ if(host) host.innerHTML="<p class='hint'>Could not load "+lg+" slate</p>"; });
+    if(lg==="mlb"||lg==="ufc") pullAltSlate(lg);
+    else pullScores(lg).catch(()=>{ if(host) host.innerHTML="<p class='hint'>Could not load "+lg+" slate</p>"; });
   }
   window.enterLeague=enterLeague;
 function showView(name) {
@@ -1301,6 +1302,74 @@ function eventsFrom(data){
     if(v.href) return v.href;
     return "";
   }
+  
+  function simpleGame(ev){
+    const fights = ev.competitions || [];
+    const c = fights[0] || {};
+    const comps = c.competitors || [];
+    let home = comps.find(x=>x.homeAway==="home");
+    let away = comps.find(x=>x.homeAway==="away");
+    if(!home && !away && comps.length>=2){ away=comps[0]; home=comps[1]; }
+    home=home||{}; away=away||{};
+    const ath= (x)=> (x.athlete&& (x.athlete.displayName||x.athlete.shortName)) || (x.team&& (x.team.abbreviation||x.team.shortDisplayName||x.team.displayName)) || "";
+    const tid= (x)=> (x.team&&x.team.id) || x.id || "";
+    const st=((c.status||{}).type)||{};
+    const state=st.state|| (st.completed?"post":"pre");
+    return {
+      id:String(c.id||ev.id||""),
+      away:ath(away), home:ath(home),
+      awayName:ath(away), homeName:ath(home),
+      awayId:tid(away), homeId:tid(home),
+      awayScore: away.score!=null?String(away.score.displayValue||away.score):"",
+      homeScore: home.score!=null?String(home.score.displayValue||home.score):"",
+      state: state==="in"? "in" : (st.completed||state==="post")?"post":"pre",
+      completed: !!st.completed,
+      detail: st.detail||st.shortDetail||"",
+      start: ev.date||c.date||"",
+      period: (c.status&&c.status.period)||"",
+      clock: (c.status&&c.status.displayClock)||"",
+      broadcast: ((c.broadcasts||[])[0]&&(((c.broadcasts||[])[0].names||[])[0]))||"",
+      spread: "", overUnder: "",
+      league: window.LEAGUE
+    };
+  }
+  async function pullAltSlate(lg){
+    const host=$("liveList");
+    const url = lg==="ufc"
+      ? "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
+      : "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard";
+    const ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+    const to=ctrl?setTimeout(()=>ctrl.abort(),8000):null;
+    try{
+      const res=await fetch(url,{cache:"no-store",mode:"cors",signal:ctrl&&ctrl.signal});
+      if(to) clearTimeout(to);
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      const data=await res.json();
+      let evs=data.events||[];
+      if(lg==="ufc"){
+        const flat=[];
+        evs.forEach(ev=>{
+          (ev.competitions||[null]).forEach((c,i)=>{
+            const copy=Object.assign({},ev,{id:String((c&&c.id)||ev.id)+(i?"-"+i:""), competitions:c?[c]:[]});
+            flat.push(copy);
+          });
+        });
+        evs=flat;
+      }
+      const games=evs.map(simpleGame).filter(g=>g.away||g.home);
+      games.forEach(g=>g.league=lg);
+      window.LIVE_GAMES=games;
+      if(!games.length){
+        if(host) host.innerHTML="<p class='hint'>No "+lg.toUpperCase()+" events posted right now.</p>";
+        return;
+      }
+      paintSlate(games);
+    }catch(err){
+      if(to) clearTimeout(to);
+      if(host) host.innerHTML="<p class='hint'>"+lg.toUpperCase()+" did not load. "+(err&&err.message||"")+"</p>";
+    }
+  }
+
   async function pullScores(forLg) {
     if(forLg) window.LEAGUE=forLg;
     const lg=window.LEAGUE||"nfl";
