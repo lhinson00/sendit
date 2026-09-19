@@ -1753,119 +1753,7 @@ function packStat(L, cat){
   return bits.join(" · ") || L.displayValue || "";
 }
 async function openNflTeam(tid, name){
-  if(!tid) return;
-  window.FROMTEAM=true;
-  window.FROMNFL=true;
-  window.TEAM_CTX={id:tid,name:name||"Team"};
-  if($("toGame")) $("toGame").textContent="← Standings";
-  show("player");
-  $("playerRoom").innerHTML="<p class='hint'>Opening "+name+"…</p>";
-  const base="https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid;
-  try{
-    const [tRes,sRes,rRes,stRes,plRes]=await Promise.all([
-      fetch(base,{cache:"no-store"}),
-      fetch(base+"/schedule",{cache:"no-store"}),
-      fetch(base+"/roster",{cache:"no-store"}),
-      fetch(base+"/statistics",{cache:"no-store"}),
-      fetch(base+"/athletes/statistics",{cache:"no-store"})
-    ]);
-    const pack=tRes.ok?await tRes.json():{};
-    const sched=sRes.ok?await sRes.json():{};
-    const rost=rRes.ok?await rRes.json():{};
-    const stat=stRes.ok?await stRes.json():{};
-    const pl=plRes.ok?await plRes.json():{};
-    const t=pack.team||{};
-    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/nfl/500/"+tid+".png");
-    const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
-    const cats=((((stat.results||{}).stats)||{}).categories)||[];
-    const grab=(cat,names)=>{
-      const c=cats.find(x=>x.name===cat);
-      for(const n of names){
-        const s=((c&&c.stats)||[]).find(x=>x.name===n || x.abbreviation===n);
-        if(s) return s.displayValue||s.value||"—";
-      }
-      return "—";
-    };
-    const tiles=[
-      ["Record", rec.summary||"—"],
-      ["PF", grab("scoring",["totalPoints","pointsFor"])],
-      ["PA", grab("miscellaneous",["pointsAgainst"]) || "—"],
-      ["Pass Yds", grab("passing",["passingYards","netPassingYards"])],
-      ["Rush Yds", grab("rushing",["rushingYards"])],
-      ["Rec Yds", grab("receiving",["receivingYards"])],
-      ["Pass TD", grab("passing",["passingTouchdowns"])],
-      ["Rush TD", grab("rushing",["rushingTouchdowns"])],
-      ["Sacks", grab("defensive",["sacks"])],
-      ["INT", grab("defensiveInterceptions",["interceptions"]) || grab("defensive",["interceptions"])],
-      ["3rd %", grab("miscellaneous",["thirdDownConvPct"]) || grab("general",["thirdDownConversionPct"])],
-      ["TOP", grab("miscellaneous",["possessionTimeSeconds","timeOfPossession"])]
-    ];
-    const playerCats=(pl.results||[]).map(cat=>{
-      const rows=(cat.leaders||[]).slice(0,12).map(L=>{
-        const a=L.athlete||{};
-        const shot=(a.headshot&&(a.headshot.href||a.headshot))||("https://a.espncdn.com/i/headshots/nfl/players/full/"+a.id+".png");
-        const line=packStat(L, cat.name);
-        return `<div class="lrow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${a.displayName||a.shortName||""}</b><em>${line}</em></div><span class="val">${L.displayValue||""}</span></div>`;
-      }).join("");
-      return `<div class="divblock"><h3>${cat.displayName||cat.name}</h3>${rows||"<p class='hint'>No leaders yet.</p>"}</div>`;
-    }).join("");
-    const roster=(rost.athletes||[]).map(g=>{
-      const items=(g.items||[]).map(p=>{
-        const pos=(p.position&&p.position.abbreviation)||"";
-        const shot=(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/nfl/players/full/"+p.id+".png");
-        return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${p.displayName||""}</b><em>#${p.jersey||"—"} · ${pos}</em></div></div>`;
-      }).join("");
-      return `<div class="divblock"><h3>${g.position||"Roster"}</h3>${items}</div>`;
-    }).join("");
-    const games=(sched.events||[]).slice(-18).map(ev=>{
-      const c=(ev.competitions||[])[0]||{};
-      const comps=c.competitors||[];
-      const me=comps.find(x=>String(x.id)===String(tid))||{};
-      const opp=comps.find(x=>String(x.id)!==String(tid))||{};
-      const st=((c.status||{}).type)||{};
-      const ms=(me.score&&(me.score.displayValue||me.score.value))||"";
-      const os=(opp.score&&(opp.score.displayValue||opp.score.value))||"";
-      const dec=st.state==="post"?(me.winner?"W":(opp.winner?"L":"·")):(st.state==="in"?"LIVE":"");
-      const ha=me.homeAway==="home"?"vs":"@";
-      const onm=(opp.team&&(opp.team.abbreviation||opp.team.displayName))||"";
-      return `<div class="tgame"><span>${String(ev.date||"").slice(0,10)}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${ha} ${onm}</b><em>${st.shortDetail||""}</em></div><b>${ms&&os?ms+"–"+os:""}</b></div>`;
-    }).join("");
-    $("playerRoom").innerHTML=`
-      <div class="tbook">
-        <div class="phero-top" style="grid-template-columns:88px 1fr;margin-bottom:12px">
-          <img alt="" src="${logo}" style="width:88px;height:88px;object-fit:contain;background:#fff;padding:8px"/>
-          <div class="phero-copy">
-            <p class="kicker">${t.standingSummary||"NFL"}</p>
-            <h2>${t.displayName||name}</h2>
-            <p>${rec.summary||""}</p>
-          </div>
-        </div>
-        <div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div>
-        <h3 class="kicker" style="margin-top:16px">Player categories</h3>
-        ${playerCats||"<p class='hint'>Player splits post after week 1.</p>"}
-        <h3 class="kicker" style="margin-top:16px">Schedule</h3>
-        ${games||"<p class='hint'>No schedule.</p>"}
-        <h3 class="kicker" style="margin-top:16px">Roster</h3>
-        ${roster}
-      </div>`;
-  }catch(e){
-    $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
-  }
-}
-function stv(stats, name){
-  const s=(stats||[]).find(x=>x.name===name);
-  return s ? String(s.displayValue!=null?s.displayValue:s.value??"") : "";
-}
-function prettyLead(name, value, display){
-  const n=Number(value);
-  if(/avg|obp|slug|ops|whip|era|pct/i.test(name||"")){
-    if(!isFinite(n)) return (display && !/,/.test(display)) ? display : "—";
-    if(/ops|whip|era/i.test(name||"")) return n.toFixed(2);
-    return n.toFixed(3).replace(/^0/,".");
-  }
-  if(isFinite(n)) return String(Math.round(n*10)/10).replace(/\.0$/,"");
-  if(display && !/,/.test(String(display))) return display;
-  return "—";
+  return openTeam(tid, name, "nfl");
 }
 async function openMlbStandings(){
   const host=$("boardPanel");
@@ -2080,16 +1968,18 @@ function pickStat(cats, cat, name){
   const s=((c&&c.stats)||[]).find(x=>x.name===name);
   return s ? (s.displayValue||s.value||"—") : "—";
 }
-async function openTeam(tid, name){
+async function openTeam(tid, name, sport){
   if(!tid) return;
+  const isNfl = sport==="nfl" || LEAGUE==="nfl" && sport!=="cfb";
   window.FROMTEAM = true;
   window.FROMKIT = false;
+  window.FROMNFL = !!isNfl;
   window.TEAM_CTX = {id:tid, name:name||"Team"};
   window.FROM_TEAM_PLAYER = false;
-  if($("toGame")) $("toGame").textContent = "← Rankings";
+  if($("toGame")) $("toGame").textContent = isNfl ? "← Standings" : "← Rankings";
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Opening "+name+"…</p>";
-  const base="https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/"+tid;
+  const base="https://site.api.espn.com/apis/site/v2/sports/football/"+(isNfl?"nfl":"college-football")+"/teams/"+tid;
   try{
     const [tRes,sRes,rRes,stRes,plRes]=await Promise.all([
       fetch(base,{cache:"no-store"}),
@@ -2104,7 +1994,7 @@ async function openTeam(tid, name){
     const stat=stRes.ok?await stRes.json():{};
     const plstat=plRes.ok?await plRes.json():{};
     const t=pack.team||{};
-    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/ncaa/500/"+tid+".png");
+    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+(isNfl?"nfl":"ncaa")+"/500/"+(isNfl?(t.abbreviation||"").toLowerCase():tid)+".png");
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
     const recSum=rec.summary||"";
     const cats=((((stat.results||{}).stats)||{}).categories)||[];
@@ -2185,7 +2075,8 @@ async function openTeam(tid, name){
       receiving:[["REC","receptions"],["YDS","receivingYards"],["AVG","yardsPerReception"],["LNG","longReception"],["TD","receivingTouchdowns"]],
       defensive:[["TOT","totalTackles"],["SOLO","soloTackles"],["SACK","sacks"],["TFL","tacklesForLoss"],["INT","interceptions"],["PD","passesDefended"]]
     };
-    const shotOf=a=> (a.headshot&&(a.headshot.href||a.headshot)) || (a.id?("https://a.espncdn.com/i/headshots/college-football/players/full/"+a.id+".png"):"");
+    const shotFold=isNfl?"nfl":"college-football";
+    const shotOf=a=> (a.headshot&&(a.headshot.href||a.headshot)) || (a.id?("https://a.espncdn.com/i/headshots/"+shotFold+"/players/full/"+a.id+".png"):"");
     const leadHtml = `<div class="tlead">${["passing","rushing","receiving","defensive"].map(nm=>{
       const blk=pblocks.find(x=>x.name===nm);
       const L=(blk&&blk.leaders&&blk.leaders[0])||{};
@@ -2227,7 +2118,7 @@ async function openTeam(tid, name){
       (grp.items||[]).forEach(p=>{
         const ab=((p.position||{}).abbreviation)||"";
         if(!skill.test(ab)) return;
-        people.push({id:p.id,name:p.displayName,pos:ab,no:p.jersey||"",shot:(p.headshot&&(p.headshot.href||p.headshot))||""});
+        people.push({id:p.id,name:p.displayName,pos:ab,no:p.jersey||"",shot:(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/"+shotFold+"/players/full/"+p.id+".png")});
       });
     });
     const off=people.filter(p=>/QB|RB|WR|TE/.test(p.pos)).slice(0,16);
