@@ -167,6 +167,13 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .rrow em{font-style:normal;color:var(--muted);font-size:11px}
 .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
 .fface{width:180px;height:180px;object-fit:cover;object-position:center 15%;display:block;background:#120e0c;border-radius:8px;margin:16px}
+.kitbar{display:flex;flex-wrap:wrap;gap:8px;padding:8px var(--pad) 4px}
+.kitbar select{background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:8px 10px;font:inherit}
+.krow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:12px;background:#101218;border:1px solid #2a241c}
+.krow b{display:block}
+.krow em{font-style:normal;color:var(--muted);font-size:12px}
+.khit{font-family:"Bebas Neue",sans-serif;font-size:28px;color:var(--orange)}
+.kpct{font-size:12px;color:var(--ember)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -199,8 +206,21 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
   <div class="bar">
     <button class="back" id="toHome">← Home</button>
     <span class="meta" id="liveMeta">…</span>
+    <span id="nflTabs" hidden>
+      <button type="button" class="back on" id="tabLive">Live</button>
+      <button type="button" class="back" id="tabKit">Kitchen</button>
+    </span>
   </div>
   <div id="liveList" class="list"></div>
+  <div id="kitPanel" hidden>
+    <div class="kitbar">
+      <select id="kPos"><option>WR</option><option>TE</option><option>RB</option><option>QB</option></select>
+      <select id="kStat"></select>
+      <select id="kLine"></select>
+    </div>
+    <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
+    <div id="kitList" class="list"></div>
+  </div>
 </section>
 
 <section id="viewGame" hidden>
@@ -372,6 +392,9 @@ async function loadLeague(lg){
     const data = await res.json();
     const evs = data.events || [];
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
+    if($("nflTabs")) $("nflTabs").hidden = lg!=="nfl";
+    if($("kitPanel")) $("kitPanel").hidden = true;
+    if($("liveList")) $("liveList").hidden = false;
     paint(GAMES);
     if(slateT) clearInterval(slateT);
     slateT = setInterval(async ()=>{
@@ -899,6 +922,136 @@ async function openPlayer(pid, name){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
 }
+const LOGS = {};
+const ROSTER = [];
+const FILT = {pos:"WR", stat:"recYds", line:20};
+const STATS = {
+  WR: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
+  TE: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
+  RB: [["rushYds","Rush yards"],["rushTd","Rush TD"],["recYds","Rec yards"],["rec","Receptions"]],
+  QB: [["passYds","Pass yards"],["passTd","Pass TD"],["int","INT"],["rushYds","Rush yards"],["rushTd","Rush TD"]]
+};
+const LINES = {
+  recYds:[10,20,30,40,50,60,70,80,90,100],
+  rushYds:[10,20,30,40,50,60,70,80,90,100],
+  passYds:[125,175,225,250,300],
+  rec:[2,3,4,5,6,7,8,10],
+  recTd:[1], rushTd:[1], passTd:[1,2], int:[1]
+};
+function fillKitControls(){
+  const st=$("kStat"), ln=$("kLine");
+  if(!st) return;
+  const opts=STATS[FILT.pos]||STATS.WR;
+  if(!opts.some(o=>o[0]===FILT.stat)) FILT.stat=opts[0][0];
+  st.innerHTML=opts.map(o=>"<option value='"+o[0]+"'"+(o[0]===FILT.stat?" selected":"")+">"+o[1]+"</option>").join("");
+  const lines=LINES[FILT.stat]||[1];
+  if(!lines.includes(FILT.line)) FILT.line=lines[0];
+  ln.innerHTML=lines.map(n=>"<option"+(n===FILT.line?" selected":"")+">"+n+(FILT.stat==="rec"?"+ rec":FILT.stat.indexOf("Td")>=0||FILT.stat==="int"?"+":"+ yds")+"</option>").join("");
+}
+function valOf(row, stat){
+  const names=row.names||[], stats=row.stats||[];
+  const pick = keys => {
+    for(const k of keys){ const i=names.indexOf(k); if(i>=0) return Number(String(stats[i]||"0").replace(/,/g,""))||0; }
+    return 0;
+  };
+  if(stat==="recYds") return pick(["receivingYards"]);
+  if(stat==="rec") return pick(["receptions"]);
+  if(stat==="recTd") return pick(["receivingTouchdowns"]);
+  if(stat==="rushYds") return pick(["rushingYards"]);
+  if(stat==="rushTd") return pick(["rushingTouchdowns"]);
+  if(stat==="passYds") return pick(["passingYards"]);
+  if(stat==="passTd") return pick(["passingTouchdowns"]);
+  if(stat==="int") return pick(["interceptions"]);
+  return 0;
+}
+async function loadRosters(){
+  if(ROSTER.length) return ROSTER;
+  const tb=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams?limit=32",{cache:"no-store"});
+  const teams=((((await tb.json()).sports||[])[0]||{}).leagues||[])[0];
+  const list=(teams&&teams.teams)||[];
+  const ids=list.map(t=>(t.team&&t.team.id)||t.id).filter(Boolean);
+  const packs=await Promise.all(ids.map(async id=>{
+    try{
+      const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+id+"/roster",{cache:"no-store"});
+      if(!r.ok) return [];
+      const d=await r.json();
+      const ath=[];
+      (d.athletes||d.side||[]).forEach(grp=>{
+        const items=grp.items||grp.athletes|| (Array.isArray(grp)?grp:[]);
+        items.forEach(a=>{
+          const p=a.position||{};
+          const ab=p.abbreviation||"";
+          if(!/^(QB|RB|WR|TE)$/.test(ab)) return;
+          ath.push({id:String(a.id), name:a.displayName||a.fullName, pos:ab, team:(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||""});
+        });
+      });
+      return ath;
+    }catch(e){ return []; }
+  }));
+  packs.flat().forEach(p=>ROSTER.push(p));
+  return ROSTER;
+}
+async function loadLog(pid){
+  if(LOGS[pid]) return LOGS[pid];
+  const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+pid+"/gamelog",{cache:"no-store"});
+  if(!res.ok){ LOGS[pid]=[]; return []; }
+  const d=await res.json();
+  const names=d.names||[];
+  const evMeta=d.events||{};
+  const cats=((d.seasonTypes||[])[0]||{}).categories||[];
+  const rows=[];
+  cats.forEach(c=>{
+    (c.events||[]).forEach(ev=>{
+      const meta=evMeta[ev.eventId]||evMeta[String(ev.eventId)]||{};
+      const opp=(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||meta.gameName||"";
+      rows.push({id:ev.eventId, stats:ev.stats||[], names:names, opp:opp, week:meta.week||""});
+    });
+  });
+  LOGS[pid]=rows.slice(-18);
+  return LOGS[pid];
+}
+async function runKitchen(){
+  const host=$("kitList");
+  if(!host) return;
+  fillKitControls();
+  host.innerHTML="<p class='hint'>Loading NFL rosters + last 18…</p>";
+  $("kitMeta").textContent="Pulling "+FILT.pos+" logs…";
+  await loadRosters();
+  const pool=ROSTER.filter(p=>p.pos===FILT.pos);
+  host.innerHTML="<p class='hint'>"+pool.length+" "+FILT.pos+"s · fetching logs</p>";
+  const out=[];
+  for(let i=0;i<pool.length;i+=6){
+    const slice=pool.slice(i,i+6);
+    await Promise.all(slice.map(async p=>{
+      const games=await loadLog(p.id);
+      const hits=games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
+      const n=games.length;
+      out.push({p,hits,n,rate:n?hits/n:0});
+    }));
+    $("kitMeta").textContent=out.length+" / "+pool.length+" "+FILT.pos+"s";
+  }
+  out.sort((a,b)=> (b.rate-a.rate) || (b.hits-a.hits) || (b.n-a.n));
+  $("kitMeta").textContent=FILT.pos+" · last 18 · "+FILT.stat+" "+FILT.line+"+ · "+out.filter(x=>x.n).length+" with games";
+  host.innerHTML=out.filter(x=>x.n).map(x=>`
+    <button type="button" class="krow prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}">
+      <div><b>${x.p.name}</b><em>${x.p.team} · ${x.p.pos}</em></div>
+      <div class="khit">${x.hits}/${x.n}</div>
+      <div class="kpct">${Math.round(x.rate*100)}%</div>
+    </button>`).join("") || "<p class='hint'>No logs yet.</p>";
+}
+function showKit(on){
+  if($("liveList")) $("liveList").hidden=!!on;
+  if($("kitPanel")) $("kitPanel").hidden=!on;
+  if($("tabLive")) $("tabLive").classList.toggle("on", !on);
+  if($("tabKit")) $("tabKit").classList.toggle("on", !!on);
+  if(on) runKitchen();
+}
+$("tabLive") && ($("tabLive").onclick=()=>showKit(false));
+$("tabKit") && ($("tabKit").onclick=()=>showKit(true));
+$("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls(); runKitchen(); });
+$("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls(); runKitchen(); });
+$("kLine") && ($("kLine").onchange=e=>{ FILT.line=parseInt(e.target.value,10)||FILT.line; runKitchen(); });
+fillKitControls();
 document.addEventListener("click", ev=>{
   const row = ev.target.closest && ev.target.closest(".prow[data-pid]");
   if(row && (row.dataset.pid || row.dataset.pname)){
