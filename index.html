@@ -133,18 +133,29 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cside b{display:block;font-size:16px}
 .cside em{font-style:normal;color:var(--muted);font-size:12px}
 .cscore{font-family:"Bebas Neue",sans-serif;font-size:52px;line-height:.9;color:#fff}
+.cast3{display:grid;grid-template-columns:220px 1fr 200px;gap:12px;padding:0 var(--pad) 16px}
+@media(max-width:900px){.cast3{grid-template-columns:1fr}}
+.statpair{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid #222}
+.statpair b{font-size:18px}
+.statpair span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center}
+.hbar{height:4px;background:#222;margin-top:4px}
+.hbar i{display:block;height:4px;background:var(--orange)}
+.leadmini{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid #222}
+.leadmini img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1a120c}
+.leadmini .nm{font-size:12px}
+.wpbig{font-family:"Bebas Neue",sans-serif;font-size:42px;color:var(--orange)}
 .scorebug.islive .cscore{color:var(--orange)}
 .scorebug.islive{box-shadow:0 0 0 1px #ff3b3b inset, 0 0 24px rgba(255,59,59,.18)}
 .scorebug.islive .mlb-inning{color:#ff6d6d;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
-.field{position:relative;height:46px;margin:14px 0 8px;background:linear-gradient(90deg,#0c2a12,#1a4a22 12%,#1a4a22 88%,#0c2a12);border:1px solid #2a4a30;border-radius:4px;overflow:hidden}
-.fieldticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 8.8%,rgba(255,255,255,.16) 8.8% 9.2%)}
-.field .ezL,.field .ezR{position:absolute;top:0;bottom:0;width:8%;background:rgba(0,0,0,.35)}
-.field .ezL{left:0}.field .ezR{right:0}
-.field .ball{position:absolute;top:8px;width:12px;height:30px;margin-left:-6px;background:var(--orange);border-radius:2px;box-shadow:0 0 10px var(--orange)}
-.field .fd{position:absolute;top:0;bottom:0;width:2px;background:#ffe56a;box-shadow:0 0 8px #ffe56a}
-.field .dir{position:absolute;top:16px;font-size:16px;color:#ffe56a;text-shadow:0 0 6px #000}
-.field .yn{position:absolute;bottom:2px;transform:translateX(-50%);font-size:9px;letter-spacing:.04em;color:#d8f0d8;font-family:"Bebas Neue",sans-serif;text-shadow:0 1px 2px #000}
+.field{position:relative;height:92px;margin:8px 0;background:linear-gradient(#218a3c,#167028 55%,#0d4a1c);border:2px solid #efe6d8;border-radius:6px;overflow:hidden}
+.fieldticks{position:absolute;inset:0 8%;background:repeating-linear-gradient(90deg,transparent 0 9.6%,rgba(255,255,255,.28) 9.6% 10%)}
+.field .ezL,.field .ezR{position:absolute;top:0;bottom:0;width:8%;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;font-family:"Bebas Neue",sans-serif;letter-spacing:.14em;font-size:13px;color:#fff;background:rgba(0,0,0,.3)}
+.field .ezL{left:0;transform:rotate(180deg)}.field .ezR{right:0}
+.field .ball{position:absolute;top:24px;width:36px;height:36px;margin-left:-18px;border-radius:50%;object-fit:contain;background:#fff;border:2px solid #ffe56a}
+.field .fd{position:absolute;top:6px;bottom:6px;width:3px;background:#ffe56a}
+.field .dir{position:absolute;top:6px;font-size:18px;color:#ffe56a;text-shadow:0 1px 2px #000}
+.field .yn{position:absolute;bottom:4px;transform:translateX(-50%);font-size:11px;color:#f3ffea;font-family:"Bebas Neue",sans-serif}
 .lastbig{margin:0 var(--pad) 12px;padding:14px 16px;background:linear-gradient(90deg,#2a1408,#101218);border:1px solid var(--orange)}
 .lastbig span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-bottom:6px}
 .lastbig p{margin:0;font-size:18px;line-height:1.35;font-weight:700}
@@ -528,6 +539,7 @@ function renderFootball(g, sum){
   const spot = (lastPlay.start || lastPlay.end || {});
   const downTxt = spot.downDistanceText || spot.shortDownDistanceText || "";
   const poss = (cur.team && (cur.team.abbreviation || cur.team.shortDisplayName)) || "";
+  const possLogo = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss===aw?aLogo:poss===hm?hLogo:aLogo);
   const driveTxt = cur.description || "";
   const yte = spot.yardsToEndzone;
   const fieldPct = (yte==null || yte==="") ? null : Math.max(8, Math.min(92, 100-Number(yte)));
@@ -574,32 +586,36 @@ function renderFootball(g, sum){
         <tr><td>${aw}</td><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}<td>${as}</td></tr>
         <tr><td>${hm}</td><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}<td>${hs}</td></tr>
       </table>
-      ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL"></div><div class="ezR"></div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<div class="ball" style="left:${fieldPct}%"></div><div class="dir" style="left:calc(${fieldPct}% + 10px)">→</div></div><p class="hint">${poss||""} → ${downTxt||""}${driveTxt?(" · "+driveTxt):""}</p>`:""}
+      ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL">${poss||aw}</div><div class="ezR">${poss===hm?aw:hm}</div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<img class="ball" alt="" src="${possLogo}" style="left:${fieldPct}%"/><div class="dir" style="left:calc(${fieldPct}% + 22px)">→</div></div><p class="hint">${poss||""} → ${downTxt||""}${driveTxt?(" · "+driveTxt):""}</p>`:""}
       ${poss||downTxt?`<div class="drivechip">${poss?("<b>"+poss+"</b> has it"):""}${downTxt?(" · "+downTxt):""}${driveTxt?(" · "+driveTxt):""}</div>`:""}
       ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
     </div>
-    ${venue?`<p class="hint">${venue}</p>`:""}
+    ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
     <div class="ftabs">
-      <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Live</button>
+      <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Gamecast</button>
       <button type="button" data-ftab="box" class="${tab==="box"?"on":""}">Box</button>
       <button type="button" data-ftab="lead" class="${tab==="lead"?"on":""}">Leaders</button>
     </div>
     <div class="fsec" data-sec="live" ${tab==="live"?"":"hidden"}>
-      ${lastPlay.text?`<div class="lastbig"><span>Last play${live?" · updating":""}</span><p>${lastPlay.text}</p></div>`:""}
-      ${lastScore?`<div class="play hot"><span>Last score · ${(lastScore.team&&lastScore.team.abbreviation)||""}</span><p>${lastScore.text||""}</p></div>`:""}
-      ${tapeHtml?`<p class="hint">Play tape</p><div class="ticker">${tapeHtml}</div>`:""}
-      <div class="box"><h3>Team tape</h3>
-        <table class="cmp">
-          <tr><th></th><th>${aw}</th><th>${hm}</th></tr>
-          <tr><td>Yards</td><td>${tstat(sum,aw,"totalYards")}</td><td>${tstat(sum,hm,"totalYards")}</td></tr>
-          <tr><td>Pass</td><td>${tstat(sum,aw,"netPassingYards")}</td><td>${tstat(sum,hm,"netPassingYards")}</td></tr>
-          <tr><td>Rush</td><td>${tstat(sum,aw,"rushingYards")}</td><td>${tstat(sum,hm,"rushingYards")}</td></tr>
-          <tr><td>3rd down</td><td>${tstat(sum,aw,"thirdDownEff")}</td><td>${tstat(sum,hm,"thirdDownEff")}</td></tr>
-          <tr><td>TOP</td><td>${tstat(sum,aw,"possessionTime")}</td><td>${tstat(sum,hm,"possessionTime")}</td></tr>
-          <tr><td>Turnovers</td><td>${tstat(sum,aw,"turnovers")}</td><td>${tstat(sum,hm,"turnovers")}</td></tr>
-        </table>
+      <div class="cast3">
+        <div class="box">
+          <h3>Team tape</h3>
+          ${[["totalYards","Total Yards"],["turnovers","Turnovers"],["firstDowns","1st Downs"],["totalPenaltiesYards","Penalties"],["thirdDownEff","3rd Down"],["fourthDownEff","4th Down"],["possessionTime","Possession"]].map(([k,lab])=>`<div class="statpair"><b>${tstat(sum,aw,k)}</b><span>${lab}</span><b>${tstat(sum,hm,k)}</b></div>`).join("")}
+        </div>
+        <div>
+          ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL">${poss||aw}</div><div class="ezR">${poss===hm?aw:hm}</div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<img class="ball" alt="" src="${possLogo}" style="left:${fieldPct}%"/><div class="dir" style="left:calc(${fieldPct}% + 22px)">→</div></div>`:""}
+          <div class="drivechip">${poss?("<b>"+poss+"</b> "):""}${downTxt||""}${driveTxt?(" · "+driveTxt):""}</div>
+          ${lastPlay.text?`<div class="lastbig"><span>Last play</span><p>${lastPlay.text}</p></div>`:""}
+          <p class="hint">Scoring plays</p>
+          ${scoreList||"<p class='hint'>No scores yet.</p>"}
+        </div>
+        <div class="box">
+          <h3>Win %</h3>
+          ${homePct!=null?`<div class="wpbig">${100-homePct}%</div><p class="hint">${aw}</p><div class="wpbig">${homePct}%</div><p class="hint">${hm}</p>`:"<p class='hint'>No win % yet.</p>"}
+          <h3 style="margin-top:16px">Leaders</h3>
+          ${leads||"<p class='hint'>Leaders after kickoff.</p>"}
+        </div>
       </div>
-      ${scoreList?`<p class="hint">Scoring plays</p>`+scoreList:"<p class='hint'>No scores yet.</p>"}
     </div>
     <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
     <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leads||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
