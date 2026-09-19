@@ -389,6 +389,9 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cmp td:first-child{text-align:left;font-weight:800}
 .ufc-card .gduo{grid-template-columns:1fr auto 1fr;padding:8px 0}
 .uface{width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid #3a2a18;background:#1a120c;display:block}
+.gteam.won b{color:var(--orange)}
+.gteam.won .uface{border-color:var(--orange)}
+.wintag{display:block;margin-top:6px;color:var(--orange);font-size:11px;letter-spacing:.18em;font-weight:800}
 .ufc-card .gteam{flex-direction:column;text-align:center;font-size:16px;gap:6px}
 .ufc-card .gteam.right{align-items:flex-end}
 .ufc-card .gteam span.rec{font-family:Manrope,sans-serif;font-size:11px;color:var(--muted);letter-spacing:.06em}
@@ -1050,7 +1053,7 @@ function slipsForGame(g){
   return SLIP.filter(s=>{
     if(s.fightId && g.fightId && String(s.fightId)===String(g.fightId)) return true;
     if(s.eventId && g.eventId && String(s.eventId)===String(g.eventId)) return true;
-    if(s.team && (s.team===g.awayAb || s.team===g.homeAb)) return true;
+    if(s.pid && s.team && (s.team===g.awayAb || s.team===g.homeAb)) return true;
     return false;
   });
 }
@@ -1069,10 +1072,11 @@ function pulseBoard(g){
     return;
   }
   const liveNow = g.state==="in";
-  const justFinal = g.state==="post" && prev.state==="in";
+  const justFinal = g.state==="post" && prev.state && prev.state!=="post";
   const tracked = slipsForGame(g).filter(s=>!s.pid);
   const favs = gameFavs(g);
-  const watching = tracked.length || favs.length;
+  const openThis = String(OPEN||"")===String(g.fightId||"") || String(OPEN||"")===String(g.eventId||"") || String(OPEN||"")===String(g.id||"");
+  const watching = tracked.length || favs.length || openThis;
   const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
   const tag=tracked.length?"LET'S EAT":"FAVORITE";
   if(watching && (liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
@@ -1835,7 +1839,10 @@ function paintFightShell(g, extra){
   const live=g.state==="in";
   const clock=extra.clock||g.detail||when(g);
   if($("ufcShell") && $("ufcLive") && $("ufcClock")){
-    $("ufcClock").innerHTML = (live?"<span class='livepulse'></span>":"")+clock;
+    const result = (!live && g.state==="post")
+      ? ((g.awayWin||g.homeWin)?((g.awayWin?g.away:g.home)+" wins"+(g.detail && !/final/i.test(String(g.detail))?(" · "+g.detail):"")):"FINAL")
+      : clock;
+    $("ufcClock").innerHTML = (live?"<span class='livepulse'></span>":"")+result;
     $("ufcLive").innerHTML = ufcLiveBoard(g, extra);
     return;
   }
@@ -1844,19 +1851,21 @@ function paintFightShell(g, extra){
     <div class="scorebug mlb-bug">
       <div class="mlb-inning">${g.card||"UFC"} · ${g.weight||g.format||"Bout"}</div>
       <div class="gduo" style="margin-top:12px">
-        <button type="button" class="gteam prow" data-pid="${g.awayId||""}" data-pname="${String(g.away||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
+        <button type="button" class="gteam prow${g.awayWin?" won":""}" data-pid="${g.awayId||""}" data-pname="${String(g.away||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
           <img class="uface" alt="" src="${g.awayImg}"/>
           <b>${g.away}</b>
           <span class="rec">${g.awayRec||""}</span>
+          ${g.awayWin?"<span class='wintag'>WINNER</span>":""}
         </button>
         <span class="vs">VS</span>
-        <button type="button" class="gteam prow" data-pid="${g.homeId||""}" data-pname="${String(g.home||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
+        <button type="button" class="gteam prow${g.homeWin?" won":""}" data-pid="${g.homeId||""}" data-pname="${String(g.home||"").replace(/"/g,"")}" style="flex-direction:column;border:0;background:0;color:inherit">
           <img class="uface" alt="" src="${g.homeImg}"/>
           <b>${g.home}</b>
           <span class="rec">${g.homeRec||""}</span>
+          ${g.homeWin?"<span class='wintag'>WINNER</span>":""}
         </button>
       </div>
-      <div class="outs" id="ufcClock">${live?"<span class='livepulse'></span>":""}${clock}</div>
+      <div class="outs" id="ufcClock">${live?"<span class='livepulse'></span>":""}${g.state==="post"?(g.awayWin||g.homeWin?((g.awayWin?g.away:g.home)+" wins"+(g.detail && !/final/i.test(g.detail)?(" · "+g.detail):"")):"FINAL"):clock}</div>
     </div>
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
     <div id="ufcLive">${ufcLiveBoard(g, extra)}</div>
@@ -2274,7 +2283,15 @@ function toggleFav(id, name){
   const k=String(id);
   const on=Object.keys(FAV||{}).some(lg=>FAV[lg]&&FAV[lg][k]);
   if(on){
-    Object.keys(FAV).forEach(lg=>{ if(FAV[lg]) delete FAV[lg][k]; });
+    const nm=String(name||"").toLowerCase();
+    Object.keys(FAV).forEach(lg=>{
+      if(!FAV[lg]) return;
+      delete FAV[lg][k];
+      Object.keys(FAV[lg]).forEach(id=>{
+        const label=String(FAV[lg][id]||"").toLowerCase();
+        if(nm && (label===nm || label.includes(nm) || nm.includes(label))) delete FAV[lg][id];
+      });
+    });
   } else {
     FAV[LEAGUE]=FAV[LEAGUE]||{};
     FAV[LEAGUE][k]=name||k;
@@ -2567,6 +2584,7 @@ function alertFromFav(g, prev){
   }
 }
 async function tickSlip(){
+  try{ FAV = Object.assign({nfl:{},cfb:{},mlb:{},ufc:{},tssaa:{},mls:{}}, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
   window.SLIP_GAMES = window.SLIP_GAMES || {};
   window.FAV_SNAP = window.FAV_SNAP || {};
   window.SLIP_GAMES = window.SLIP_GAMES || {};
