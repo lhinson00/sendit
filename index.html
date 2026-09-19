@@ -141,7 +141,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cside{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center}
 .cside.r{grid-template-columns:auto 1fr 44px;text-align:right}
 .qtr.mini{width:auto;margin:0;font-size:11px}
-.lp{display:flex;align-items:center;gap:6px}
+.lp{display:flex;align-items:center;gap:8px}
 .lp img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#1a120c}
 .lp b{display:block;font-size:14px}
 .lp em{font-style:normal;font-size:11px;color:var(--muted)}
@@ -152,12 +152,17 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cast2{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:0 var(--pad) 20px}
 @media(max-width:800px){.cast2{grid-template-columns:1fr}}
 .fieldwrap{padding:0 var(--pad) 8px}
-.statpair{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #222}
-.statpair b{font-size:20px}
+.statpair{display:grid;grid-template-columns:1fr auto 1fr;gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #222}
+.statpair b{font-size:22px}
 .statpair span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
+.cmpbar{grid-column:1/-1;height:6px;background:#2a241c;border-radius:2px;overflow:hidden}
+.cmpbar i{display:block;height:6px;background:var(--orange)}
 .hbar{height:4px;background:#222;margin-top:4px}
 .hbar i{display:block;height:4px;background:var(--orange)}
 .leadmini{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #222}
+.leadmini .lp:last-child{flex-direction:row-reverse;text-align:right}
+.lp.empty{color:var(--muted);justify-content:center}
+.ph{width:48px;height:48px;border-radius:50%;background:#1a120c;display:inline-block}
 .lp img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#1a120c}
 .leadmini img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1a120c}
 .leadmini .nm{font-size:12px}
@@ -605,10 +610,15 @@ function renderFootball(g, sum){
       };
     });
   });
-  const faceBit = o => o ? `<div class="lp ${o.pid?"prow":""}" data-pid="${o.pid}" data-pname="${String(o.nm).replace(/"/g,"")}"><img alt="" src="${o.shot}"/><div><b>${o.val||"—"}</b><em>${o.nm||"—"}</em></div></div>` : "<div class='lp'></div>";
+  const faceBit = o => {
+    if(!o || !o.nm) return "<div class='lp empty'>—</div>";
+    const img = o.shot ? `<img alt="" src="${o.shot}"/>` : `<span class="ph"></span>`;
+    return `<div class="lp ${o.pid?"prow":""}" data-pid="${o.pid}" data-pname="${String(o.nm).replace(/"/g,"")}">${img}<div><b>${o.val||"—"}</b><em>${o.nm}</em></div></div>`;
+  };
   const leads = Object.keys(leadMap).map(k=>{
     const row=leadMap[k];
-    return `<div class="leadmini"><div>${faceBit(row.a)}</div><span>${k}</span><div>${faceBit(row.h)}</div></div>`;
+    if(!row.a && !row.h) return "";
+    return `<div class="leadmini">${faceBit(row.a)}<span>${k}</span>${faceBit(row.h)}</div>`;
   }).join("");
   const scoreList = scores.slice().reverse().map(p=>{
     const q = (p.period&&p.period.number) ? ("Q"+p.period.number) : "";
@@ -648,7 +658,13 @@ function renderFootball(g, sum){
         <div>
           <p class="hint">${aw} &nbsp; tape &nbsp; ${hm}</p>
           <div class="statpair"><b>${aw}</b><span></span><b>${hm}</b></div>
-          ${[["totalYards","Total Yards"],["turnovers","Turnovers"],["firstDowns","1st Downs"],["totalPenaltiesYards","Penalties"],["thirdDownEff","3rd Down"],["fourthDownEff","4th Down"],["possessionTime","Possession"]].map(([k,lab])=>`<div class="statpair"><b>${tstat(sum,aw,k)}</b><span>${lab}</span><b>${tstat(sum,hm,k)}</b></div>`).join("")}
+          ${[["totalYards","Total Yards"],["netPassingYards","Passing"],["rushingYards","Rushing"],["turnovers","Turnovers"],["firstDowns","1st Downs"],["totalPenaltiesYards","Penalties"],["thirdDownEff","3rd Down"],["fourthDownEff","4th Down"],["possessionTime","Possession"]].map(([k,lab])=>{
+            const L=tstat(sum,aw,k), R=tstat(sum,hm,k);
+            const ln=parseFloat(String(L).replace(/[^0-9.]/g,""))||0;
+            const rn=parseFloat(String(R).replace(/[^0-9.]/g,""))||0;
+            const tot=ln+rn, lp=tot?Math.round(ln/tot*100):50;
+            return `<div class="statpair"><b>${L}</b><span>${lab}</span><b>${R}</b><div class="cmpbar"><i style="width:${lp}%"></i></div></div>`;
+          }).join("")}
         </div>
         <div>
           <p class="hint">${aw} &nbsp; leaders &nbsp; ${hm}</p>
