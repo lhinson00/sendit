@@ -186,6 +186,26 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .leadmini .lp:last-child img,.leadmini .lp:last-child .ph{grid-column:2;grid-row:1}
 .lp.empty{display:flex;color:var(--muted);justify-content:center}
 .wpbig{font-family:"Bebas Neue",sans-serif;font-size:42px;color:var(--orange)}
+.ldesk{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid #2a241c}
+@media(max-width:700px){.ldesk{grid-template-columns:1fr}}
+.lcol{padding:16px var(--pad);border-right:1px solid #2a241c}
+.lcol:last-child{border-right:0}
+.lcolh{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.lcolh img{width:36px;height:36px;object-fit:contain}
+.lcolh b{font-family:"Bebas Neue",sans-serif;font-size:28px}
+.litem{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #1c1814}
+.litem img,.litem .ph{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#1a120c}
+.litem i{display:block;font-style:normal;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember)}
+.litem b{display:block;font-size:18px;line-height:1.25;margin:4px 0 2px;color:#efe6d8}
+.litem em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
+.lblock{padding:16px var(--pad);border-bottom:1px solid #221e18}
+.lblock p{margin:0 0 10px;text-align:center;letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--ember)}
+.lpair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lcard{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}
+.lcard img,.lcard .ph{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#1a120c}
+.lcard .lcopy b{display:block;font-size:20px;line-height:1.2;color:#efe6d8}
+.lcard .lcopy em{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:4px}
+.lcard.empty{color:var(--muted);align-items:center;justify-content:center}
 .clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:8px 0 16px}
 .clip video{width:100%;aspect-ratio:16/9;background:#000;border-radius:6px}
 .clip p{margin:6px 0 0;font-size:12px;color:#cfc6b8}
@@ -235,6 +255,16 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .kitbar label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);margin-bottom:4px}
 .kitbar select{width:100%;background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:10px;font:inherit}
 .krow{padding:14px;background:linear-gradient(180deg,#16120e,#101218);border:1px solid #2a241c}
+.kcard{padding:16px var(--pad) 12px;border-bottom:1px solid #221e18}
+.kcard .ktop{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.spark{display:flex;align-items:flex-end;gap:3px;height:96px;padding-top:8px}
+.spark i{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:#2a241c;font-style:normal}
+.spark i.hit{background:#3a2208}
+.spark i b{font-size:9px;line-height:1;margin-bottom:2px;color:#efe6d8}
+.spark i.hit b{color:var(--orange)}
+.spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
+.seasonline{display:flex;flex-wrap:wrap;gap:14px;padding:12px var(--pad) 16px;margin:0;color:#cfc6b8;font-size:14px}
+.seasonline i{font-style:normal;color:var(--ember);font-size:10px;letter-spacing:.1em;margin-right:4px}
 .krow .ktop{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start}
 .krow b{display:block;font-size:18px}
 .krow em{font-style:normal;color:var(--muted);font-size:12px;display:block;margin-top:4px}
@@ -637,11 +667,16 @@ function renderFootball(g, sum){
     const img = o.shot ? `<img alt="" src="${o.shot}"/>` : `<span class="ph"></span>`;
     return `<div class="lp ${o.pid?"prow":""}" data-pid="${o.pid}" data-pname="${String(o.nm).replace(/"/g,"")}">${img}<div><b>${o.val||"—"}</b><em>${o.nm}</em></div></div>`;
   };
-  const leads = Object.keys(leadMap).map(k=>{
-    const row=leadMap[k];
-    if(!row.a && !row.h) return "";
-    return `<div class="leadmini">${faceBit(row.a)}<span>${k}</span>${faceBit(row.h)}</div>`;
-  }).join("");
+  const stack = (side, ab, logo) => {
+    const rows = Object.keys(leadMap).map(k=>{
+      const o=leadMap[k][side];
+      if(!o||!o.nm) return "";
+      const img = o.shot ? `<img alt="" src="${o.shot}"/>` : `<span class="ph"></span>`;
+      return `<div class="litem ${o.pid?"prow":""}" data-pid="${o.pid}" data-pname="${String(o.nm).replace(/"/g,"")}">${img}<div><i>${k}</i><b>${o.val||"—"}</b><em>${o.nm}</em></div></div>`;
+    }).join("");
+    return `<div class="lcol"><div class="lcolh"><img alt="" src="${logo||""}"/><b>${ab}</b></div>${rows||"<p class='hint'>No leaders yet.</p>"}</div>`;
+  };
+  const leadBoard = `<div class="ldesk">${stack("a",aw,aLogo)}${stack("h",hm,hLogo)}</div>`;
   const scoreList = scores.slice().reverse().map(p=>{
     const q = (p.period&&p.period.number) ? ("Q"+p.period.number) : "";
     const clk = (p.clock&&p.clock.displayValue)||"";
@@ -685,25 +720,19 @@ function renderFootball(g, sum){
         ${lastPlay.text?`<div class="lastbig"><span>Last play</span><p>${lastPlay.text}</p></div>`:""}
         ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
       </div>
-      <div class="cast2">
-        <div>
-          <div class="statpair head"><b>${aw}</b><span>tape</span><b>${hm}</b></div>
-          ${[["totalYards","Total Yards",1],["netPassingYards","Passing",1],["rushingYards","Rushing",1],["turnovers","Turnovers",1],["firstDowns","1st Downs",1],["totalPenaltiesYards","Penalties",0],["thirdDownEff","3rd Down",0],["fourthDownEff","4th Down",0],["possessionTime","Possession",2]].map(([k,lab,kind])=>{
-            const L=tstat(sum,aw,k), R=tstat(sum,hm,k);
-            const num=v=>{
-              if(kind===2){ const p=String(v).split(":"); return p.length===2?(Number(p[0])*60+Number(p[1]||0)):0; }
-              const n=parseFloat(String(v).split("-")[0]);
-              return isFinite(n)?n:0;
-            };
-            const ln=num(L), rn=num(R), tot=ln+rn;
-            const bar = (kind && tot) ? `<div class="cmpbar"><i class="l" style="width:${Math.round(ln/tot*50)}%"></i><i class="r" style="width:${Math.round(rn/tot*50)}%"></i></div>` : "";
-            return `<div class="statpair">${bar}<b>${L}</b><span>${lab}</span><b>${R}</b></div>`;
-          }).join("")}
-        </div>
-        <div>
-          <div class="leadmini head"><b>${aw}</b><span>Leaders</span><b>${hm}</b></div>
-          ${leads||"<p class='hint'>Leaders after kickoff.</p>"}
-        </div>
+      <div class="fieldwrap">
+        <div class="statpair head"><b>${aw}</b><span>tape</span><b>${hm}</b></div>
+        ${[["totalYards","Total Yards",1],["netPassingYards","Passing",1],["rushingYards","Rushing",1],["turnovers","Turnovers",1],["firstDowns","1st Downs",1],["totalPenaltiesYards","Penalties",0],["thirdDownEff","3rd Down",0],["fourthDownEff","4th Down",0],["possessionTime","Possession",2]].map(([k,lab,kind])=>{
+          const L=tstat(sum,aw,k), R=tstat(sum,hm,k);
+          const num=v=>{
+            if(kind===2){ const p=String(v).split(":"); return p.length===2?(Number(p[0])*60+Number(p[1]||0)):0; }
+            const n=parseFloat(String(v).split("-")[0]);
+            return isFinite(n)?n:0;
+          };
+          const ln=num(L), rn=num(R), tot=ln+rn;
+          const bar = (kind && tot) ? `<div class="cmpbar"><i class="l" style="width:${Math.round(ln/tot*50)}%"></i><i class="r" style="width:${Math.round(rn/tot*50)}%"></i></div>` : "";
+          return `<div class="statpair">${bar}<b>${L}</b><span>${lab}</span><b>${R}</b></div>`;
+        }).join("")}
       </div>
       <div class="fieldwrap">
         <p class="hint">Scoring plays</p>
@@ -711,7 +740,7 @@ function renderFootball(g, sum){
       </div>
     </div>
     <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
-    <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leads||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
+    <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leadBoard||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
   if(!playing){
     $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Scoring highlights</p><div class="clips">${clips}</div></div>` : "";
   }
@@ -1052,10 +1081,12 @@ async function openPlayer(pid, name){
     if(fromKit){
       const games = await loadLog(String(pid));
       const hits = games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
-      last18 = `<table class="tape"><thead><tr><th>Last 18</th><th>${labelLine(FILT.stat,FILT.line)}</th><th>${hits}/${games.length}</th></tr></thead><tbody>${games.map(g=>{
+      const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
+      last18 = `<div class="desk18"><p class="deskmeta">${hits}/${games.length} on ${labelLine(FILT.stat,FILT.line)}</p><div class="spark">${games.map(g=>{
         const v=valOf(g, FILT.stat);
-        return "<tr class='"+(v>=FILT.line?"hit":"miss")+"'><td>"+(g.opp||"—")+"</td><td>"+v+"</td><td>"+(v>=FILT.line?"HIT":"—")+"</td></tr>";
-      }).join("")}</tbody></table>`;
+        const h=Math.max(8, Math.round((v/max)*80));
+        return `<i class="${v>=FILT.line?"hit":"miss"}" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
+      }).join("")}</div></div>`;
     }
     if($("toGame")) $("toGame").textContent = fromKit ? "← Kitchen" : "← Game";
     window.FROMKIT = fromKit;
@@ -1072,7 +1103,12 @@ async function openPlayer(pid, name){
         <div class="lead3">${leads}</div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
-        <table class="tape"><thead><tr><th>Season</th><th></th>${career?`<th>Career</th>`:""}</tr></thead><tbody>${labels.map((lab,i)=>`<tr><td>${lab}</td><td>${season.stats[i]||"—"}</td>${career?`<td>${career.stats[i]||"—"}</td>`:""}</tr>`).join("")}</tbody></table>
+        ${(()=>{
+          const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM)$/i;
+          const bits=labels.map((lab,i)=>({lab,s:season.stats[i],c:career&&career.stats[i]})).filter(x=>keep.test(x.lab));
+          if(!bits.length) return "";
+          return `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>`;
+        })()}
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
@@ -1294,17 +1330,19 @@ function paintKitRows(out, host){
   $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score shrinks 1/1 below 17/18";
   host.innerHTML=rows.map(x=>{
     const games=LOGS[x.p.id]||[];
-    const log=games.map(g=>{
+    const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
+    const spark=games.map(g=>{
       const v=valOf(g, FILT.stat);
-      return "<span class='hitn "+(v>=FILT.line?"hit":"miss")+"'><em>"+(g.opp||"")+"</em><b>"+v+"</b></span>";
+      const h=Math.max(8, Math.round((v/max)*72));
+      return `<i class="${v>=FILT.line?"hit":"miss"}" style="height:${h}px" title="${g.opp||""} ${v}"><b>${v}</b><em>${g.opp||""}</em></i>`;
     }).join("");
-    return `<div class="krow">
+    return `<div class="kcard">
       <div class="ktop">
-        <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} on ${labelLine(FILT.stat,FILT.line)} · L5 ${x.l5h}/${x.l5n} · score ${x.score}</em></div>
-        <div><div class="khit">${x.score}</div><div class="kpct">${x.hits}/${x.n}</div></div>
+        <div class="khit">${x.score}</div>
+        <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} · L5 ${x.l5h}/${x.l5n} · ${labelLine(FILT.stat,FILT.line)}</em></div>
         <button type="button" class="addline" data-add="${x.p.id}">Add</button>
       </div>
-      <div class="hitline">${log}</div>
+      <div class="spark">${spark}</div>
     </div>`;
   }).join("") || "<p class='hint'>Still loading logs…</p>";
   host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
