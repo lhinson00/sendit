@@ -159,7 +159,8 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 @media(max-width:700px){.rankgrid{grid-template-columns:1fr}}
 .rankdiv{margin-bottom:4px;background:#101218;border:1px solid #2a241c;padding:10px}
 .rankdiv h3{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
-.rrow{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #1c1c22;cursor:pointer}
+.rrow{display:grid;grid-template-columns:28px 36px 1fr;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #1c1c22;cursor:pointer;text-align:left}
+.rrow img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1a120c}
 .rrow img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#1a120c}
 .rrow b{display:block}
 .rrow em{font-style:normal;color:var(--muted);font-size:11px}
@@ -709,58 +710,8 @@ function showUfcLineup(card, games){
   host.scrollIntoView({behavior:"smooth",block:"start"});
 }
 const UFC_OFFICIAL = {
-  asOf: "Sept 15, 2026 — after UFC Fight Night: Silva vs. Delgado",
-  boards: [
-    {name:"Men's pound-for-pound", rows:[
-      [1,"Islam Makhachev","29-1","WW C"],
-      [2,"Alexander Volkanovski","28-4","FW C"],
-      [3,"Petr Yan","20-5","BW C"],
-      [4,"Justin Gaethje","28-5","LW C"],
-      [5,"Ilia Topuria","17-1","LW #1"],
-      [6,"Tom Aspinall","15-3","HW #1"],
-      [7,"Sean Strickland","31-7","MW C"],
-      [8,"Merab Dvalishvili","21-5","BW #1"],
-      [9,"Alex Pereira","13-4","LHW #2"],
-      [10,"Ciryl Gane","14-2","HW C"],
-      [11,"Joshua Van","17-2","FLW C"],
-      [12,"Khamzat Chimaev","15-1","MW #1"],
-      [13,"Alexandre Pantoja","30-6","FLW #1"],
-      [14,"Arman Tsarukyan","23-3","LW #2"],
-      [15,"Charles Oliveira","37-11","LW #3"]
-    ]},
-    {name:"Heavyweight", rows:[
-      ["C","Ciryl Gane","14-2","Champion"],
-      [1,"Tom Aspinall","15-3",""],
-      [2,"Alex Pereira","13-4",""]
-    ]},
-    {name:"Light Heavyweight", rows:[
-      [2,"Alex Pereira","13-4",""]
-    ]},
-    {name:"Middleweight", rows:[
-      ["C","Sean Strickland","31-7","Champion"],
-      [1,"Khamzat Chimaev","15-1",""]
-    ]},
-    {name:"Welterweight", rows:[
-      ["C","Islam Makhachev","29-1","Champion"]
-    ]},
-    {name:"Lightweight", rows:[
-      ["C","Justin Gaethje","28-5","Champion"],
-      [1,"Ilia Topuria","17-1",""],
-      [2,"Arman Tsarukyan","23-3",""],
-      [3,"Charles Oliveira","37-11","BMF"]
-    ]},
-    {name:"Featherweight", rows:[
-      ["C","Alexander Volkanovski","28-4","Champion"]
-    ]},
-    {name:"Bantamweight", rows:[
-      ["C","Petr Yan","20-5","Champion"],
-      [1,"Merab Dvalishvili","21-5",""]
-    ]},
-    {name:"Flyweight", rows:[
-      ["C","Joshua Van","17-2","Champion"],
-      [1,"Alexandre Pantoja","30-6",""]
-    ]}
-  ]
+  asOf: "UFC.com official rankings",
+  boards: [{"name": "Men's Pound-for-Pound", "rows": [["C", "Islam Makhachev", "3332412"], ["2", "Alexander Volkanovski", "3949584"], ["3", "Petr Yan", "4293517"], ["4", "Justin Gaethje", "3022345"], ["5", "Ilia Topuria", "4350812"], ["6", "Tom Aspinall", "4010976"], ["7", "Sean Strickland", "3093653"], ["8", "Merab Dvalishvili", "3948572"], ["9", "Alex Pereira", "4705658"], ["10", "Ciryl Gane", "4426000"], ["11", "Joshua Van", "5120301"], ["12", "Khamzat Chimaev", "4684751"], ["13", "Alexandre Pantoja", "2560746"], ["14", "Arman Tsarukyan", "4419372"], ["15", "Charles Oliveira", "2504169"]]}, {"name": "Flyweight", "rows": [["C", "Joshua Van", "5120301"], ["1", "Alexandre Pantoja", "2560746"], ["2", "Manel Kape", "4236504"], ["3", "Brandon Royval", "4239928"], ["4", "Tatsuro Taira", "4917772"], ["5", "Kyoji Horiguchi", "2613374"], ["6", "Lone\u2019er Kavanagh", "5147737"], ["7", "Asu Almabayev", "4294926"], ["8", "Brandon Moreno", "3027545"], ["9", "Amir Albazi", "4684848"], ["10", "Ramazan Temirov", "4895691"], ["11", "Tim Elliott", "2614020"], ["12", "Steve Erceg", "4997217"], ["13", "Sumudaerji", "4405109"], ["14", "Tagir Ulanbekov", "4294924"], ["15", "Alex Perez", "3155425"]]}, {"name": "Bantamweight", "rows": [["C", "Petr Yan", "4293517"], ["1", "Merab Dvalishvili", "3948572"], ["2", "Sean O'Malley", "4205093"], ["3", "Song Yadong", "3151289"], ["4", "Umar Nurmagomedov", "4569549"], ["5", "Mario Bautista", "4410868"], ["6", "Cory Sandhagen", "4294504"], ["7", "Aiemann Zahabi", "4079149"], ["8", "David Martinez", "4503229"], ["9", "Deiveson Figueiredo", "4189320"], ["10", "Marlon Vera", "3155424"], ["11", "Payton Talbott", "5144008"], ["12", "Raul Rosas Jr.", "5088844"], ["13", "Raoni Barcelos", "3075570"], ["14", "Farid Basharat", "5016786"], ["15", "Marcus McGhee", "4895760"]]}, {"name": "Featherweight", "rows": [["C", "Alexander Volkanovski", "3949584"], ["1", "Movsar Evloev", "4029275"], ["2", "Diego Lopes", "4881999"], ["3", "Lerone Murphy", "4576101"], ["4", "Aljamain Sterling", "3031559"], ["5", "Jean Silva", "5145766"], ["6", "Yair Rodriguez", "3155420"], ["7", "Arnold Allen", "3902098"], ["8", "Youssef Zalal", "4351319"], ["9", "Kevin Vallejos", "5145681"], ["10", "Steve Garcia", "3023804"], ["11", "Brian Ortega", "3045737"], ["12", "Aaron Pico", "4199009"], ["13", "Melquizael Costa", "4425763"], ["14", "David Onama", "4897850"], ["15", "Patricio Pitbull", "2532870"]]}, {"name": "Lightweight", "rows": [["C", "Justin Gaethje", "3022345"], ["1", "Ilia Topuria", "4350812"], ["2", "Arman Tsarukyan", "4419372"], ["3", "Charles Oliveira", "2504169"], ["4", "Max Holloway", "2614933"], ["5", "Paddy Pimblett", "4008549"], ["6", "Beno\u00eet Saint Denis", "4895362"], ["7", "Mauricio Ruffy", "5122238"], ["8", "Quillan Salkilld", "5157667"], ["9", "Salahdine Parnasse", "4312859"], ["10", "Rafael Fiziev", "4339488"], ["11", "Renato Moicano", "3028863"], ["11", "Mateusz Gamrot", "3068125"], ["13", "Dan Hooker", "3109135"], ["14", "Tom Nolan", "5144007"], ["15", "Beneil Dariush", "3085551"]]}, {"name": "Welterweight", "rows": [["C", "Islam Makhachev", "3332412"], ["1", "Ian Machado Garry", "4738092"], ["2", "Carlos Prates", "4294832"], ["3", "Michael Morales", "4869426"], ["4", "Jack Della Maddalena", "4828707"], ["5", "Gabriel Bonfim", "4921516"], ["6", "Sean Brady", "4295192"], ["7", "Belal Muhammad", "3172112"], ["8", "Leon Edwards", "3152929"], ["9", "Kamaru Usman", "3088812"], ["10", "Joaquin Buckley", "4024714"], ["11", "Yaroslav Amosov", "4275020"], ["12", "Uro\u0161 Medi\u0107", "4685870"], ["13", "Mike Malott", "3165120"], ["14", "Daniel Rodriguez", "4426312"], ["15", "Neil Magny", "3001914"]]}, {"name": "Middleweight", "rows": [["C", "Sean Strickland", "3093653"], ["1", "Khamzat Chimaev", "4684751"], ["2", "Dricus Du Plessis", "3166126"], ["3", "Nassourdine Imavov", "4690539"], ["4", "Brendan Allen", "4025699"], ["5", "Caio Borralho", "4835137"], ["6", "Joe Pyfer", "4684135"], ["7", "Gregory Rodrigues", "4690541"], ["8", "Anthony Hernandez", "4290956"], ["9", "Israel Adesanya", "4285679"], ["10", "Christian Leroy Duncan", "4848674"], ["11", "Jared Cannonier", "3154860"], ["12", "Abus Magomedov", "3077822"], ["13", "Ikram Aliskerov", "4684776"], ["14", "Bo Nickal", "5061870"], ["15", "Shara Magomedov", "4421784"]]}, {"name": "Light Heavyweight", "rows": [["C", "Carlos Ulberg", "4695736"], ["1", "Magomed Ankalaev", "4273399"], ["2", "Ji\u0159\u00ed Proch\u00e1zka", "3156612"], ["3", "Alex Pereira", "4705658"], ["4", "Khalil Rountree Jr.", "4028627"], ["5", "Navajo Stirling", "5216713"], ["6", "Paulo Costa", "4080826"], ["7", "Jamahal Hill", "4425355"], ["8", "Azamat Murzakanov", "4227265"], ["9", "Jan B\u0142achowicz", "2506250"], ["10", "Dominick Reyes", "4233039"], ["11", "Bogdan Guskov", "5152109"], ["12", "Robert Whittaker", "3009717"], ["13", "Johnny Walker", "3146944"], ["14", "Alonzo Menifield", "3948876"], ["15", "Nikita Krylov", "3026263"]]}, {"name": "Heavyweight", "rows": [["C", "Tom Aspinall", "4010976"], ["1", "Ciryl Gane", "4426000"], ["2", "Alexander Volkov", "2993650"], ["3", "Sergei Pavlovich", "4217395"], ["4", "Josh Hokit", ""], ["5", "Curtis Blaydes", "3922557"], ["6", "Waldo Cortes Acosta", "4903365"], ["7", "Rizvan Kuniev", "4001837"], ["8", "Vitor Petrino", "5060483"], ["9", "Serghei Spivac", "4421246"], ["10", "Ante Delija", "3041315"], ["11", "Valter Walker", "5147389"], ["12", "Tyrell Fortune", "4065006"], ["13", "Derrick Lewis", "2560713"], ["14", "Mario Pinto", "5218817"], ["15", "Aleksandar Raki\u0107", "4079314"]]}, {"name": "Women's Pound-for-Pound", "rows": [["C", "Valentina Shevchenko", "2554705"], ["2", "Kayla Harrison", "4332765"], ["3", "Zhang Weili", "4350762"], ["4", "Natalia Silva", "4054605"], ["5", "Mackenzie Dern", "4021217"], ["6", "Alexa Grasso", "3136287"], ["7", "Manon Fiorot", "4608674"], ["8", "Erin Blanchfield", "4350796"], ["9", "Tatiana Suarez", "4020435"], ["10", "Julianna Pe\u00f1a", "2951361"], ["11", "Virna Jandiroba", "4289516"], ["12", "Raquel Pennington", "2995167"], ["12", "Rose Namajunas", "3032973"], ["14", "Denise Gomes", "4963343"], ["15", "Maycee Barber", "4246307"]]}, {"name": "Women's Strawweight", "rows": [["C", "Mackenzie Dern", "4021217"], ["1", "Zhang Weili", "4350762"], ["2", "Tatiana Suarez", "4020435"], ["3", "Virna Jandiroba", "4289516"], ["4", "Denise Gomes", "4963343"], ["5", "Gillian Robertson", "4089026"], ["6", "Yan Xiaonan", "4275487"], ["7", "Fatima Kline", "5028019"], ["8", "Loopy Godinez", "4700617"], ["9", "Alexia Thainara", "5075992"], ["10", "J\u00e9ssica Andrade", "3024395"], ["11", "Tabatha Ricci", "4868095"], ["12", "Amanda Lemos", "4233196"], ["13", "Amanda Ribas", "4221863"], ["14", "Angela Hill", "3115931"], ["15", "Mizuki", "3027998"]]}, {"name": "Women's Flyweight", "rows": [["C", "Valentina Shevchenko", "2554705"], ["1", "Natalia Silva", "4054605"], ["2", "Alexa Grasso", "3136287"], ["3", "Manon Fiorot", "4608674"], ["4", "Erin Blanchfield", "4350796"], ["5", "Rose Namajunas", "3032973"], ["6", "Maycee Barber", "4246307"], ["7", "Jasmine Jasudavicius", "4835135"], ["8", "Wang Cong", "4215200"], ["9", "Tracy Cortez", "4243624"], ["10", "Miranda Maverick", "4065598"], ["11", "Karine Silva", "3309918"], ["12", "Casey O'Neill", "4699589"], ["13", "Eduarda Moura", "5143888"], ["14", "Gabriella Fernandes", "4871203"], ["15", "Regina Tarin", "5338118"]]}, {"name": "Women's Bantamweight", "rows": [["C", "Kayla Harrison", "4332765"], ["1", "Julianna Pe\u00f1a", "2951361"], ["2", "Raquel Pennington", "2995167"], ["3", "Joselyne Edwards", "4397782"], ["4", "Norma Dumont", "4418784"], ["5", "Ailin Perez", "5075333"], ["6", "Yana Santos", "3154898"], ["7", "Luana Santos", "5110469"], ["8", "Macy Chiasson", "4334306"], ["9", "Jacqueline Cavalcanti", "4916251"], ["10", "Karol Rosa", "4292349"], ["11", "Bia Mesquita", "5310274"], ["12", "Michelle Montague", "4916259"], ["13", "Nora Cornolle", "4916974"], ["14", "Miesha Tate", "2553021"], ["15", "Melissa Croden", "4947922"]]}]
 };
 async function loadUfcRankings(){
   const host=$("ufcRanks");
@@ -771,10 +722,9 @@ async function loadUfcRankings(){
   const divs = UFC_OFFICIAL.boards.filter(b=>!/pound/i.test(b.name));
   const block = boards => boards.map(b=>{
       const rows=b.rows.map(r=>{
-        const name=r[1], rec=r[2], note=r[3], rk=r[0];
-        const pid=ids[name]||"";
+        const rk=r[0], name=r[1], pid=r[2]||ids[name]||"";
         const img = pid ? "https://a.espncdn.com/i/headshots/mma/players/full/"+pid+".png" : "";
-        return "<div class='rrow prow' data-pid='"+pid+"' data-pname='"+name.replace(/"/g,"")+"'><span class='rk'>"+rk+"</span>"+(img?"<img alt='' src='"+img+"'/>":"<span></span>")+"<div><b>"+name+"</b><em>"+rec+(note?" · "+note:"")+"</em></div></div>";
+        return "<div class='rrow prow' data-pid='"+pid+"' data-pname='"+String(name).replace(/"/g,"")+"'><span class='rk'>"+rk+"</span>"+(img?"<img alt='' src='"+img+"'/>":"<span></span>")+"<div><b>"+name+"</b></div></div>";
       }).join("");
       return "<div class='rankdiv'><h3>"+b.name+"</h3>"+rows+"</div>";
     }).join("");
