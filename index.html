@@ -2165,7 +2165,8 @@ function paintLeaders(){
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
-    return a.id ? ("https://a.espncdn.com/i/headshots/"+(LEAGUE==="nfl"?"nfl":"college-football")+"/players/full/"+a.id+".png") : "";
+    const folder = LEAGUE==="mlb" || mlb ? "mlb" : LEAGUE==="nfl" ? "nfl" : "college-football";
+    return a.id ? ("https://a.espncdn.com/i/headshots/"+folder+"/players/full/"+a.id+".png") : "";
   };
   host.innerHTML = `<div class="ldhead">
       <button type="button" class="${side==="off"?"on":""}" data-side="off">Offense</button>
