@@ -49,10 +49,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .gduo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
 .gteam{display:flex;align-items:center;gap:8px;font-family:"Bebas Neue",sans-serif;font-size:20px}
 .gteam.right{justify-content:flex-end}
-.logoplate{width:36px;height:36px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;overflow:visible;flex:none;position:relative}
+.logoplate{width:36px;height:36px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
 .logoplate img{width:28px;height:28px;object-fit:contain}
 .gcard .nm{font-size:15px;line-height:1.15;flex-wrap:wrap}
-.rbadge{position:absolute;top:-6px;left:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--orange);color:#140800;font-size:10px;font-weight:800;line-height:18px;text-align:center;z-index:2}
+.rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
 .pills button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
@@ -515,7 +515,7 @@ const CONF = [
 let CFB_FILT = "all";
 function rankChip(r){
   r=Number(r);
-  return (r>0 && r<=25) ? `<i class="rbadge">${r}</i>` : "";
+  return (r>0 && r<=25) ? `<span class="rknum">#${r}</span>` : "";
 }
 function filterCfb(games){
   if(LEAGUE!=="cfb" || CFB_FILT==="all") return games;
@@ -568,9 +568,9 @@ function paint(games){
       <button type="button" class="gcard${live?" live":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
-          <div class="nm"><span class="logoplate">${rankChip(g.awayRank)}<img alt="" src="${g.awayImg}"/></span>${g.away}</div>
+          <div class="nm"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
           <div class="sc"><em>${g.awayScore||"–"}</em><span>–</span><em>${g.homeScore||"–"}</em></div>
-          <div class="nm r">${g.home}<span class="logoplate">${rankChip(g.homeRank)}<img alt="" src="${g.homeImg}"/></span></div>
+          <div class="nm r"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
         </div>
         ${sub?`<div class="sub">${sub}</div>`:""}
       </button>`;
