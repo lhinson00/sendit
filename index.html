@@ -1381,14 +1381,14 @@ function parseLog(d){
           const parts=nm.split(/ vs | @ | at /i);
           opp=(parts[1]||parts[0]||"").slice(0,14);
         }
-        rows.push({id:String(ev.eventId), stats:ev.stats||[], names:names, opp:opp, season:st.displayName||""});
+        rows.push({id:String(ev.eventId), stats:ev.stats||[], names:names, opp:opp, season:st.displayName||"", date:meta.gameDate||meta.date||""});
       });
     });
   });
   return rows;
 }
 async function loadLog(pid){
-  if(LOGS[pid] && LOGS[pid].length>=10) return LOGS[pid];
+  if(LOGS[pid] && LOGS[pid].length>=10 && LOGS[pid][0] && LOGS[pid][0].date) return LOGS[pid];
   const qs=["","?season=2025"];
   const seen=new Set();
   const rows=[];
@@ -1402,8 +1402,8 @@ async function loadLog(pid){
         rows.push(r);
       });
     }catch(e){}
-    if(rows.length>=18) break;
   }
+  rows.sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")) || String(a.id).localeCompare(String(b.id)));
   LOGS[pid]=rows.slice(-18);
   return LOGS[pid];
 }
