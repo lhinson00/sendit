@@ -942,7 +942,7 @@ function filterCfb(games){
 function paintCfbPills(){
   const host=$("cfbPills");
   if(!host) return;
-  host.hidden = LEAGUE!=="cfb" || (window.BOARD && window.BOARD!=="slate");
+  host.hidden = LEAGUE!=="cfb" || (window.BOARD && window.BOARD!=="slate") || ($("eatPanel") && !$("eatPanel").hidden);
   if(LEAGUE!=="cfb") return;
   host.innerHTML = CONF.map(([id,lab])=>`<button type="button" data-cf="${id}" class="${CFB_FILT===id?"on":""}">${lab}</button>`).join("");
   host.querySelectorAll("[data-cf]").forEach(b=>b.onclick=()=>{ CFB_FILT=b.dataset.cf; paint(GAMES); });
@@ -2362,6 +2362,7 @@ function showEat(opts){
   if(LEAGUE==="tssaa") return;
   if(!(opts&&opts.keepFrom)) rememberEatFrom();
   window.FROM_EAT=false;
+  if(LEAGUE==="cfb") window.BOARD="eat";
   show("live");
   if($("liveList")) $("liveList").hidden=true;
   if($("boardPanel")) $("boardPanel").hidden=true;
