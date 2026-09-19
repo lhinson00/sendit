@@ -141,10 +141,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cside{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center}
 .cside.r{grid-template-columns:auto 1fr 44px;text-align:right}
 .qtr.mini{width:auto;margin:0;font-size:11px}
-.lp{display:flex;align-items:center;gap:8px}
-.lp img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#1a120c}
-.lp b{display:block;font-size:14px}
-.lp em{font-style:normal;font-size:11px;color:var(--muted)}
+.lp{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px;align-items:center;min-width:0}
+.lp img,.ph{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#1a120c}
+.lp b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lp em{font-style:normal;font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cside img{width:44px;height:44px;object-fit:contain}
 .cside b{display:block;font-size:16px}
 .cside em{font-style:normal;color:var(--muted);font-size:12px}
@@ -163,13 +163,11 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cmpbar i.r{background:#6a645c;border-radius:0 2px 2px 0}
 .hbar{height:4px;background:#222;margin-top:4px}
 .hbar i{display:block;height:4px;background:var(--orange)}
-.leadmini{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #222}
-.leadmini .lp:last-child{flex-direction:row-reverse;text-align:right}
-.lp.empty{color:var(--muted);justify-content:center}
-.ph{width:48px;height:48px;border-radius:50%;background:#1a120c;display:inline-block}
-.lp img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#1a120c}
-.leadmini img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1a120c}
-.leadmini .nm{font-size:12px}
+.leadmini{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr);gap:10px;align-items:center;padding:14px 0;border-bottom:1px solid #222}
+.leadmini > span{text-align:center;font-size:12px;color:#cfc6b8}
+.leadmini .lp:last-child{grid-template-columns:minmax(0,1fr) 48px;text-align:right}
+.leadmini .lp:last-child img,.leadmini .lp:last-child .ph{grid-column:2}
+.lp.empty{display:flex;color:var(--muted);justify-content:center}
 .wpbig{font-family:"Bebas Neue",sans-serif;font-size:42px;color:var(--orange)}
 .scorebug.islive .cscore{color:var(--orange)}
 .scorebug.islive{box-shadow:0 0 0 1px #ff3b3b inset, 0 0 24px rgba(255,59,59,.18)}
