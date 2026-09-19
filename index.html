@@ -126,6 +126,14 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .ftabs button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .drivechip{margin-top:12px;padding:10px 12px;background:#14110e;border:1px solid #3a2a18;font-size:13px}
 .drivechip b{color:var(--orange)}
+.cast{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.cside{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center}
+.cside.r{grid-template-columns:auto 1fr 44px}
+.cside img{width:44px;height:44px;object-fit:contain}
+.cside b{display:block;font-size:16px}
+.cside em{font-style:normal;color:var(--muted);font-size:12px}
+.cscore{font-family:"Bebas Neue",sans-serif;font-size:52px;line-height:.9;color:#fff}
+.scorebug.islive .cscore{color:var(--orange)}
 .scorebug.islive{box-shadow:0 0 0 1px #ff3b3b inset, 0 0 24px rgba(255,59,59,.18)}
 .scorebug.islive .mlb-inning{color:#ff6d6d;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
@@ -501,9 +509,15 @@ function renderFootball(g, sum){
   const hs = scoreOf(home) || g.homeScore || "0";
   const aw = g.awayAb || g.away, hm = g.homeAb || g.home;
   const awN = g.away, hmN = g.home;
+  const aRec = ((away.records||[])[0]||{}).summary || g.awayRec || "";
+  const hRec = ((home.records||[])[0]||{}).summary || g.homeRec || "";
+  const aLogo = (away.team && ((away.team.logo)||(away.team.logos&&away.team.logos[0]&&away.team.logos[0].href))) || g.awayImg;
+  const hLogo = (home.team && ((home.team.logo)||(home.team.logos&&home.team.logos[0]&&home.team.logos[0].href))) || g.homeImg;
+  const tv = ((((hdr.broadcasts||[])[0]||{}).media)||{}).shortName || g.broadcast || "";
+  const gi = sum.gameInfo || {};
+  const city = (gi.venue && gi.venue.address && gi.venue.address.city) || "";
   const wp = (sum.winprobability||[]).slice(-1)[0];
   const homePct = wp ? Math.round((wp.homeWinPercentage||0)*100) : null;
-  const gi = sum.gameInfo || {};
   const venue = (gi.venue && gi.venue.fullName) || "";
   const scores = (sum.scoringPlays||[]).slice();
   const lastScore = scores.slice(-1)[0];
@@ -550,11 +564,10 @@ function renderFootball(g, sum){
   const tab = window.FTAB || "live";
   $("gameRoom").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
-      <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}</div>
-      <div class="mlb-score">
-        <div class="mlb-side"><em>${awN}</em><b>${as}</b></div>
-        <span class="vs">@</span>
-        <div class="mlb-side r"><em>${hmN}</em><b>${hs}</b></div>
+      <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
+      <div class="cast">
+        <div class="cside"><img alt="" src="${aLogo}"/><div><b>${awN}</b><em>${aRec||aw}</em></div><span class="cscore">${as}</span></div>
+        <div class="cside r"><span class="cscore">${hs}</span><div><b>${hmN}</b><em>${hRec||hm}</em></div><img alt="" src="${hLogo}"/></div>
       </div>
       <table class="qtr">
         <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}<th>T</th></tr>
