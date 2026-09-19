@@ -82,22 +82,15 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 @media(max-width:560px){.playoffbox{grid-template-columns:1fr}.srow{grid-template-columns:20px 24px 1fr 48px 28px 28px 40px}}
 .pollrow{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #221e18;cursor:pointer}
 .pollrow:hover{background:#16120e}
-.oddsrow,.oddsdesk{padding:8px 0 2px}
-.oddsdesk{display:grid;gap:8px}
-.mkt{background:#0e0f14;border:1px solid #2a241c;border-radius:8px;padding:8px}
-.mkt > b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-bottom:6px}
-.side{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;margin:4px 0}
-.side .who{border:1px solid #3a2a18;background:#14110e;color:#e8e0d4;font-size:11px;padding:7px 8px;text-align:left;border-radius:4px}
-.side .who.on{border-color:var(--orange);color:var(--orange)}
-.step{display:flex;align-items:center;gap:0;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d12}
-.step button{border:0;background:#1a1612;color:var(--orange);width:28px;height:32px;font-size:16px;font-weight:800}
-.step input{width:64px;background:transparent;border:0;color:#fff;text-align:center;font-size:13px;font-weight:800;padding:6px 2px}
-.trackit{border:1px solid var(--orange);background:#1a120c;color:var(--orange);font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:7px 8px;border-radius:4px;white-space:nowrap}
-.trackit:hover{background:var(--orange);color:#140800}
-@media(max-width:560px){
-  .side{grid-template-columns:1fr auto; }
-  .trackit{grid-column:1/-1}
-}
+.oddsdesk{padding:8px 0 0}
+.oddstrip{display:grid;grid-template-columns:42px 1fr 1fr;gap:6px;align-items:center;padding:5px 0;border-top:1px solid #221c16}
+.oddstrip b{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember)}
+.side{display:flex;align-items:center;gap:6px;min-width:0}
+.side .who{border:1px solid #3a2a18;background:#14110e;color:#e8e0d4;font-size:11px;font-weight:800;padding:6px 8px;border-radius:4px;white-space:nowrap}
+.side .who.on,.side .who:hover{border-color:var(--orange);color:var(--orange)}
+.step{display:flex;align-items:center;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d12;flex:1;min-width:0}
+.step button{border:0;background:#1a1612;color:var(--orange);width:26px;height:28px;font-size:15px;font-weight:800;flex:0 0 26px}
+.step input{flex:1;min-width:0;width:52px;background:transparent;border:0;color:#fff;text-align:center;font-size:13px;font-weight:800;padding:5px 2px}
 .daycut{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);border-bottom:1px solid #3a2a18;padding-bottom:6px}
 .tbook{padding:0 var(--pad) 28px}
 .tsk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
@@ -368,7 +361,12 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .glog i.hit{border-color:#5a3410;color:var(--orange);background:#1a1208}
 .glog i b{display:block;font-size:13px;color:inherit}
 .addline{border:1px solid var(--orange);background:#1a120c;color:var(--orange);padding:8px 10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:11px}
-.slip{padding:16px;background:linear-gradient(180deg,#16120e,#0c0d12);border:1px solid #3a2a18;border-radius:10px;position:relative;overflow:hidden;cursor:pointer}
+.slip{padding:16px 16px 16px 38px;background:linear-gradient(180deg,#16120e,#0c0d12);border:1px solid #3a2a18;border-radius:10px;position:relative;overflow:hidden;cursor:pointer}
+.chk{position:absolute;left:12px;top:14px;accent-color:#ff6a00;width:16px;height:16px}
+.packbar{display:flex;gap:8px;padding:0 0 12px}
+.packbar input{flex:1;background:#0c0d12;border:1px solid #3a2a18;color:#fff;padding:8px 10px;font-size:13px}
+.packbar button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:8px 10px}
+.packstat{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 .slip .back{cursor:pointer}
 .slip.live{border-color:#ff3b3b;box-shadow:inset 3px 0 0 #ff3b3b}
 .slip.hit{border-color:#3ee0a0}
@@ -461,6 +459,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
     <div class="eathead">
       <h2>Let's Eat</h2>
       <p class="hint" id="eatMeta">Tickets track live when the game kicks. Add from Kitchen or a slate line.</p>
+    </div>
+    <div class="packbar" data-stop="1">
+      <input id="packName" type="text" placeholder="Parlay name · Sat 4-leg"/>
+      <button type="button" id="makePack">Group selected</button>
     </div>
     <div id="eatList" class="list"></div>
   </div>
@@ -633,19 +635,18 @@ function signed(n){
   if(!Number.isFinite(v)) return String(n||"");
   return (v>0?"+":"")+v;
 }
-function sideRow(g, kind, side, label, posted, step){
+function sideCell(g, kind, side, label, posted, step){
   const key=draftKey(g)+":"+kind+":"+side;
   const saved=ODDS_DRAFT[key];
   const val = saved!=null && saved!=="" ? saved : (posted!=null && posted!=="" ? posted : "");
   const ph = posted!=null && posted!=="" ? posted : (kind==="ml"?"+150":kind==="ou"?"44.5":"+3.5");
   return `<div class="side" data-kind="${kind}" data-side="${side}">
-    <button type="button" class="who" data-use-posted="1">${label}${posted!=="" && posted!=null ? " · posted "+posted : ""}</button>
+    <button type="button" class="who" data-track="${kind}" data-side="${side}" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}" title="Track ${label}">${label}</button>
     <div class="step">
       <button type="button" data-bump="${-step}">−</button>
       <input data-kind="${kind}" data-side="${side}" data-dkey="${key}" value="${val}" placeholder="${ph}"/>
       <button type="button" data-bump="${step}">+</button>
     </div>
-    <button type="button" class="trackit" data-track="${kind}" data-side="${side}" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">Track ${label.split(" ")[0]}</button>
   </div>`;
 }
 function oddsTape(g){
@@ -653,26 +654,14 @@ function oddsTape(g){
   const o=g.odds||{};
   const a=g.awayAb||g.away, h=g.homeAb||g.home;
   if(LEAGUE==="ufc"){
-    return `<div class="oddsdesk" data-stop="1" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">
-      <div class="mkt"><b>Moneyline · pick the fighter, set your book price</b>
-        ${sideRow(g,"ml","away",a,o.awayML||"",10)}
-        ${sideRow(g,"ml","home",h,o.homeML||"",10)}
-      </div>
+    return `<div class="oddsdesk" data-stop="1">
+      <div class="oddstrip"><b>ML</b>${sideCell(g,"ml","away",a,o.awayML||"",10)}${sideCell(g,"ml","home",h,o.homeML||"",10)}</div>
     </div>`;
   }
-  return `<div class="oddsdesk" data-stop="1" data-gid="${g.eventId||""}">
-    <div class="mkt"><b>ATS · pick the team, then the number you actually bet</b>
-      ${sideRow(g,"spread","away",a,o.awaySp||"",0.5)}
-      ${sideRow(g,"spread","home",h,o.homeSp||"",0.5)}
-    </div>
-    <div class="mkt"><b>Moneyline · your book price</b>
-      ${sideRow(g,"ml","away",a,o.awayML||"",10)}
-      ${sideRow(g,"ml","home",h,o.homeML||"",10)}
-    </div>
-    <div class="mkt"><b>Total · over or under your number</b>
-      ${sideRow(g,"ou","over","Over",o.ou!=null?o.ou:"",0.5)}
-      ${sideRow(g,"ou","under","Under",o.ou!=null?o.ou:"",0.5)}
-    </div>
+  return `<div class="oddsdesk" data-stop="1">
+    <div class="oddstrip"><b>ATS</b>${sideCell(g,"spread","away",a,o.awaySp||"",0.5)}${sideCell(g,"spread","home",h,o.homeSp||"",0.5)}</div>
+    <div class="oddstrip"><b>ML</b>${sideCell(g,"ml","away",a,o.awayML||"",10)}${sideCell(g,"ml","home",h,o.homeML||"",10)}</div>
+    <div class="oddstrip"><b>O/U</b>${sideCell(g,"ou","over","Over",o.ou!=null?o.ou:"",0.5)}${sideCell(g,"ou","under","Under",o.ou!=null?o.ou:"",0.5)}</div>
   </div>`;
 }
 function bumpVal(inp, delta, kind){
@@ -1017,7 +1006,7 @@ async function loadLeague(lg){
     if($("cfbTabs")) $("cfbTabs").hidden = lg!=="cfb";
     if($("mlbTabs")) $("mlbTabs").hidden = lg!=="mlb";
     if($("tssaaTabs")) $("tssaaTabs").hidden = true;
-    if($("tabEatAny")) $("tabEatAny").hidden = lg==="ufc";
+    if($("tabEatAny")) $("tabEatAny").hidden = lg!=="ufc";
     if($("boardPanel")) { $("boardPanel").hidden = true; $("boardPanel").innerHTML=""; }
     window.BOARD = "slate";
     if($("kitPanel")) $("kitPanel").hidden = true;
@@ -1926,6 +1915,22 @@ async function tickSlip(){
   saveSlip();
   if($("eatPanel") && !$("eatPanel").hidden) paintSlip();
 }
+function packTag(rows){
+  const tags=rows.map(s=>{
+    if(s.push) return "PUSH";
+    if(s.hit) return "HIT";
+    if(s.status==="in") return "LIVE";
+    if(s.status==="post") return "MISS";
+    if(s.stat && s.live>=s.line) return "HIT";
+    if(s.stat && s.status==="post") return "MISS";
+    return "PRE";
+  });
+  if(tags.includes("MISS")) return "MISS";
+  if(tags.includes("LIVE") || tags.includes("PRE")) return "LIVE";
+  if(tags.every(t=>t==="PUSH")) return "PUSH";
+  if(tags.every(t=>t==="HIT" || t==="PUSH")) return "HIT";
+  return "LIVE";
+}
 function paintSlip(){
   const host=$("eatList");
   if(!host) return;
@@ -1933,14 +1938,23 @@ function paintSlip(){
   if(!SLIP.length){ host.innerHTML="<p class='hint'>Nothing on the ticket yet. Add a Kitchen line or tap ATS / ML / O/U on a slate card.</p>"; return; }
   const liveN=SLIP.filter(s=>s.status==="in").length;
   const hitN=SLIP.filter(s=>s.hit && !s.push).length;
-  $("eatMeta").textContent = SLIP.length+" ticket"+(SLIP.length===1?"":"s")+(liveN?" · "+liveN+" live":"")+(hitN?" · "+hitN+" hit":"")+" · refreshes while you watch";
+  const packs=new Set(SLIP.map(s=>s.pack).filter(p=>p && p!=="Singles"));
+  $("eatMeta").textContent = SLIP.length+" ticket"+(SLIP.length===1?"":"s")+(packs.size?" · "+packs.size+" parlay"+(packs.size===1?"":"s"):"")+(liveN?" · "+liveN+" live":"")+(hitN?" · "+hitN+" hit":"")+" · check legs, then Group selected";
   const groups={};
   SLIP.forEach(s=>{
-    const key=s.game||s.eventId||"Open";
+    const key=s.pack || "Singles";
     (groups[key]=groups[key]||[]).push(s);
   });
-  host.innerHTML=Object.keys(groups).map(key=>{
-    const rows=groups[key].map(s=>{
+  const order=Object.keys(groups).sort((a,b)=>{
+    if(a==="Singles") return 1;
+    if(b==="Singles") return -1;
+    return a.localeCompare(b);
+  });
+  host.innerHTML=order.map(key=>{
+    const packRows=groups[key];
+    const ptag=key==="Singles"?"OPEN":packTag(packRows);
+    const hitC=packRows.filter(s=>s.hit||(s.stat&&s.live>=s.line)).length;
+    const rows=packRows.map(s=>{
       const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
       if(g){ s.status=g.state; s.game=g.away+" @ "+g.home; }
       const score = g && (g.awayScore!==""||g.homeScore!=="") ? `${g.awayAb||g.away} ${g.awayScore||0}  ${g.homeScore||0} ${g.homeAb||g.home}` : "";
@@ -1952,7 +1966,8 @@ function paintSlip(){
                     (s.status==="pre"?"waiting on kick":("margin "+(s.live>=0?"+":"")+s.live+" vs "+s.line));
         const need = s.kind==="ou" ? Math.max(0, Number(s.line)-(s.live||0)) : null;
         const pct = s.kind==="ou" ? Math.min(100, Math.round(((s.live||0)/Math.max(1,Number(s.line)))*100)) : (s.status==="in"?55:s.status==="post"?100:8);
-        return `<div class="slip ${tag.toLowerCase()}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
+        return `<div class="slip ${tag.toLowerCase()}" data-sid="${s.id}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
+          <input class="chk" type="checkbox" data-pick="${s.id}"/>
           <span class="tag ${tag}">${tag}</span>
           <div class="who">${s.name} · ${s.label||""}</div>
           <div class="goal">${now}</div>
@@ -1964,7 +1979,8 @@ function paintSlip(){
       const pct=Math.min(100, Math.round((s.live/(s.line||1))*100));
       const hit=s.live>=s.line;
       const tag=hit?"HIT":(s.status==="in"||(g&&g.state==="in")?"LIVE":(g&&g.state==="post"?"MISS":"PRE"));
-      return `<div class="slip ${tag.toLowerCase()}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
+      return `<div class="slip ${tag.toLowerCase()}" data-sid="${s.id}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
+        <input class="chk" type="checkbox" data-pick="${s.id}"/>
         <span class="tag ${tag}">${tag}</span>
         <div class="who">${s.name} · ${s.team||""} ${s.pos||""}</div>
         <div class="goal">${s.live||0} <span style="font-size:18px;color:#8a8478">/ ${s.line}</span></div>
@@ -1973,22 +1989,40 @@ function paintSlip(){
         <button type="button" class="back" data-drop="${s.id}">Remove</button>
       </div>`;
     }).join("");
-    const first=groups[key][0]||{};
-    return `<div class="eatgrp" data-open-eid="${first.eventId||""}" data-open-fid="${first.fightId||""}" data-open-lg="${first.lg||LEAGUE}"><h3>${key}</h3>${rows}</div>`;
+    const first=packRows[0]||{};
+    const head = key==="Singles"
+      ? `<div class="packstat"><h3>Singles · not in a parlay</h3></div>`
+      : `<div class="packstat"><h3>${key} · ${hitC}/${packRows.length} legs</h3><span class="tag ${ptag}">PARLAY ${ptag}</span><button type="button" class="back" data-unpack="${key}">Ungroup</button></div>`;
+    return `<div class="eatgrp ${ptag.toLowerCase()}" data-pack="${key}" data-open-eid="${first.eventId||""}" data-open-fid="${first.fightId||""}" data-open-lg="${first.lg||LEAGUE}">${head}${rows}</div>`;
   }).join("");
   host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=e=>{
     e.stopPropagation();
     SLIP=SLIP.filter(x=>x.id!==b.dataset.drop); saveSlip(); paintSlip();
   });
-  host.querySelectorAll(".slip[data-open-eid],.slip[data-open-fid],.eatgrp > h3").forEach(el=>{
+  host.querySelectorAll("[data-unpack]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    SLIP.forEach(s=>{ if(s.pack===b.dataset.unpack) delete s.pack; });
+    saveSlip(); paintSlip();
+  });
+  host.querySelectorAll(".chk").forEach(c=>c.onclick=e=>e.stopPropagation());
+  host.querySelectorAll(".slip[data-open-eid],.slip[data-open-fid]").forEach(el=>{
     el.onclick=e=>{
-      if(e.target.closest("[data-drop]")) return;
+      if(e.target.closest("[data-drop],.chk,[data-unpack]")) return;
       e.stopPropagation();
-      const box = el.classList.contains("slip") ? el : el.parentElement;
-      openSlipGame(box.dataset.openEid, box.dataset.openFid, box.dataset.openLg);
+      openSlipGame(el.dataset.openEid, el.dataset.openFid, el.dataset.openLg);
     };
   });
 }
+function groupSelected(){
+  const picks=[...document.querySelectorAll("#eatList .chk:checked")].map(c=>c.dataset.pick);
+  if(picks.length<2){ if($("eatMeta")) $("eatMeta").textContent="Check at least two tickets, then Group selected."; return; }
+  const name=(($("packName")&&$("packName").value)||"").trim() || ("Parlay "+(picks.length)+" · "+new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}));
+  SLIP.forEach(s=>{ if(picks.includes(s.id)) s.pack=name; });
+  saveSlip();
+  if($("packName")) $("packName").value="";
+  paintSlip();
+}
+if($("makePack")) $("makePack").onclick=e=>{ e.preventDefault(); groupSelected(); };
 async function openSlipGame(eid, fid, lg){
   const id = eid || fid;
   if(!id) return;
