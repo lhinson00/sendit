@@ -82,11 +82,22 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 @media(max-width:560px){.playoffbox{grid-template-columns:1fr}.srow{grid-template-columns:20px 24px 1fr 48px 28px 28px 40px}}
 .pollrow{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #221e18;cursor:pointer}
 .pollrow:hover{background:#16120e}
-.oddsrow{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 2px;align-items:center}
-.oddsrow button,.oddsrow .chip{border:1px solid #3a2a18;background:#14110e;color:#e8e0d4;font-size:11px;padding:5px 8px;border-radius:4px}
-.oddsrow button:hover{border-color:var(--orange);color:var(--orange)}
-.oddsrow input{width:62px;background:#0c0d12;border:1px solid #3a2a18;color:#fff;padding:4px 6px;font-size:12px}
-.oddsrow i{font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.oddsrow,.oddsdesk{padding:8px 0 2px}
+.oddsdesk{display:grid;gap:8px}
+.mkt{background:#0e0f14;border:1px solid #2a241c;border-radius:8px;padding:8px}
+.mkt > b{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-bottom:6px}
+.side{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;margin:4px 0}
+.side .who{border:1px solid #3a2a18;background:#14110e;color:#e8e0d4;font-size:11px;padding:7px 8px;text-align:left;border-radius:4px}
+.side .who.on{border-color:var(--orange);color:var(--orange)}
+.step{display:flex;align-items:center;gap:0;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d12}
+.step button{border:0;background:#1a1612;color:var(--orange);width:28px;height:32px;font-size:16px;font-weight:800}
+.step input{width:64px;background:transparent;border:0;color:#fff;text-align:center;font-size:13px;font-weight:800;padding:6px 2px}
+.trackit{border:1px solid var(--orange);background:#1a120c;color:var(--orange);font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:7px 8px;border-radius:4px;white-space:nowrap}
+.trackit:hover{background:var(--orange);color:#140800}
+@media(max-width:560px){
+  .side{grid-template-columns:1fr auto; }
+  .trackit{grid-column:1/-1}
+}
 .daycut{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);border-bottom:1px solid #3a2a18;padding-bottom:6px}
 .tbook{padding:0 var(--pad) 28px}
 .tsk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
@@ -357,7 +368,8 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .glog i.hit{border-color:#5a3410;color:var(--orange);background:#1a1208}
 .glog i b{display:block;font-size:13px;color:inherit}
 .addline{border:1px solid var(--orange);background:#1a120c;color:var(--orange);padding:8px 10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:11px}
-.slip{padding:16px;background:linear-gradient(180deg,#16120e,#0c0d12);border:1px solid #3a2a18;border-radius:10px;position:relative;overflow:hidden}
+.slip{padding:16px;background:linear-gradient(180deg,#16120e,#0c0d12);border:1px solid #3a2a18;border-radius:10px;position:relative;overflow:hidden;cursor:pointer}
+.slip .back{cursor:pointer}
 .slip.live{border-color:#ff3b3b;box-shadow:inset 3px 0 0 #ff3b3b}
 .slip.hit{border-color:#3ee0a0}
 .slip.miss{opacity:.78}
@@ -614,36 +626,100 @@ function paintCfbPills(){
   host.innerHTML = CONF.map(([id,lab])=>`<button type="button" data-cf="${id}" class="${CFB_FILT===id?"on":""}">${lab}</button>`).join("");
   host.querySelectorAll("[data-cf]").forEach(b=>b.onclick=()=>{ CFB_FILT=b.dataset.cf; paint(GAMES); });
 }
+const ODDS_DRAFT = {};
+function draftKey(g){ return String(g.eventId||g.fightId||""); }
+function signed(n){
+  const v=Number(n);
+  if(!Number.isFinite(v)) return String(n||"");
+  return (v>0?"+":"")+v;
+}
+function sideRow(g, kind, side, label, posted, step){
+  const key=draftKey(g)+":"+kind+":"+side;
+  const saved=ODDS_DRAFT[key];
+  const val = saved!=null && saved!=="" ? saved : (posted!=null && posted!=="" ? posted : "");
+  const ph = posted!=null && posted!=="" ? posted : (kind==="ml"?"+150":kind==="ou"?"44.5":"+3.5");
+  return `<div class="side" data-kind="${kind}" data-side="${side}">
+    <button type="button" class="who" data-use-posted="1">${label}${posted!=="" && posted!=null ? " · posted "+posted : ""}</button>
+    <div class="step">
+      <button type="button" data-bump="${-step}">−</button>
+      <input data-kind="${kind}" data-side="${side}" data-dkey="${key}" value="${val}" placeholder="${ph}"/>
+      <button type="button" data-bump="${step}">+</button>
+    </div>
+    <button type="button" class="trackit" data-track="${kind}" data-side="${side}" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">Track ${label.split(" ")[0]}</button>
+  </div>`;
+}
 function oddsTape(g){
   if(LEAGUE==="tssaa") return "";
   const o=g.odds||{};
-  const has=o.details||o.ou||o.awayML||o.homeML||o.awaySp||o.homeSp;
   const a=g.awayAb||g.away, h=g.homeAb||g.home;
-  const postedSpA=o.awaySp||"";
-  const postedSpH=o.homeSp||"";
-  const ou=o.ou!=null?o.ou:"";
   if(LEAGUE==="ufc"){
-    return `<div class="oddsrow" data-stop="1">
-      <i>ML</i>
-      <button type="button" data-track="ml" data-side="away" data-gid="${g.eventId}" data-fid="${g.fightId||""}">${a}</button>
-      <button type="button" data-track="ml" data-side="home" data-gid="${g.eventId}" data-fid="${g.fightId||""}">${h}</button>
-      <input class="ln" data-kind="ml" data-stop="1" type="text" inputmode="numeric" placeholder="+150" title="Your book price"/>
+    return `<div class="oddsdesk" data-stop="1" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">
+      <div class="mkt"><b>Moneyline · pick the fighter, set your book price</b>
+        ${sideRow(g,"ml","away",a,o.awayML||"",10)}
+        ${sideRow(g,"ml","home",h,o.homeML||"",10)}
+      </div>
     </div>`;
   }
-  return `<div class="oddsrow" data-stop="1">
-    <i>ATS</i>
-    <button type="button" data-track="spread" data-side="away" data-gid="${g.eventId}">${a} ${postedSpA||"pick"}</button>
-    <button type="button" data-track="spread" data-side="home" data-gid="${g.eventId}">${h} ${postedSpH||"pick"}</button>
-    <input class="ln" data-kind="spread" data-stop="1" type="number" step="0.5" placeholder="${postedSpA||"+6.5"}" title="Your spread"/>
-    <i>ML</i>
-    <button type="button" data-track="ml" data-side="away" data-gid="${g.eventId}">${a} ${o.awayML||""}</button>
-    <button type="button" data-track="ml" data-side="home" data-gid="${g.eventId}">${h} ${o.homeML||""}</button>
-    <input class="ln" data-kind="ml" data-stop="1" type="text" inputmode="numeric" placeholder="${o.awayML||"+150"}" title="Your ML price"/>
-    <i>O/U</i>
-    <button type="button" data-track="ou" data-side="over" data-gid="${g.eventId}">O ${ou||""}</button>
-    <button type="button" data-track="ou" data-side="under" data-gid="${g.eventId}">U ${ou||""}</button>
-    <input class="ln" data-kind="ou" data-stop="1" type="number" step="0.5" placeholder="${ou||"44.5"}" title="Your total"/>
+  return `<div class="oddsdesk" data-stop="1" data-gid="${g.eventId||""}">
+    <div class="mkt"><b>ATS · pick the team, then the number you actually bet</b>
+      ${sideRow(g,"spread","away",a,o.awaySp||"",0.5)}
+      ${sideRow(g,"spread","home",h,o.homeSp||"",0.5)}
+    </div>
+    <div class="mkt"><b>Moneyline · your book price</b>
+      ${sideRow(g,"ml","away",a,o.awayML||"",10)}
+      ${sideRow(g,"ml","home",h,o.homeML||"",10)}
+    </div>
+    <div class="mkt"><b>Total · over or under your number</b>
+      ${sideRow(g,"ou","over","Over",o.ou!=null?o.ou:"",0.5)}
+      ${sideRow(g,"ou","under","Under",o.ou!=null?o.ou:"",0.5)}
+    </div>
   </div>`;
+}
+function bumpVal(inp, delta, kind){
+  if(kind==="ml"){
+    const n=parseInt(String(inp.value||"0").replace(/[^+.\d-]/g,""),10);
+    const base=Number.isFinite(n)?n:100;
+    const next=base+delta;
+    inp.value = next>0?("+"+next):String(next);
+    return;
+  }
+  const n=parseFloat(String(inp.value||"0"));
+  const base=Number.isFinite(n)?n:0;
+  const next=Math.round((base+delta)*2)/2;
+  inp.value = kind==="spread" ? signed(next) : String(next);
+}
+function bindOdds(root, findGame){
+  if(!root) return;
+  root.querySelectorAll(".oddsdesk,[data-stop]").forEach(row=>{
+    row.onclick=e=>e.stopPropagation();
+    row.querySelectorAll("input").forEach(inp=>{
+      ["click","pointerdown","focus","touchstart"].forEach(ev=>inp.addEventListener(ev,e=>e.stopPropagation(),true));
+      inp.addEventListener("input",()=>{ if(inp.dataset.dkey) ODDS_DRAFT[inp.dataset.dkey]=inp.value; });
+    });
+    row.querySelectorAll("[data-bump]").forEach(b=>b.onclick=e=>{
+      e.preventDefault(); e.stopPropagation();
+      const box=b.closest(".side");
+      const inp=box && box.querySelector("input");
+      if(!inp) return;
+      bumpVal(inp, Number(b.dataset.bump), box.dataset.kind);
+      if(inp.dataset.dkey) ODDS_DRAFT[inp.dataset.dkey]=inp.value;
+      box.querySelector(".who") && box.querySelector(".who").classList.add("on");
+    });
+    row.querySelectorAll("[data-use-posted]").forEach(b=>b.onclick=e=>{
+      e.preventDefault(); e.stopPropagation();
+      const box=b.closest(".side");
+      box.querySelector(".who") && box.querySelector(".who").classList.add("on");
+    });
+    row.querySelectorAll("[data-track]").forEach(b=>b.onclick=e=>{
+      e.preventDefault(); e.stopPropagation();
+      const g=findGame(b);
+      if(!g) return;
+      const box=b.closest(".side");
+      const inp=box && box.querySelector("input");
+      if(inp && inp.dataset.dkey) ODDS_DRAFT[inp.dataset.dkey]=inp.value;
+      addTeamSlip(g, b.dataset.track, b.dataset.side, inp && inp.value);
+    });
+  });
 }
 function paint(games){
   window.LIVE_GAMES = games;
@@ -728,21 +804,7 @@ function paint(games){
     e.stopPropagation();
     toggleFav(b.dataset.fav, b.dataset.fname);
   });
-  host.querySelectorAll("[data-stop]").forEach(row=>{
-    row.onclick=e=>e.stopPropagation();
-    row.querySelectorAll("input").forEach(inp=>{
-      ["click","pointerdown","focus","touchstart"].forEach(ev=>inp.addEventListener(ev,e=>e.stopPropagation(),true));
-    });
-    row.querySelectorAll("[data-track]").forEach(b=>b.onclick=e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      const g=(window.LIVE_GAMES||GAMES||[]).find(x=>String(x.eventId)===String(b.dataset.gid) || String(x.fightId)===String(b.dataset.fid||b.dataset.gid));
-      if(!g) return;
-      const kind=b.dataset.track, side=b.dataset.side;
-      const box=row.querySelector(kind==="ml"?'input[data-kind="ml"]':kind==="ou"?'input[data-kind="ou"]':'input[data-kind="spread"]');
-      addTeamSlip(g, kind, side, box&&box.value);
-    });
-  });
+  bindOdds(host, b=>(window.LIVE_GAMES||GAMES||[]).find(x=>String(x.eventId)===String(b.dataset.gid) || String(x.fightId)===String(b.dataset.fid||b.dataset.gid)));
   host.querySelectorAll(".logoplate[data-tid]").forEach(b=>b.onclick=e=>{
     e.stopPropagation();
     if(!b.dataset.tid) return;
@@ -1429,18 +1491,7 @@ function showUfcLineup(card, games){
     e.stopPropagation();
     toggleFav(b.dataset.fav, b.dataset.fname);
   });
-  host.querySelectorAll("[data-stop]").forEach(row=>{
-    row.onclick=e=>e.stopPropagation();
-    row.querySelectorAll("input").forEach(inp=>{
-      ["click","pointerdown","focus"].forEach(ev=>inp.addEventListener(ev,e=>e.stopPropagation(),true));
-    });
-    row.querySelectorAll("[data-track]").forEach(b=>b.onclick=e=>{
-      e.stopPropagation();
-      const g=fights.find(x=>String(x.fightId)===String(b.dataset.fid||b.dataset.gid)||String(x.eventId)===String(b.dataset.gid));
-      const box=row.querySelector('input[data-kind="ml"]');
-      if(g) addTeamSlip(g, "ml", b.dataset.side, box&&box.value);
-    });
-  });
+  bindOdds(host, b=>fights.find(x=>String(x.fightId)===String(b.dataset.fid||b.dataset.gid)||String(x.eventId)===String(b.dataset.gid)));
   host.scrollIntoView({behavior:"smooth",block:"start"});
 }
 const UFC_OFFICIAL = {
@@ -1770,9 +1821,10 @@ function rememberEatFrom(){
   const view = ($("viewGame") && !$("viewGame").hidden) ? "game" : "live";
   window.EAT_FROM = {lg:LEAGUE, tab, view};
 }
-function showEat(){
+function showEat(opts){
   if(LEAGUE==="tssaa") return;
-  rememberEatFrom();
+  if(!(opts&&opts.keepFrom)) rememberEatFrom();
+  window.FROM_EAT=false;
   show("live");
   if($("liveList")) $("liveList").hidden=true;
   if($("boardPanel")) $("boardPanel").hidden=true;
@@ -1795,7 +1847,8 @@ function addSlip(pid){
   if(!p) return;
   const id=p.id+"-"+FILT.stat+"-"+FILT.line;
   if(SLIP.some(s=>s.id===id)) { nflTab("eat"); return; }
-  SLIP.push({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:""});
+  const g=(window.LIVE_GAMES||GAMES||[]).find(x=>x.awayAb===p.team||x.homeAb===p.team||(x.away||"").includes(p.team)||(x.home||"").includes(p.team));
+  SLIP.push({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:g?(g.away+" @ "+g.home):"", eventId:g&&g.eventId, lg:"nfl"});
   saveSlip();
   nflTab("eat");
 }
@@ -1865,7 +1918,7 @@ async function tickSlip(){
           if(s.kind && s.kind!=="player") return;
           if(!s.pid) return;
           const v=liveStatFromBox(sum, s.pid, s.stat);
-          if(v){ s.live=v; s.game=g.away+" @ "+g.home; }
+          if(v!=null){ s.live=v; s.game=g.away+" @ "+g.home; s.eventId=s.eventId||g.eventId; s.lg=s.lg||"nfl"; s.status=g.state; }
         });
       }catch(e){}
     }
@@ -1899,7 +1952,7 @@ function paintSlip(){
                     (s.status==="pre"?"waiting on kick":("margin "+(s.live>=0?"+":"")+s.live+" vs "+s.line));
         const need = s.kind==="ou" ? Math.max(0, Number(s.line)-(s.live||0)) : null;
         const pct = s.kind==="ou" ? Math.min(100, Math.round(((s.live||0)/Math.max(1,Number(s.line)))*100)) : (s.status==="in"?55:s.status==="post"?100:8);
-        return `<div class="slip ${tag.toLowerCase()}">
+        return `<div class="slip ${tag.toLowerCase()}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
           <span class="tag ${tag}">${tag}</span>
           <div class="who">${s.name} · ${s.label||""}</div>
           <div class="goal">${now}</div>
@@ -1911,7 +1964,7 @@ function paintSlip(){
       const pct=Math.min(100, Math.round((s.live/(s.line||1))*100));
       const hit=s.live>=s.line;
       const tag=hit?"HIT":(s.status==="in"||(g&&g.state==="in")?"LIVE":(g&&g.state==="post"?"MISS":"PRE"));
-      return `<div class="slip ${tag.toLowerCase()}">
+      return `<div class="slip ${tag.toLowerCase()}" data-open-eid="${s.eventId||""}" data-open-fid="${s.fightId||""}" data-open-lg="${s.lg||LEAGUE}">
         <span class="tag ${tag}">${tag}</span>
         <div class="who">${s.name} · ${s.team||""} ${s.pos||""}</div>
         <div class="goal">${s.live||0} <span style="font-size:18px;color:#8a8478">/ ${s.line}</span></div>
@@ -1920,9 +1973,36 @@ function paintSlip(){
         <button type="button" class="back" data-drop="${s.id}">Remove</button>
       </div>`;
     }).join("");
-    return `<div class="eatgrp"><h3>${key}</h3>${rows}</div>`;
+    const first=groups[key][0]||{};
+    return `<div class="eatgrp" data-open-eid="${first.eventId||""}" data-open-fid="${first.fightId||""}" data-open-lg="${first.lg||LEAGUE}"><h3>${key}</h3>${rows}</div>`;
   }).join("");
-  host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{ SLIP=SLIP.filter(x=>x.id!==b.dataset.drop); saveSlip(); paintSlip(); });
+  host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    SLIP=SLIP.filter(x=>x.id!==b.dataset.drop); saveSlip(); paintSlip();
+  });
+  host.querySelectorAll(".slip[data-open-eid],.slip[data-open-fid],.eatgrp > h3").forEach(el=>{
+    el.onclick=e=>{
+      if(e.target.closest("[data-drop]")) return;
+      e.stopPropagation();
+      const box = el.classList.contains("slip") ? el : el.parentElement;
+      openSlipGame(box.dataset.openEid, box.dataset.openFid, box.dataset.openLg);
+    };
+  });
+}
+async function openSlipGame(eid, fid, lg){
+  const id = eid || fid;
+  if(!id) return;
+  window.FROM_EAT = true;
+  if(lg && lg!==LEAGUE && URLS[lg]){
+    LEAGUE = lg;
+    try{
+      const evs = await pullScoreboard(lg);
+      GAMES = evs.flatMap(ev=>mapComp(ev,lg));
+      window.LIVE_GAMES = GAMES;
+    }catch(e){}
+  }
+  if($("toSlate")) $("toSlate").textContent = "← Let's Eat";
+  openGame(id, fid);
 }
 setInterval(()=>{ tickSlip(); }, 12000);
 const STATS = {
@@ -2814,7 +2894,15 @@ $("toHome").onclick = ()=>{
   if($("eatPanel") && !$("eatPanel").hidden){ leaveEat(); return; }
   if(poll) clearInterval(poll); poll=null; OPEN=null; show("home");
 };
-$("toSlate").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("live"); };
+$("toSlate").onclick = ()=>{
+  if(poll) clearInterval(poll); poll=null; OPEN=null;
+  if(window.FROM_EAT){
+    window.FROM_EAT=false;
+    showEat({keepFrom:true});
+    return;
+  }
+  show("live");
+};
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 show("home");
 (function bumpHits(){
