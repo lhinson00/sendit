@@ -745,7 +745,7 @@ function oddsTape(g){
   if(LEAGUE==="tssaa" || LEAGUE==="mls") return "";
   const o=g.odds||{};
   const a=g.awayAb||g.away, h=g.homeAb||g.home;
-  const mlPick = `<div class="oddstrip"><b>WIN</b>
+  const mlPick = `<div class="oddstrip"><b>ML</b>
     <div class="side" data-kind="ml" data-side="away"><button type="button" class="who" data-track="ml" data-side="away" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">${a}</button></div>
     <div class="side" data-kind="ml" data-side="home"><button type="button" class="who" data-track="ml" data-side="home" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">${h}</button></div>
   </div>`;
@@ -1875,8 +1875,8 @@ function addTeamSlip(g, kind, side, custom){
     label = "O/U";
   } else {
     line = 1;
-    name = (side==="home"?g.home:g.away)+" to win";
-    label = "WIN";
+    name = (side==="home"?g.home:g.away)+" ML";
+    label = "ML";
     custom = "";
   }
   const id=[g.eventId||g.fightId, kind, side, line, custom||""].join("-");
@@ -2070,7 +2070,7 @@ function paintSlip(){
         need = s.status==="pre" ? "Waiting on first score" : s.side==="over" ? (gap>0?gap+" to the number":"over the number") : (gap<0?"under the number":Math.abs(gap)+" under the number");
         pct=Math.min(100, Math.round(((s.live||0)/Math.max(1,Number(s.line)))*100));
       } else if(s.kind==="ml"){
-        goal=tag==="HIT"?"WIN":tag==="MISS"?"LOSS":"TO WIN";
+        goal=tag==="HIT"?"WIN":tag==="MISS"?"LOSS":"ML";
         need=s.status==="post"?(s.hit?"Got the W":"Did not finish"):"Needs the W";
         pct=s.status==="post"?100:(s.status==="in"?50:8);
       } else {
