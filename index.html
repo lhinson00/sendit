@@ -29,6 +29,20 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .meta{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 .list{display:grid;gap:10px;padding:0 var(--pad) 24px}
 .gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
+.gcard.live{border-color:#ff3b3b;background:#160e0c}
+.gcard .bigline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:6px 0 4px}
+.gcard .nm{font-family:"Bebas Neue",sans-serif;font-size:20px;display:flex;align-items:center;gap:8px}
+.gcard .nm.r{justify-content:flex-end}
+.gcard .sc{font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;text-align:center;color:#fff}
+.gcard.live .sc{color:var(--orange)}
+.gcard .sub{font-size:12px;color:#c9c2b8;margin-top:6px;line-height:1.4}
+.gcard .sub b{color:var(--ember)}
+.ufc-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:10px 12px}
+.ufc-row .f{display:flex;align-items:center;gap:8px;min-width:0}
+.ufc-row .f.r{justify-content:flex-end;text-align:right}
+.ufc-row img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #3a2a18;background:#1a120c;flex:none}
+.ufc-row b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ufc-row em{display:block;font-style:normal;font-size:11px;color:var(--muted)}
 .gstat{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .gduo{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
 .gteam{display:flex;align-items:center;gap:8px;font-family:"Bebas Neue",sans-serif;font-size:20px}
@@ -207,6 +221,7 @@ let LEAGUE = "nfl";
 let GAMES = [];
 let OPEN = null;
 let poll = null;
+let slateT = null;
 const $ = id => document.getElementById(id);
 function show(name){
   ["viewHome","viewLive","viewGame"].forEach(id => { $(id).hidden = id !== "view"+name[0].toUpperCase()+name.slice(1); });
@@ -267,7 +282,18 @@ function mapComp(ev, lg){
       state: st.state || (st.completed?"post":"pre"),
       detail: st.detail || st.shortDetail || "",
       start: c.startDate || ev.date || c.date || "",
-      broadcast: ((c.broadcasts||[])[0] && ((c.broadcasts||[])[0].names||[])[0]) || c.broadcast || ""
+      broadcast: ((c.broadcasts||[])[0] && ((c.broadcasts||[])[0].names||[])[0]) || c.broadcast || "",
+      lastPlay: ((c.situation||{}).lastPlay && (c.situation.lastPlay.text)) || "",
+      down: (c.situation && (c.situation.downDistanceText || c.situation.shortDownDistanceText)) || "",
+      red: !!(c.situation && c.situation.isRedZone),
+      balls: c.situation && c.situation.balls,
+      strikes: c.situation && c.situation.strikes,
+      outs: c.situation && c.situation.outs,
+      pitcher: (c.situation && c.situation.pitcher && c.situation.pitcher.athlete && (c.situation.pitcher.athlete.shortName||c.situation.pitcher.athlete.displayName)) || "",
+      pitcherLine: (c.situation && c.situation.pitcher && c.situation.pitcher.summary) || "",
+      batter: (c.situation && c.situation.batter && c.situation.batter.athlete && (c.situation.batter.athlete.shortName||c.situation.batter.athlete.displayName)) || "",
+      awaySP: (function(){ const p=(away.probables||[])[0]; return p && p.athlete ? ((p.athlete.shortName||p.athlete.displayName)+(p.record?(" "+p.record):"")) : ""; })(),
+      homeSP: (function(){ const p=(home.probables||[])[0]; return p && p.athlete ? ((p.athlete.shortName||p.athlete.displayName)+(p.record?(" "+p.record):"")) : ""; })()
     });
   });
   return rows;
@@ -300,16 +326,26 @@ function paint(games){
     host.innerHTML = "<div id='ufcEvents'>"+evHtml+"</div><div id='ufcLineup'></div><div id='ufcRanks'></div>";
     host.querySelectorAll("[data-event]").forEach(b=>b.onclick=()=>showUfcLineup(b.dataset.event, games));
   } else {
-    host.innerHTML = games.map(g=>`
-      <button type="button" class="gcard" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+    host.innerHTML = games.map(g=>{
+      const live=g.state==="in";
+      let sub="";
+      if(LEAGUE==="mlb"){
+        if(g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"")+(g.balls!=null?(" · "+g.balls+"-"+g.strikes):"");
+        else sub = (g.awaySP?("SP "+g.awaySP+" vs "):"")+(g.homeSP||"");
+      } else {
+        sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
+      }
+      return `
+      <button type="button" class="gcard${live?" live":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
-        <div class="gduo">
-          <div class="gteam"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
-          <span class="vs">VS</span>
-          <div class="gteam right">${g.home}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+        <div class="bigline">
+          <div class="nm"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${g.away}</div>
+          <div class="sc">${g.awayScore||"–"} <span class="vs"> </span> ${g.homeScore||"–"}</div>
+          <div class="nm r">${g.home}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
         </div>
-        ${g.awayScore||g.homeScore?`<div class="linechip">${g.awayScore} — ${g.homeScore}</div>`:""}
-      </button>`).join("");
+        ${sub?`<div class="sub">${sub}</div>`:""}
+      </button>`;
+    }).join("");
   }
   host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
   if(LEAGUE==="ufc") loadUfcRankings();
@@ -329,6 +365,19 @@ async function loadLeague(lg){
     const evs = data.events || [];
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
     paint(GAMES);
+    if(slateT) clearInterval(slateT);
+    slateT = setInterval(async ()=>{
+      if(!$("viewLive") || $("viewLive").hidden) return;
+      if($("viewGame") && !$("viewGame").hidden) return;
+      if(LEAGUE==="ufc") return;
+      try{
+        const r = await fetch(URLS[LEAGUE], {cache:"no-store"});
+        if(!r.ok) return;
+        const d = await r.json();
+        GAMES = (d.events||[]).flatMap(ev=>mapComp(ev,LEAGUE));
+        paint(GAMES);
+      }catch(e){}
+    }, 20000);
   }catch(err){
     clearTimeout(t);
     $("liveList").innerHTML = "<p class='hint'>"+lg.toUpperCase()+" did not load. "+(err.message||err)+"</p>";
@@ -639,13 +688,13 @@ function showUfcLineup(card, games){
   const host=$("ufcLineup");
   if(!host) return;
   const fights=games.filter(g=>(g.card||"UFC")===card);
-  host.innerHTML = "<p class='sec' style='padding:8px 0 8px'>Lineup · "+card+"</p>"+fights.map(g=>`
-    <button type="button" class="gcard ufc-card" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
-      <div class="gstat"><span>${g.format||"Bout"}</span><span>${when(g)}</span></div>
-      <div class="gduo">
-        <div class="gteam"><img class="uface" alt="" src="${g.awayImg}"/><b>${g.away}</b><span class="rec">${g.awayRec||""}</span></div>
+  host.innerHTML = "<p class='hint'>Lineup · "+card+"</p>"+fights.map(g=>`
+    <button type="button" class="gcard" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
+      <div class="gstat"><span>${g.format||"Bout"}</span><span>${g.awayWin||g.homeWin?"FINAL":when(g)}</span></div>
+      <div class="ufc-row">
+        <div class="f"><img alt="" src="${g.awayImg}"/><div><b>${g.away}</b><em>${g.awayRec||""}${g.awayWin?" · W":""}</em></div></div>
         <span class="vs">VS</span>
-        <div class="gteam"><img class="uface" alt="" src="${g.homeImg}"/><b>${g.home}</b><span class="rec">${g.homeRec||""}</span></div>
+        <div class="f r"><div><b>${g.home}</b><em>${g.homeRec||""}${g.homeWin?" · W":""}</em></div><img alt="" src="${g.homeImg}"/></div>
       </div>
     </button>`).join("");
   host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
