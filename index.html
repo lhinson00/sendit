@@ -174,6 +174,14 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .krow em{font-style:normal;color:var(--muted);font-size:12px}
 .khit{font-family:"Bebas Neue",sans-serif;font-size:28px;color:var(--orange)}
 .kpct{font-size:12px;color:var(--ember)}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.chips i{font-style:normal;font-size:10px;padding:2px 4px;background:#1a120c;color:#8a8478}
+.chips i.hit{background:#2a1a08;color:var(--orange)}
+.addline{border:1px solid var(--orange);background:#1a120c;color:var(--orange);padding:8px 10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:11px}
+.slip{padding:14px;background:#101218;border:1px solid #2a241c}
+.slip .goal{font-family:"Bebas Neue",sans-serif;font-size:26px;color:var(--orange)}
+.barfill{height:8px;background:#1c1c22;margin-top:8px}
+.barfill i{display:block;height:8px;background:var(--orange);width:0}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -209,6 +217,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
     <span id="nflTabs" hidden>
       <button type="button" class="back on" id="tabLive">Live</button>
       <button type="button" class="back" id="tabKit">Kitchen</button>
+      <button type="button" class="back" id="tabEat">Let's Eat</button>
     </span>
   </div>
   <div id="liveList" class="list"></div>
@@ -220,6 +229,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
     </div>
     <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
     <div id="kitList" class="list"></div>
+  </div>
+  <div id="eatPanel" hidden>
+    <p class="hint" id="eatMeta">Lines you add from Kitchen track here when their game is live.</p>
+    <div id="eatList" class="list"></div>
   </div>
 </section>
 
@@ -394,6 +407,7 @@ async function loadLeague(lg){
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
     if($("nflTabs")) $("nflTabs").hidden = lg!=="nfl";
     if($("kitPanel")) $("kitPanel").hidden = true;
+    if($("eatPanel")) $("eatPanel").hidden = true;
     if($("liveList")) $("liveList").hidden = false;
     paint(GAMES);
     if(slateT) clearInterval(slateT);
@@ -925,6 +939,91 @@ async function openPlayer(pid, name){
 const LOGS = {};
 const ROSTER = [];
 const FILT = {pos:"WR", stat:"recYds", line:20};
+let SLIP = [];
+try{ SLIP = JSON.parse(localStorage.getItem("sauceSlip")||"[]")||[]; }catch(e){ SLIP=[]; }
+function saveSlip(){ try{ localStorage.setItem("sauceSlip", JSON.stringify(SLIP)); }catch(e){} }
+function labelLine(stat,line){
+  if(stat==="rec") return line+"+ rec";
+  if(stat==="recYds") return line+"+ rec yds";
+  if(stat==="rushYds") return line+"+ rush yds";
+  if(stat==="passYds") return line+"+ pass yds";
+  if(stat==="recTd") return line+"+ rec TD";
+  if(stat==="rushTd") return line+"+ rush TD";
+  if(stat==="passTd") return line+"+ pass TD";
+  if(stat==="int") return line+"+ INT";
+  return line+"+";
+}
+function addSlip(pid){
+  const p=ROSTER.find(x=>x.id===String(pid));
+  if(!p) return;
+  const id=p.id+"-"+FILT.stat+"-"+FILT.line;
+  if(SLIP.some(s=>s.id===id)) { nflTab("eat"); return; }
+  SLIP.push({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:""});
+  saveSlip();
+  nflTab("eat");
+}
+function liveStatFromBox(sum, pid, stat){
+  const sides=((sum.boxscore||{}).players)||[];
+  let rec=0, recY=0, recTd=0, rush=0, rushTd=0, passY=0, passTd=0, ints=0;
+  sides.forEach(side=>{
+    (side.statistics||[]).forEach(grp=>{
+      const keys=grp.keys||grp.names||[];
+      (grp.athletes||[]).forEach(a=>{
+        if(!a.athlete || String(a.athlete.id)!==String(pid)) return;
+        const st=a.stats||[];
+        const get=n=>{ const i=keys.indexOf(n); return i>=0?Number(String(st[i]||"0").split("/")[0])||0:0; };
+        rec+=get("receptions"); recY+=get("receivingYards"); recTd+=get("receivingTouchdowns");
+        rush+=get("rushingYards"); rushTd+=get("rushingTouchdowns");
+        passY+=get("passingYards"); passTd+=get("passingTouchdowns"); ints+=get("interceptions");
+      });
+    });
+  });
+  if(stat==="rec") return rec;
+  if(stat==="recYds") return recY;
+  if(stat==="recTd") return recTd;
+  if(stat==="rushYds") return rush;
+  if(stat==="rushTd") return rushTd;
+  if(stat==="passYds") return passY;
+  if(stat==="passTd") return passTd;
+  if(stat==="int") return ints;
+  return 0;
+}
+async function tickSlip(){
+  if(!SLIP.length) return;
+  const games=GAMES.filter(g=>g.state==="in"||g.state==="post");
+  for(const g of games){
+    try{
+      const res=await fetch(SUM.nfl(g.eventId),{cache:"no-store"});
+      if(!res.ok) continue;
+      const sum=await res.json();
+      SLIP.forEach(s=>{
+        const v=liveStatFromBox(sum, s.pid, s.stat);
+        if(v){ s.live=v; s.game=g.away+" @ "+g.home; }
+      });
+    }catch(e){}
+  }
+  saveSlip();
+  if($("eatPanel") && !$("eatPanel").hidden) paintSlip();
+}
+function paintSlip(){
+  const host=$("eatList");
+  if(!host) return;
+  if(!SLIP.length){ host.innerHTML="<p class='hint'>Add lines from Kitchen. They stay here and move when the game is live.</p>"; return; }
+  $("eatMeta").textContent=SLIP.length+" line"+(SLIP.length===1?"":"s");
+  host.innerHTML=SLIP.map(s=>{
+    const pct=Math.min(100, Math.round((s.live/s.line)*100));
+    const hit=s.live>=s.line;
+    return `<div class="slip">
+      <div><b>${s.name}</b> · ${s.team} ${s.pos}</div>
+      <div class="goal">${s.live} / ${s.line} ${labelLine(s.stat,s.line)}${hit?" · HIT":""}</div>
+      <div class="barfill"><i style="width:${pct}%"></i></div>
+      <p class="hint">${s.game||"Waiting on kickoff"}</p>
+      <button type="button" class="back" data-drop="${s.id}">Remove</button>
+    </div>`;
+  }).join("");
+  host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{ SLIP=SLIP.filter(x=>x.id!==b.dataset.drop); saveSlip(); paintSlip(); });
+}
+setInterval(tickSlip, 20000);
 const STATS = {
   WR: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
   TE: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
@@ -1032,22 +1131,36 @@ async function runKitchen(){
   }
   out.sort((a,b)=> (b.rate-a.rate) || (b.hits-a.hits) || (b.n-a.n));
   $("kitMeta").textContent=FILT.pos+" · last 18 · "+FILT.stat+" "+FILT.line+"+ · "+out.filter(x=>x.n).length+" with games";
-  host.innerHTML=out.filter(x=>x.n).map(x=>`
-    <button type="button" class="krow prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}">
-      <div><b>${x.p.name}</b><em>${x.p.team} · ${x.p.pos}</em></div>
+  host.innerHTML=out.filter(x=>x.n).map(x=>{
+    const games=LOGS[x.p.id]||[];
+    const chips=games.map(g=>{
+      const v=valOf(g, FILT.stat);
+      const ok=v>=FILT.line;
+      return "<i class='"+(ok?"hit":"miss")+"' title='"+(g.opp||"")+"'>"+v+"</i>";
+    }).join("");
+    return `
+    <div class="krow">
+      <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} · ${x.p.pos} · last 18</em><div class="chips">${chips}</div></div>
       <div class="khit">${x.hits}/${x.n}</div>
-      <div class="kpct">${Math.round(x.rate*100)}%</div>
-    </button>`).join("") || "<p class='hint'>No logs yet.</p>";
+      <button type="button" class="addline" data-add="${x.p.id}">Add</button>
+    </div>`;
+  }).join("") || "<p class='hint'>No logs yet.</p>";
+  host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
 }
-function showKit(on){
-  if($("liveList")) $("liveList").hidden=!!on;
-  if($("kitPanel")) $("kitPanel").hidden=!on;
-  if($("tabLive")) $("tabLive").classList.toggle("on", !on);
-  if($("tabKit")) $("tabKit").classList.toggle("on", !!on);
-  if(on) runKitchen();
+function nflTab(which){
+  const live=which==="live", kit=which==="kit", eat=which==="eat";
+  if($("liveList")) $("liveList").hidden=!live;
+  if($("kitPanel")) $("kitPanel").hidden=!kit;
+  if($("eatPanel")) $("eatPanel").hidden=!eat;
+  if($("tabLive")) $("tabLive").classList.toggle("on", live);
+  if($("tabKit")) $("tabKit").classList.toggle("on", kit);
+  if($("tabEat")) $("tabEat").classList.toggle("on", eat);
+  if(kit) runKitchen();
+  if(eat) paintSlip();
 }
-$("tabLive") && ($("tabLive").onclick=()=>showKit(false));
-$("tabKit") && ($("tabKit").onclick=()=>showKit(true));
+$("tabLive") && ($("tabLive").onclick=()=>nflTab("live"));
+$("tabKit") && ($("tabKit").onclick=()=>nflTab("kit"));
+$("tabEat") && ($("tabEat").onclick=()=>nflTab("eat"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls(); runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls(); runKitchen(); });
 $("kLine") && ($("kLine").onchange=e=>{ FILT.line=parseInt(e.target.value,10)||FILT.line; runKitchen(); });
