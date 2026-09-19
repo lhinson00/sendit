@@ -75,10 +75,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .sgrid div{background:#101218;border:1px solid #2a241c;padding:10px 8px}
 .sgrid i{display:block;font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .sgrid b{display:block;font-family:"Bebas Neue",sans-serif;font-size:24px;color:#fff;margin-top:2px}
-.ptable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 18px}
-.ptable th{text-align:right;font-size:10px;letter-spacing:.1em;color:var(--muted);padding:6px 6px;border-bottom:1px solid #2a241c}
-.ptable th:first-child,.ptable td:first-child{text-align:left}
-.ptable td{padding:7px 6px;border-bottom:1px solid #1c1814;color:#e8e0d4}
+.ptable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 18px;table-layout:fixed}
+.ptable th{text-align:right;font-size:10px;letter-spacing:.08em;color:var(--muted);padding:8px 4px;border-bottom:1px solid #2a241c;white-space:nowrap}
+.ptable th:first-child,.ptable td:first-child{text-align:left;width:22%}
+.ptable td{padding:8px 4px;border-bottom:1px solid #1c1814;color:#e8e0d4;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ptable tr.tot td{color:var(--orange);font-weight:700}
 .ptable .nm{display:flex;flex-direction:column}
 .ptable .nm b{font-size:13px}
@@ -1129,7 +1129,6 @@ async function openFighter(pid, name){
 }
 async function openPlayer(pid, name){
   window.FROMUFC = false;
-  window.FROMTEAM = false;
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
@@ -1223,7 +1222,8 @@ async function openPlayer(pid, name){
         return `<i class="${v>=FILT.line?"hit":"miss"}" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
       }).join("")}</div></div>`;
     }
-    if($("toGame")) $("toGame").textContent = fromKit ? "← Kitchen" : "← Game";
+    window.FROM_TEAM_PLAYER = !!(window.TEAM_CTX && window.TEAM_CTX.id);
+    if($("toGame")) $("toGame").textContent = window.FROM_TEAM_PLAYER ? "← Team" : fromKit ? "← Kitchen" : "← Game";
     window.FROMKIT = fromKit;
     $("playerRoom").innerHTML = `
       <div class="phero">
@@ -1238,16 +1238,13 @@ async function openPlayer(pid, name){
         <div class="lead3">${leads}</div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
-        ${fromKit ? (()=>{
-          const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM)$/i;
+        ${(()=>{
+          const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM|SOLO|TOT|SACK|TFL)$/i;
           const bits=labels.map((lab,i)=>({lab,s:season.stats[i]})).filter(x=>keep.test(x.lab));
-          if(!bits.length) return "";
-          return `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>`;
-        })() : `
-          <div class="tiles">${tiles}</div>
-          ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
-          <div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No log posted</p>"}</div>
-        `}
+          const line = bits.length ? `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>` : (fromKit?"":`<div class="tiles">${tiles}</div>`);
+          if(fromKit) return line;
+          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No log posted</p>"}</div>`;
+        })()}
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
@@ -1588,6 +1585,8 @@ async function openTeam(tid, name){
   if(!tid) return;
   window.FROMTEAM = true;
   window.FROMKIT = false;
+  window.TEAM_CTX = {id:tid, name:name||"Team"};
+  window.FROM_TEAM_PLAYER = false;
   if($("toGame")) $("toGame").textContent = "← Rankings";
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Opening "+name+"…</p>";
@@ -1827,6 +1826,11 @@ document.addEventListener("click", ev=>{
   }
 });
 $("toGame") && ($("toGame").onclick = ()=>{
+  if(window.FROM_TEAM_PLAYER && window.TEAM_CTX && window.TEAM_CTX.id){
+    window.FROM_TEAM_PLAYER=false;
+    openTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
+    return;
+  }
   if(window.FROMTEAM){ window.FROMTEAM=false; show("live"); cfbTab("polls"); }
   else if(window.FROMKIT){ show("live"); nflTab("kit"); }
   else if(window.FROMUFC || LEAGUE==="ufc"){ window.FROMUFC=false; show("live"); }
