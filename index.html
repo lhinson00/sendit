@@ -1054,7 +1054,7 @@ async function openPlayer(pid, name){
     const isPass = /pass/i.test(st.displayName||"") || labels.includes("CMP") || labels.includes("CMP%");
     const isRush = /rush/i.test(st.displayName||"");
     const isRec = /receiv/i.test(st.displayName||"");
-    const fromKit = LEAGUE==="nfl" || LEAGUE==="cfb";
+    const fromKit = LEAGUE==="nfl" && !!window.FROMKIT;
     const kitPos = (ROSTER.find(p=>p.id===String(pid))||{}).pos || FILT.pos || "";
     const leadKeys = fromKit
       ? (kitPos==="QB" || isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
@@ -1095,7 +1095,7 @@ async function openPlayer(pid, name){
         <div class="phero-top">
           <img alt="" src="${shot}"/>
           <div class="phero-copy">
-            <p class="kicker">${kitPos?kitPos+" · "+(ROSTER.find(p=>p.id===String(pid))||{}).team||"": (st.displayName||"Player")}</p>
+            <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
             ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:"<p>Last 18 tape</p>"}
           </div>
@@ -1103,12 +1103,16 @@ async function openPlayer(pid, name){
         <div class="lead3">${leads}</div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
-        ${(()=>{
+        ${fromKit ? (()=>{
           const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM)$/i;
-          const bits=labels.map((lab,i)=>({lab,s:season.stats[i],c:career&&career.stats[i]})).filter(x=>keep.test(x.lab));
+          const bits=labels.map((lab,i)=>({lab,s:season.stats[i]})).filter(x=>keep.test(x.lab));
           if(!bits.length) return "";
           return `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>`;
-        })()}
+        })() : `
+          <div class="tiles">${tiles}</div>
+          ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
+          <div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No log posted</p>"}</div>
+        `}
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
@@ -1406,7 +1410,10 @@ document.addEventListener("click", ev=>{
     ev.preventDefault();
     ev.stopPropagation();
     if(LEAGUE==="ufc") openFighter(row.dataset.pid||"", row.dataset.pname||"Fighter");
-    else if(row.dataset.pid) openPlayer(row.dataset.pid, row.dataset.pname||"Player");
+    else if(row.dataset.pid){
+      window.FROMKIT = !!(ev.target.closest("#kitPanel") || ev.target.closest(".kcard"));
+      openPlayer(row.dataset.pid, row.dataset.pname||"Player");
+    }
   }
 });
 $("toGame") && ($("toGame").onclick = ()=>{
