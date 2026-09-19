@@ -745,14 +745,16 @@ function oddsTape(g){
   if(LEAGUE==="tssaa" || LEAGUE==="mls") return "";
   const o=g.odds||{};
   const a=g.awayAb||g.away, h=g.homeAb||g.home;
+  const mlPick = `<div class="oddstrip"><b>WIN</b>
+    <div class="side" data-kind="ml" data-side="away"><button type="button" class="who" data-track="ml" data-side="away" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">${a}</button></div>
+    <div class="side" data-kind="ml" data-side="home"><button type="button" class="who" data-track="ml" data-side="home" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">${h}</button></div>
+  </div>`;
   if(LEAGUE==="ufc"){
-    return `<div class="oddsdesk" data-stop="1">
-      <div class="oddstrip"><b>ML</b>${sideCell(g,"ml","away",a,o.awayML||"",10)}${sideCell(g,"ml","home",h,o.homeML||"",10)}</div>
-    </div>`;
+    return `<div class="oddsdesk" data-stop="1">${mlPick}</div>`;
   }
   return `<div class="oddsdesk" data-stop="1">
     <div class="oddstrip"><b>ATS</b>${sideCell(g,"spread","away",a,o.awaySp||"",0.5)}${sideCell(g,"spread","home",h,o.homeSp||"",0.5)}</div>
-    <div class="oddstrip"><b>ML</b>${sideCell(g,"ml","away",a,o.awayML||"",10)}${sideCell(g,"ml","home",h,o.homeML||"",10)}</div>
+    ${mlPick}
     <div class="oddstrip"><b>O/U</b>${sideCell(g,"ou","over","Over",o.ou!=null?o.ou:"",0.5)}${sideCell(g,"ou","under","Under",o.ou!=null?o.ou:"",0.5)}</div>
   </div>`;
 }
@@ -1873,16 +1875,13 @@ function addTeamSlip(g, kind, side, custom){
     label = "O/U";
   } else {
     line = 1;
-    const posted = side==="home"?o.homeML:o.awayML;
-    const typed = (custom||"").toString().trim();
-    const price = typed || posted || "";
-    name = (side==="home"?g.home:g.away)+" ML "+price;
-    label = "ML";
-    custom = price;
+    name = (side==="home"?g.home:g.away)+" to win";
+    label = "WIN";
+    custom = "";
   }
   const id=[g.eventId||g.fightId, kind, side, line, custom||""].join("-");
   if(SLIP.some(s=>s.id===id)) { showEat(); return; }
-  SLIP.push({id, kind, side, line, price: kind==="ml"?(custom||""):"", posted: kind==="ml"?(side==="home"?o.homeML:o.awayML):"", label, name, lg:LEAGUE, eventId:g.eventId, fightId:g.fightId||"", away:g.away, home:g.home, live:0, game:g.away+" @ "+g.home, status:"pre"});
+  SLIP.push({id, kind, side, line, price:"", posted:"", label, name, lg:LEAGUE, eventId:g.eventId, fightId:g.fightId||"", away:g.away, home:g.home, live:0, game:g.away+" @ "+g.home, status:"pre"});
   saveSlip();
   showEat();
 }
@@ -2071,8 +2070,8 @@ function paintSlip(){
         need = s.status==="pre" ? "Waiting on first score" : s.side==="over" ? (gap>0?gap+" to the number":"over the number") : (gap<0?"under the number":Math.abs(gap)+" under the number");
         pct=Math.min(100, Math.round(((s.live||0)/Math.max(1,Number(s.line)))*100));
       } else if(s.kind==="ml"){
-        goal=tag==="HIT"?"WIN":tag==="MISS"?"LOSS":"ML";
-        need=s.status==="post"?(s.hit?"Covered the moneyline":"Did not finish"):"Needs the W";
+        goal=tag==="HIT"?"WIN":tag==="MISS"?"LOSS":"TO WIN";
+        need=s.status==="post"?(s.hit?"Got the W":"Did not finish"):"Needs the W";
         pct=s.status==="post"?100:(s.status==="in"?50:8);
       } else {
         const m=s.live;
