@@ -105,6 +105,19 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .leadrow em{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .leadrow b{display:block;font-size:15px}
 .leadrow span{color:var(--ember);font-size:13px}
+.ftabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 var(--pad) 12px}
+.ftabs button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+.ftabs button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
+.drivechip{margin-top:12px;padding:10px 12px;background:#14110e;border:1px solid #3a2a18;font-size:13px}
+.drivechip b{color:var(--orange)}
+.qtr{width:100%;margin-top:12px;border-collapse:collapse;font-size:12px}
+.qtr th,.qtr td{padding:6px 4px;text-align:center;border-top:1px solid #2a241c}
+.qtr th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.qtr td:first-child,.qtr th:first-child{text-align:left}
+.cmp{width:100%;margin-top:4px;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{padding:8px 6px;text-align:center;border-top:1px solid #2a241c}
+.cmp th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.cmp td:first-child{text-align:left;font-weight:800}
 .ufc-card .gduo{grid-template-columns:1fr auto 1fr;padding:8px 0}
 .uface{width:86px;height:86px;border-radius:50%;object-fit:cover;border:3px solid #3a2a18;background:#1a120c;display:block}
 .ufc-card .gteam{flex-direction:column;text-align:center;font-size:16px;gap:6px}
@@ -365,63 +378,101 @@ function tstat(sum, ab, name){
   const s=((t&&t.statistics)||[]).find(x=>x.name===name);
   return s ? (s.displayValue||s.value||"—") : "—";
 }
+function qtrCells(comp){
+  const ls = comp.linescores || [];
+  const cells = [1,2,3,4,5].map(i => (ls[i-1] && ls[i-1].displayValue) || (ls[i-1] && ls[i-1].value) || "");
+  return cells;
+}
 function renderFootball(g, sum){
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
   const home = comps.find(x=>x.homeAway==="home") || {};
   const away = comps.find(x=>x.homeAway==="away") || {};
-  const st = ((hdr.status||{}).type||{}).detail || g.detail || "";
+  const stType = (hdr.status||{}).type || {};
+  const st = stType.detail || g.detail || "";
   const as = scoreOf(away) || g.awayScore || "0";
   const hs = scoreOf(home) || g.homeScore || "0";
   const aw = g.awayAb || g.away, hm = g.homeAb || g.home;
+  const awN = g.away, hmN = g.home;
   const wp = (sum.winprobability||[]).slice(-1)[0];
   const homePct = wp ? Math.round((wp.homeWinPercentage||0)*100) : null;
   const gi = sum.gameInfo || {};
   const venue = (gi.venue && gi.venue.fullName) || "";
-  const scores = (sum.scoringPlays||[]).slice().reverse();
-  const lastScore = scores[0];
+  const scores = (sum.scoringPlays||[]).slice();
+  const lastScore = scores.slice(-1)[0];
+  const drives = sum.drives || {};
+  const cur = drives.current || {};
+  const plays = cur.plays || [];
+  const lastPlay = plays.slice(-1)[0] || {};
+  const spot = (lastPlay.start || lastPlay.end || {});
+  const downTxt = spot.downDistanceText || spot.shortDownDistanceText || "";
+  const poss = (cur.team && (cur.team.abbreviation || cur.team.shortDisplayName)) || "";
+  const driveTxt = cur.description || "";
+  const aQ = qtrCells(away), hQ = qtrCells(home);
+  const hasOT = aQ[4] || hQ[4];
   const leads = (sum.leaders||[]).map(block=>{
     const team=(block.team&&block.team.abbreviation)||"";
-    const bits=(block.leaders||[]).slice(0,3).map(L=>{
+    const bits=(block.leaders||[]).slice(0,4).map(L=>{
       const a=((L.leaders||[])[0]||{});
       const nm=(a.athlete&&a.athlete.displayName)||"";
       const pid=a.athlete&&a.athlete.id||"";
       const val=a.displayValue||"";
       return "<div class='leadrow"+(pid?" prow":"")+"' data-pid='"+pid+"' data-pname='"+String(nm).replace(/"/g,"")+"'><em>"+(L.displayName||L.name)+"</em><b>"+nm+"</b><span>"+val+"</span></div>";
     }).join("");
-    return "<div class='box'><h3>"+team+" leaders</h3>"+bits+"</div>";
+    return "<div class='box'><h3>"+team+"</h3>"+bits+"</div>";
   }).join("");
-  const scoreList = scores.slice(0,10).map(p=>{
+  const scoreList = scores.slice().reverse().map(p=>{
     const q = (p.period&&p.period.number) ? ("Q"+p.period.number) : "";
     const clk = (p.clock&&p.clock.displayValue)||"";
     const tm = (p.team&&p.team.abbreviation)||"";
-    return "<div class='play'><span>"+tm+" · "+q+" "+clk+" · "+p.awayScore+"-"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
+    const kind = (p.type&&p.type.abbreviation)||"";
+    return "<div class='play"+(kind==="TD"||kind==="FG"?" hot":"")+"'><span>"+tm+" "+kind+" · "+q+" "+clk+" · "+p.awayScore+"–"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
   }).join("");
+  const tab = window.FTAB || "live";
   $("gameRoom").innerHTML = `
     <div class="scorebug mlb-bug">
       <div class="mlb-inning">${st||"Pregame"}</div>
       <div class="mlb-score">
-        <div class="mlb-side"><em>${aw}</em><b>${as}</b></div>
+        <div class="mlb-side"><em>${awN}</em><b>${as}</b></div>
         <span class="vs">@</span>
-        <div class="mlb-side r"><em>${hm}</em><b>${hs}</b></div>
+        <div class="mlb-side r"><em>${hmN}</em><b>${hs}</b></div>
       </div>
-      <div class="tiles fbtiles">
-        <div class="tile"><em>${aw} yds</em><b>${tstat(sum,aw,"totalYards")}</b></div>
-        <div class="tile"><em>${hm} yds</em><b>${tstat(sum,hm,"totalYards")}</b></div>
-        <div class="tile"><em>${aw} pass</em><b>${tstat(sum,aw,"netPassingYards")}</b></div>
-        <div class="tile"><em>${hm} pass</em><b>${tstat(sum,hm,"netPassingYards")}</b></div>
-        <div class="tile"><em>${aw} rush</em><b>${tstat(sum,aw,"rushingYards")}</b></div>
-        <div class="tile"><em>${hm} rush</em><b>${tstat(sum,hm,"rushingYards")}</b></div>
-        <div class="tile"><em>${aw} 3rd</em><b>${tstat(sum,aw,"thirdDownEff")}</b></div>
-        <div class="tile"><em>${hm} 3rd</em><b>${tstat(sum,hm,"thirdDownEff")}</b></div>
-      </div>
+      <table class="qtr">
+        <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}<th>T</th></tr>
+        <tr><td>${aw}</td><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}<td>${as}</td></tr>
+        <tr><td>${hm}</td><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}<td>${hs}</td></tr>
+      </table>
+      ${poss||downTxt||lastPlay.text?`<div class="drivechip">${poss?("<b>"+poss+"</b> ball"):""}${downTxt?(" · "+downTxt):""}${driveTxt?(" · "+driveTxt):""}${lastPlay.text?("<div style='margin-top:6px'>"+lastPlay.text+"</div>"):""}</div>`:""}
       ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
     </div>
-    ${lastScore?`<div class="play hot"><span>Last score · ${(lastScore.team&&lastScore.team.abbreviation)||""}</span><p>${lastScore.text||""}</p></div>`:""}
     ${venue?`<p class="hint">${venue}</p>`:""}
-    ${leads}
-    ${scoreList?`<p class="hint">Scoring</p>`+scoreList:""}
-    ${boxHtml(sum)}`;
+    <div class="ftabs">
+      <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Live</button>
+      <button type="button" data-ftab="box" class="${tab==="box"?"on":""}">Box</button>
+      <button type="button" data-ftab="lead" class="${tab==="lead"?"on":""}">Leaders</button>
+    </div>
+    <div class="fsec" data-sec="live" ${tab==="live"?"":"hidden"}>
+      ${lastScore?`<div class="play hot"><span>Last score · ${(lastScore.team&&lastScore.team.abbreviation)||""}</span><p>${lastScore.text||""}</p></div>`:""}
+      <div class="box"><h3>Team tape</h3>
+        <table class="cmp">
+          <tr><th></th><th>${aw}</th><th>${hm}</th></tr>
+          <tr><td>Yards</td><td>${tstat(sum,aw,"totalYards")}</td><td>${tstat(sum,hm,"totalYards")}</td></tr>
+          <tr><td>Pass</td><td>${tstat(sum,aw,"netPassingYards")}</td><td>${tstat(sum,hm,"netPassingYards")}</td></tr>
+          <tr><td>Rush</td><td>${tstat(sum,aw,"rushingYards")}</td><td>${tstat(sum,hm,"rushingYards")}</td></tr>
+          <tr><td>3rd down</td><td>${tstat(sum,aw,"thirdDownEff")}</td><td>${tstat(sum,hm,"thirdDownEff")}</td></tr>
+          <tr><td>TOP</td><td>${tstat(sum,aw,"possessionTime")}</td><td>${tstat(sum,hm,"possessionTime")}</td></tr>
+          <tr><td>Turnovers</td><td>${tstat(sum,aw,"turnovers")}</td><td>${tstat(sum,hm,"turnovers")}</td></tr>
+        </table>
+      </div>
+      ${scoreList?`<p class="hint">Scoring plays</p>`+scoreList:"<p class='hint'>No scores yet.</p>"}
+    </div>
+    <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
+    <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leads||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
+  document.querySelectorAll("[data-ftab]").forEach(b=>b.onclick=()=>{
+    window.FTAB=b.dataset.ftab;
+    document.querySelectorAll("[data-ftab]").forEach(x=>x.classList.toggle("on", x===b));
+    document.querySelectorAll(".fsec").forEach(s=>s.hidden = s.dataset.sec!==window.FTAB);
+  });
 }
 function renderGame(g, sum){
   if(LEAGUE==="nfl" || LEAGUE==="cfb"){ renderFootball(g,sum); return; }
