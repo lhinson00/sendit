@@ -84,6 +84,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ufc-row .f .star{position:absolute;top:0;left:0;z-index:2}
 .ufc-row .f.r .star{left:auto;right:0}
 .ufc-row img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid #3a2a18;background:#1a120c;flex:none;margin-top:4px}
+.ufc-row .f.won img{border-color:var(--orange);box-shadow:0 0 0 2px rgba(255,140,40,.35)}
+.ufc-row .f.won b{color:var(--orange)}
+.ufc-row .f.lost{opacity:.42}
+.ufc-row .wintag{margin-top:2px}
 .ufc-row b{display:block;font-size:14px;line-height:1.2;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:100%;margin-top:2px}
 .ufc-row em{display:block;font-style:normal;font-size:11px;color:var(--muted)}
 .ufc-row .vs{align-self:center;font-family:"Bebas Neue",sans-serif;letter-spacing:.12em;color:var(--ember);font-size:18px;padding-top:28px;text-align:center}
@@ -1910,7 +1914,7 @@ function renderFight(g){
   }
   if(poll) clearInterval(poll);
   poll=setInterval(tickFight, 8000);
-  if(g.state==="in") tickFight();
+  tickFight();
 }
 async function loadFightHistory(aid, name, hostId){
   const write = html => { const host=$(hostId); if(host) host.innerHTML=html; };
@@ -2001,11 +2005,11 @@ function showUfcLineup(card, games){
     const done=g.state==="post"||g.awayWin||g.homeWin;
     return `
     <div class="gcard ufight${live?" live":""}${isHeat(g)?" heat":""}${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
-      <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?"FINAL":when(g))}</span></div>
+      <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?((g.awayWin?g.away:(g.homeWin?g.home:"FINAL"))+(g.awayWin||g.homeWin?" WINS":"")):when(g))}</span></div>
       <div class="ufc-row">
-        <div class="f">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}${g.awayWin?" · W":""}</em></div>
-        <span class="vs">VS</span>
-        <div class="f r">${starBtn(g.homeId,g.home)}<img alt="" src="${g.homeImg}"/><b>${g.home||"—"}</b><em>${g.homeRec||""}${g.homeWin?" · W":""}</em></div>
+        <div class="f${g.awayWin?" won":""}${g.homeWin?" lost":""}">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}</em>${g.awayWin?"<span class='wintag'>WINNER</span>":""}</div>
+        <span class="vs">${done?(g.awayWin||g.homeWin?"FINAL":"FINAL"):"VS"}</span>
+        <div class="f r${g.homeWin?" won":""}${g.awayWin?" lost":""}">${starBtn(g.homeId,g.home)}<img alt="" src="${g.homeImg}"/><b>${g.home||"—"}</b><em>${g.homeRec||""}</em>${g.homeWin?"<span class='wintag'>WINNER</span>":""}</div>
       </div>
       ${oddsTape(g,"peek")}
     </div>`;
