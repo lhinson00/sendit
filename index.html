@@ -19,6 +19,8 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .hero h2{font-family:"Bebas Neue",sans-serif;font-size:clamp(32px,8vw,56px);line-height:.95;margin:8px 0 10px;letter-spacing:.01em}
 .kicker{letter-spacing:.2em;text-transform:uppercase;font-size:10px;color:var(--orange);font-weight:800}
 .lede{color:var(--muted);margin:0}
+.hits{margin-top:14px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.hits b{color:var(--orange);font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.04em}
 .hub{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px var(--pad) 32px}
 .hubcard{text-align:left;padding:18px;border-radius:16px;border:1px solid rgba(255,122,24,.3);background:#120e0c;color:#fff}
 .hubcard img{width:40px;height:40px;object-fit:contain;margin-bottom:8px}
@@ -351,6 +353,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
     <p class="kicker">Sports Sauce</p>
     <h2>One board.<br>Live scores. Real stats. Actual research.</h2>
     <p class="lede">NFL, college, baseball, the card — without leaving the page.</p>
+    <p class="hits" id="hitLine">Board visits · —</p>
   </div>
   <div class="hub">
     <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
@@ -492,8 +495,8 @@ function mapComp(ev, lg){
       pitcher: (c.situation && c.situation.pitcher && c.situation.pitcher.athlete && (c.situation.pitcher.athlete.shortName||c.situation.pitcher.athlete.displayName)) || "",
       pitcherLine: (c.situation && c.situation.pitcher && c.situation.pitcher.summary) || "",
       batter: (c.situation && c.situation.batter && c.situation.batter.athlete && (c.situation.batter.athlete.shortName||c.situation.batter.athlete.displayName)) || "",
-      awaySP: (function(){ const p=(away.probables||[])[0]; return p && p.athlete ? ((p.athlete.shortName||p.athlete.displayName)+(p.record?(" "+p.record):"")) : ""; })(),
-      homeSP: (function(){ const p=(home.probables||[])[0]; return p && p.athlete ? ((p.athlete.shortName||p.athlete.displayName)+(p.record?(" "+p.record):"")) : ""; })(),
+      awaySP: (function(){ const p=(away.probables||[])[0]; if(!p||!p.athlete) return ""; return (p.athlete.shortName||p.athlete.displayName||"")+(p.record?(" "+p.record):""); })(),
+      homeSP: (function(){ const p=(home.probables||[])[0]; if(!p||!p.athlete) return ""; return (p.athlete.shortName||p.athlete.displayName||"")+(p.record?(" "+p.record):""); })(),
       awayRank: Number((away.curatedRank&&away.curatedRank.current)||99),
       homeRank: Number((home.curatedRank&&home.curatedRank.current)||99),
       awayConf: String((away.team&&away.team.conferenceId)||""),
@@ -559,8 +562,9 @@ function paint(games){
       const live=g.state==="in";
       let sub="";
       if(LEAGUE==="mlb"){
-        if(g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"")+(g.balls!=null?(" · "+g.balls+"-"+g.strikes):"");
-        else sub = (g.awaySP?("SP "+g.awaySP+" vs "):"")+(g.homeSP||"");
+        if(g.state==="in" && g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"");
+        else if(g.awaySP || g.homeSP) sub = "<b>SP</b> "+(g.awaySP||"TBD")+" <em>vs</em> "+(g.homeSP||"TBD");
+        else if(g.state==="pre") sub = "Starters not posted yet";
       } else {
         sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
       }
@@ -579,19 +583,43 @@ function paint(games){
   host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
   if(LEAGUE==="ufc") loadUfcRankings();
 }
+function boardDates(){
+  const fmt=d=>d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
+  const now=new Date();
+  const tmr=new Date(now.getTime()+86400000);
+  return [fmt(now), fmt(tmr)];
+}
+async function pullScoreboard(lg){
+  const base=URLS[lg];
+  if(lg!=="mlb"){
+    const res=await fetch(base,{cache:"no-store"});
+    if(!res.ok) throw new Error("ESPN "+res.status);
+    return (await res.json()).events||[];
+  }
+  const evs=[], seen=new Set();
+  for(const day of boardDates()){
+    try{
+      const res=await fetch(base+(base.includes("?")?"&":"?")+"dates="+day,{cache:"no-store"});
+      if(!res.ok) continue;
+      ((await res.json()).events||[]).forEach(ev=>{
+        if(seen.has(ev.id)) return;
+        seen.add(ev.id);
+        evs.push(ev);
+      });
+    }catch(e){}
+  }
+  if(evs.length) return evs;
+  const res=await fetch(base,{cache:"no-store"});
+  if(!res.ok) throw new Error("ESPN "+res.status);
+  return (await res.json()).events||[];
+}
 async function loadLeague(lg){
   LEAGUE=lg;
   show("live");
   $("liveMeta").textContent = "Loading "+lg.toUpperCase();
   $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
-  const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), 8000);
   try{
-    const res = await fetch(URLS[lg], {cache:"no-store", signal:ctrl.signal});
-    clearTimeout(t);
-    if(!res.ok) throw new Error("ESPN "+res.status);
-    const data = await res.json();
-    const evs = data.events || [];
+    const evs = await pullScoreboard(lg);
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
     if($("nflTabs")) $("nflTabs").hidden = lg!=="nfl";
     if($("cfbTabs")) $("cfbTabs").hidden = lg!=="cfb";
@@ -607,15 +635,12 @@ async function loadLeague(lg){
       if($("viewGame") && !$("viewGame").hidden) return;
       if(LEAGUE==="ufc") return;
       try{
-        const r = await fetch(URLS[LEAGUE], {cache:"no-store"});
-        if(!r.ok) return;
-        const d = await r.json();
-        GAMES = (d.events||[]).flatMap(ev=>mapComp(ev,LEAGUE));
+        const evs = await pullScoreboard(LEAGUE);
+        GAMES = evs.flatMap(ev=>mapComp(ev,LEAGUE));
         paint(GAMES);
       }catch(e){}
     }, 20000);
   }catch(err){
-    clearTimeout(t);
     $("liveList").innerHTML = "<p class='hint'>"+lg.toUpperCase()+" did not load. "+(err.message||err)+"</p>";
     $("liveMeta").textContent = lg.toUpperCase()+" failed";
   }
@@ -1845,6 +1870,21 @@ $("toHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; 
 $("toSlate").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("live"); };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 show("home");
+(function bumpHits(){
+  const el=$("hitLine");
+  if(!el) return;
+  const key="sauceHitDay";
+  const today=new Date().toISOString().slice(0,10);
+  const already=localStorage.getItem(key)===today;
+  const url = already
+    ? "https://api.counterapi.dev/v1/lhinson00/sendit/"
+    : "https://api.counterapi.dev/v1/lhinson00/sendit/up";
+  fetch(url,{cache:"no-store"}).then(r=>r.json()).then(d=>{
+    const n=d.count||d.value||d;
+    if(n) el.innerHTML="Board visits · <b>"+Number(n).toLocaleString()+"</b>";
+    if(!already) localStorage.setItem(key, today);
+  }).catch(()=>{ el.textContent="Board visits · live"; });
+})();
 </script>
 </body>
 </html>
