@@ -47,7 +47,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .back{border:0;background:0;color:var(--orange);font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:0;font-size:12px}
 .tabbtn{border:0;background:0;color:#8a8378;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px;padding:6px 8px;white-space:nowrap}
 .tabbtn.on{color:var(--orange)}
-.meta{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.meta{display:none}
 .list{display:grid;gap:10px;padding:0 var(--pad) 24px}
 .gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
 .gcard.live{border-color:#ff3b3b;background:#160e0c}
@@ -565,7 +565,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
   <div class="bar">
     <div class="barleft">
       <button class="back" id="toHome">← Home</button>
-      <span class="meta" id="liveMeta">…</span>
+      <span class="meta" id="liveMeta" hidden></span>
     </div>
     <button type="button" class="tabbtn" id="tabEatAny" hidden>Let's Eat</button>
     <span class="tabs" id="nflTabs" hidden>
