@@ -99,7 +99,9 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
 .phero{margin:0 var(--pad) 16px;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d10}
 .phero-top{display:grid;grid-template-columns:120px 1fr;min-height:150px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 55%)}
-.phero-top img{width:120px;height:150px;object-fit:cover;object-position:top;background:#16120e}
+.phero-top img{width:120px;height:168px;object-fit:cover;object-position:top center;background:#16120e}
+.desk18{padding:12px}
+.deskmeta{font-size:12px;color:var(--ember);margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase}
 .phero-copy{padding:16px 14px 12px}
 .phero-copy .kicker{margin:0 0 6px}
 .phero-copy h2{font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,7vw,44px);line-height:.9;margin:0 0 8px}
@@ -1012,7 +1014,13 @@ async function openPlayer(pid, name){
     const isPass = /pass/i.test(st.displayName||"") || labels.includes("CMP") || labels.includes("CMP%");
     const isRush = /rush/i.test(st.displayName||"");
     const isRec = /receiv/i.test(st.displayName||"");
-    const leadKeys = isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
+    const fromKit = LEAGUE==="nfl" || LEAGUE==="cfb";
+    const kitPos = (ROSTER.find(p=>p.id===String(pid))||{}).pos || FILT.pos || "";
+    const leadKeys = fromKit
+      ? (kitPos==="QB" || isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
+        : kitPos==="RB" || isRush ? [["RUSH","YDS"],["TD","TD"],["REC","REC"]]
+        : [["YDS","YDS"],["REC","REC"],["TD","TD"]])
+      : isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
       : isRush ? [["YDS","YDS"],["TD","TD"],["AVG","AVG"]]
       : isRec ? [["YDS","YDS"],["REC","REC"],["TD","TD"]]
       : isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]]
@@ -1029,32 +1037,32 @@ async function openPlayer(pid, name){
     const nxt = ((((d.nextGame||{}).league||{}).events)||[])[0] || {};
     const nextLine = nxt.shortName || nxt.name || "";
     const roto = (d.rotowire && (d.rotowire.headline||d.rotowire.story)) || "";
-    const lrCat = (splitsPack.splitCategories||[]).find(c=>/right \/ left/i.test(c.displayName||""));
-    const slLabs = splitsPack.labels || [];
-    const avgI = idx(slLabs, ["AVG","BA","OBA"]);
-    const lr = (lrCat && lrCat.splits || []).map(s=>{
-      const v = avgI>=0 ? s.stats[avgI] : (s.stats||[]).slice(-4,-3)[0] || "—";
-      return "<div class='tile'><em>"+s.displayName+"</em><b>"+v+"</b></div>";
-    }).join("");
+    let last18="";
+    if(fromKit){
+      const games = await loadLog(String(pid));
+      const hits = games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
+      last18 = `<div class="desk18"><div class="deskmeta">${hits}/${games.length} on ${labelLine(FILT.stat,FILT.line)} · last 18</div><div class="glog">${games.map(g=>{
+        const v=valOf(g, FILT.stat);
+        return "<i class='"+(v>=FILT.line?"hit":"miss")+"'><b>"+v+"</b>"+(g.opp||"—")+"</i>";
+      }).join("")}</div></div>`;
+    }
+    if($("toGame")) $("toGame").textContent = fromKit ? "← Kitchen" : "← Game";
+    window.FROMKIT = fromKit;
     $("playerRoom").innerHTML = `
       <div class="phero">
         <div class="phero-top">
           <img alt="" src="${shot}"/>
           <div class="phero-copy">
-            <p class="kicker">${st.displayName||"Player"}</p>
+            <p class="kicker">${kitPos?kitPos+" · "+(ROSTER.find(p=>p.id===String(pid))||{}).team||"": (st.displayName||"Player")}</p>
             <h2>${name}</h2>
-            ${nextLine?`<p class="nextchip">${(d.nextGame&&d.nextGame.displayName)||"Game"} · ${nextLine}</p>`:"<p>ESPN season tape</p>"}
+            ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:"<p>Last 18 tape</p>"}
           </div>
         </div>
         <div class="lead3">${leads}</div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
+        ${last18}
         <div class="tiles">${tiles}</div>
-        ${lr?`<div class="lr">${lr}</div>`:""}
         ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
-      </div>
-      <div class="glog">
-        <h3>Recent</h3>
-        ${cards||"<p class='hint'>No log posted</p>"}
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
@@ -1353,7 +1361,10 @@ document.addEventListener("click", ev=>{
     else if(row.dataset.pid) openPlayer(row.dataset.pid, row.dataset.pname||"Player");
   }
 });
-$("toGame") && ($("toGame").onclick = ()=>show("game"));
+$("toGame") && ($("toGame").onclick = ()=>{
+  if(window.FROMKIT){ show("live"); nflTab("kit"); }
+  else show("game");
+});
 $("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toSlate").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("live"); };
