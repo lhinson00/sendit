@@ -173,6 +173,9 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .leadmini .lp:last-child img,.leadmini .lp:last-child .ph{grid-column:2;grid-row:1}
 .lp.empty{display:flex;color:var(--muted);justify-content:center}
 .wpbig{font-family:"Bebas Neue",sans-serif;font-size:42px;color:var(--orange)}
+.clips{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:8px 0 16px}
+.clip video{width:100%;aspect-ratio:16/9;background:#000;border-radius:6px}
+.clip p{margin:6px 0 0;font-size:12px;color:#cfc6b8}
 .scorebug.islive .cscore{color:var(--orange)}
 .scorebug.islive{box-shadow:0 0 0 1px #ff3b3b inset, 0 0 24px rgba(255,59,59,.18)}
 .scorebug.islive .mlb-inning{color:#ff6d6d;animation:pulse 1.6s ease-in-out infinite}
@@ -633,6 +636,13 @@ function renderFootball(g, sum){
     const kind = (p.type&&p.type.abbreviation)||"";
     return "<div class='play"+(kind==="TD"||kind==="FG"?" hot":"")+"'><span>"+tm+" "+kind+" · "+q+" "+clk+" · "+p.awayScore+"–"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
   }).join("");
+  const clips=(sum.videos||[]).map(v=>{
+    const src=((((v.links||{}).source)||{}).href)||((((v.links||{}).mobile)||{}).source||{}).href||"";
+    const thumb=v.thumbnail||"";
+    const title=v.headline||v.description||"Highlight";
+    if(!src && !thumb) return "";
+    return `<div class="clip"><video controls preload="none" poster="${thumb}" src="${src}"></video><p>${title}</p></div>`;
+  }).join("");
   const tab = window.FTAB || "live";
   $("gameRoom").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
@@ -681,6 +691,7 @@ function renderFootball(g, sum){
         </div>
       </div>
       <div class="fieldwrap">
+        ${clips?`<p class="hint">Scoring highlights</p><div class="clips">${clips}</div>`:""}
         <p class="hint">Scoring plays</p>
         ${scoreList||"<p class='hint'>No scores yet.</p>"}
       </div>
