@@ -16,10 +16,10 @@ body{min-height:100dvh;width:min(1120px,100%);margin:0 auto}
 .scflash .scwipe{position:absolute;left:0;right:0;top:-4px;height:4px;background:linear-gradient(90deg,var(--ember),var(--orange),#ffd29a);transform-origin:left center;animation:scwipe .55s ease-out both}
 .scflash .scbug{display:grid;grid-template-columns:76px 1fr;align-items:center;gap:12px;padding:0;background:#0a0b10}
 .scflash .scnet{font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:.16em;color:#140800;background:var(--orange);padding:10px 8px;line-height:1.05;text-align:center}
-.scflash .sckind{padding-right:16px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#ffd0a8;font-weight:800;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scflash .sckind{padding-right:16px;font-size:13px;letter-spacing:.06em;text-transform:none;color:#ffd0a8;font-weight:800;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scflash .scmain{padding:10px 16px 18px;background:linear-gradient(105deg,transparent 0 12px,var(--orange) 12px 16px,transparent 16px),repeating-linear-gradient(135deg,rgba(255,140,40,.05) 0 8px,transparent 8px 16px),linear-gradient(180deg,#1a1008,#07070a 55%,#05060a);border-top:1px solid rgba(255,140,40,.4);box-shadow:0 -16px 40px rgba(0,0,0,.45)}
 .scflash .scscore{margin:0;font-family:"Bebas Neue",sans-serif;font-size:clamp(44px,13vw,72px);letter-spacing:.06em;line-height:.82;color:#fff}
-.scflash .scteam{margin:6px 0 0;font-family:"Bebas Neue",sans-serif;font-size:clamp(26px,7vw,40px);letter-spacing:.04em;line-height:.9;color:var(--orange)}
+.scflash .scteam{margin:8px 0 0;font-family:Manrope,system-ui,sans-serif;font-size:16px;font-weight:700;letter-spacing:0;line-height:1.25;color:#f2ebe3;text-transform:none}
 .scflash .scnums{margin:4px 0 0;font-family:"Bebas Neue",sans-serif;font-size:clamp(18px,5vw,26px);letter-spacing:.06em;color:#fff}
 .scflash .scline{margin:8px 0 0;color:#e8d7c6;font-size:14px;line-height:1.35;max-width:36em}
 @keyframes scdock{from{transform:translateY(110%);opacity:0}to{transform:none;opacity:1}}
@@ -1045,10 +1045,10 @@ function pulseBoard(g){
     window.ALERT_TOT[key]=tot;
     const kind=playKind(g.lastPlay,g,prev);
     flashAlert({
-      kicker: kind,
+      kicker: scorerName(g,prev)||"",
       title: kind,
-      team: (scorerName(g,prev)||"").toUpperCase(),
-      score: scorebug(g),
+      team: scoreboard(g),
+      score: "",
       body: g.lastPlay||g.detail||""
     });
   } else if(watching && justFinal){
@@ -1058,7 +1058,7 @@ function pulseBoard(g){
     flashAlert({
       kicker: ufc?"UFC":"FINAL",
       title: ufc?fightKind(g):"END OF GAME",
-      team: (winner||"").toUpperCase(),
+      team: (winner||""),
       score: ufc?"":scoreboard(g),
       body: ufc?((winner&&loser?winner+" def. "+loser+". ":"")+(g.detail||"Official result")):((winner?winner+" wins. ":"")+scorebug(g)+(g.detail?(" · "+g.detail):""))
     });
