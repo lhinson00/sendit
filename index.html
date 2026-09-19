@@ -1064,30 +1064,37 @@ function valOf(row, stat){
   return 0;
 }
 async function loadRosters(){
-  if(ROSTER.length) return ROSTER;
-  const tb=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams?limit=32",{cache:"no-store"});
-  const teams=((((await tb.json()).sports||[])[0]||{}).leagues||[])[0];
-  const list=(teams&&teams.teams)||[];
-  const ids=list.map(t=>(t.team&&t.team.id)||t.id).filter(Boolean);
-  const packs=await Promise.all(ids.map(async id=>{
-    try{
-      const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+id+"/roster",{cache:"no-store"});
-      if(!r.ok) return [];
-      const d=await r.json();
-      const ath=[];
-      (d.athletes||d.side||[]).forEach(grp=>{
-        const items=grp.items||grp.athletes|| (Array.isArray(grp)?grp:[]);
-        items.forEach(a=>{
-          const p=a.position||{};
-          const ab=p.abbreviation||"";
+  if(ROSTER.length>20) return ROSTER;
+  let ids=[];
+  try{
+    const tb=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams?limit=32",{cache:"no-store"});
+    const teams=((((await tb.json()).sports||[])[0]||{}).leagues||[])[0];
+    ids=((teams&&teams.teams)||[]).map(t=>(t.team&&t.team.id)||t.id).filter(Boolean);
+  }catch(e){}
+  if(!ids.length) ids=["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","33","34"];
+  const seen=new Set(ROSTER.map(p=>p.id));
+  for(let i=0;i<ids.length;i+=8){
+    const slice=ids.slice(i,i+8);
+    const packs=await Promise.all(slice.map(async id=>{
+      try{
+        const ctrl=new AbortController();
+        const t=setTimeout(()=>ctrl.abort(),7000);
+        const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+id+"/roster",{cache:"no-store",signal:ctrl.signal});
+        clearTimeout(t);
+        if(!r.ok) return [];
+        const d=await r.json();
+        const team=(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||"";
+        const ath=[];
+        (d.athletes||[]).forEach(grp=> (grp.items||[]).forEach(a=>{
+          const ab=((a.position||{}).abbreviation)||"";
           if(!/^(QB|RB|WR|TE)$/.test(ab)) return;
-          ath.push({id:String(a.id), name:a.displayName||a.fullName, pos:ab, team:(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||""});
-        });
-      });
-      return ath;
-    }catch(e){ return []; }
-  }));
-  packs.flat().forEach(p=>ROSTER.push(p));
+          ath.push({id:String(a.id), name:a.displayName||a.fullName||"", pos:ab, team});
+        }));
+        return ath;
+      }catch(e){ return []; }
+    }));
+    packs.flat().forEach(p=>{ if(!seen.has(p.id)){ seen.add(p.id); ROSTER.push(p); } });
+  }
   return ROSTER;
 }
 async function loadLog(pid){
@@ -1109,43 +1116,64 @@ async function loadLog(pid){
   LOGS[pid]=rows.slice(-18);
   return LOGS[pid];
 }
-async function runKitchen(){
-  const host=$("kitList");
-  if(!host) return;
-  fillKitControls();
-  host.innerHTML="<p class='hint'>Loading NFL rosters + last 18…</p>";
-  $("kitMeta").textContent="Pulling "+FILT.pos+" logs…";
-  await loadRosters();
-  const pool=ROSTER.filter(p=>p.pos===FILT.pos);
-  host.innerHTML="<p class='hint'>"+pool.length+" "+FILT.pos+"s · fetching logs</p>";
-  const out=[];
-  for(let i=0;i<pool.length;i+=6){
-    const slice=pool.slice(i,i+6);
-    await Promise.all(slice.map(async p=>{
-      const games=await loadLog(p.id);
-      const hits=games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
-      const n=games.length;
-      out.push({p,hits,n,rate:n?hits/n:0});
-    }));
-    $("kitMeta").textContent=out.length+" / "+pool.length+" "+FILT.pos+"s";
-  }
-  out.sort((a,b)=> (b.rate-a.rate) || (b.hits-a.hits) || (b.n-a.n));
-  $("kitMeta").textContent=FILT.pos+" · last 18 · "+FILT.stat+" "+FILT.line+"+ · "+out.filter(x=>x.n).length+" with games";
-  host.innerHTML=out.filter(x=>x.n).map(x=>{
+function sauceScore(hits, n, l5h, l5n){
+  if(!n) return 0;
+  const hr = hits/n;
+  const recent = l5n ? (l5h/l5n) : hr;
+  return Math.round(hr*80 + recent*20);
+}
+function paintKitRows(out, host){
+  out.sort((a,b)=> (b.score-a.score) || (b.rate-a.rate) || (b.hits-a.hits));
+  const rows=out.filter(x=>x.n);
+  $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score = hit rate 80% + last 5 20%";
+  host.innerHTML=rows.map(x=>{
     const games=LOGS[x.p.id]||[];
     const chips=games.map(g=>{
       const v=valOf(g, FILT.stat);
-      const ok=v>=FILT.line;
-      return "<i class='"+(ok?"hit":"miss")+"' title='"+(g.opp||"")+"'>"+v+"</i>";
+      return "<i class='"+(v>=FILT.line?"hit":"miss")+"'>"+(g.opp?g.opp+" ":"")+v+"</i>";
     }).join("");
-    return `
-    <div class="krow">
-      <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} · ${x.p.pos} · last 18</em><div class="chips">${chips}</div></div>
-      <div class="khit">${x.hits}/${x.n}</div>
+    return `<div class="krow">
+      <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} on ${labelLine(FILT.stat,FILT.line)} · L5 ${x.l5h}/${x.l5n}</em><div class="chips">${chips}</div></div>
+      <div><div class="khit">${x.score}</div><div class="kpct">${x.hits}/${x.n}</div></div>
       <button type="button" class="addline" data-add="${x.p.id}">Add</button>
     </div>`;
-  }).join("") || "<p class='hint'>No logs yet.</p>";
+  }).join("") || "<p class='hint'>Still loading logs…</p>";
   host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
+}
+async function runKitchen(){
+  const host=$("kitList");
+  if(!host) return;
+  try{
+  fillKitControls();
+  host.innerHTML="<p class='hint'>Opening Kitchen… pulling NFL rosters.</p>";
+  $("kitMeta").textContent="Kitchen · "+FILT.pos;
+  await loadRosters();
+  const pool=ROSTER.filter(p=>p.pos===FILT.pos);
+  if(!pool.length){
+    host.innerHTML="<p class='hint'>No "+FILT.pos+" roster rows yet. Tap Kitchen again.</p>";
+    return;
+  }
+  host.innerHTML="<p class='hint'>"+pool.length+" "+FILT.pos+"s · last 18 logs coming in…</p>";
+  const out=[];
+  for(let i=0;i<pool.length;i+=8){
+    const slice=pool.slice(i,i+8);
+    await Promise.all(slice.map(async p=>{
+      try{
+        const games=await loadLog(p.id);
+        const hits=games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
+        const n=games.length;
+        const last5=games.slice(-5);
+        const l5h=last5.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
+        const l5n=last5.length;
+        out.push({p,hits,n,l5h,l5n,rate:n?hits/n:0,score:sauceScore(hits,n,l5h,l5n)});
+      }catch(e){}
+    }));
+    paintKitRows(out, host);
+  }
+  paintKitRows(out, host);
+  }catch(e){
+    host.innerHTML="<p class='hint'>Kitchen error: "+(e.message||e)+"</p>";
+  }
 }
 function nflTab(which){
   const live=which==="live", kit=which==="kit", eat=which==="eat";
