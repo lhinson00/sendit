@@ -812,7 +812,16 @@ function isTwoMinute(g){
   return /\b(2:00|1:\d{2}|0:\d{2})\b/.test(d);
 }
 function scoreboard(g){
-  return (g.awayAb||g.away||"")+" "+nScore(g.awayScore)+" — "+nScore(g.homeScore)+" "+(g.homeAb||g.home||"");
+  return (g.away||g.awayAb||"")+" "+nScore(g.awayScore)+", "+(g.home||g.homeAb||"")+" "+nScore(g.homeScore);
+}
+function scorerName(g, prev){
+  const da=nScore(g.awayScore)-nScore(prev&&prev.as);
+  const dh=nScore(g.homeScore)-nScore(prev&&prev.hs);
+  if(dh>0 && da<=0) return g.home||g.homeAb||"";
+  if(da>0 && dh<=0) return g.away||g.awayAb||"";
+  if(dh>da) return g.home||g.homeAb||"";
+  if(da>dh) return g.away||g.awayAb||"";
+  return "";
 }
 function playKind(text, g, prev){
   const t=String(text||"");
@@ -1013,17 +1022,18 @@ function pulseBoard(g){
     window.ALERT_TOT[key]=tot;
     const kind=playKind(g.lastPlay,g,prev);
     flashAlert({
-      kicker: tag+" · "+who,
-      title: scoreboard(g),
-      body: kind+(g.lastPlay?(" · "+g.lastPlay):"")
+      kicker: kind,
+      title: (scorerName(g,prev)||kind).toUpperCase(),
+      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
     });
   } else if(watching && justFinal){
-    const winner=g.awayWin?(g.awayAb||g.away):(g.homeWin?(g.homeAb||g.home):"");
-    const ufc=g.lg==="ufc"||LEAGUE==="ufc"||g.fightId;
+    const ufc=g.lg==="ufc"||LEAGUE==="ufc"||!!g.fightId;
+    const winner=g.awayWin?(g.away||g.awayAb):(g.homeWin?(g.home||g.homeAb):"");
+    const loser=g.awayWin?(g.home||g.homeAb):(g.homeWin?(g.away||g.awayAb):"");
     flashAlert({
-      kicker: tag+" · "+who,
-      title: ufc?((winner||"Final")+" wins"):("FINAL · "+scoreboard(g)),
-      body: ufc?(g.detail||"Fight over"):(g.detail||"Game over")
+      kicker: ufc?"END OF FIGHT":"END OF GAME",
+      title: ufc?(winner+" def. "+loser):scoreboard(g),
+      body: ufc?(g.detail||"Official result"):((winner?winner+" wins. ":"")+(g.detail||""))
     });
   }
   window.WATCH_SNAP[key]=pack;
@@ -2407,9 +2417,9 @@ function alertFromSlip(s, g, prev){
       const left=Math.max(0, Number(s.line)-now);
       const tag=labelLine(s.stat,s.line);
       flashAlert({
-        kicker: (s.name||"PLAYER")+" · "+(s.team||""),
-        title: now+" / "+s.line,
-        body: tag+(now>=s.line?" · line cleared":(" · "+left+" to go"))+(s.game?(" · "+s.game):"")
+        kicker: tag,
+        title: (s.name||"Player")+"  "+now+" / "+s.line,
+        body: (now>=s.line?"Line cleared":left+" to go")+(s.game?(" · "+s.game):"")+(s.team?(" · "+s.team):"")
       });
     }
     return;
@@ -2418,9 +2428,9 @@ function alertFromSlip(s, g, prev){
     if(g && g.state==="post" && prev.state==="in"){
       const winner = g.awayWin?g.away:(g.homeWin?g.home:"Final");
       flashAlert({
-        kicker:"UFC · "+(s.label||"ML"),
-        title: winner+" wins",
-        body: (g.detail||"Fight over")+" · "+(g.away||"")+" vs "+(g.home||"")
+        kicker:"END OF FIGHT",
+        title: winner+" def. "+(g.awayWin?g.home:g.homeWin?g.away:""),
+        body: (g.detail||"Official result")
       });
     }
     return;
@@ -2431,9 +2441,9 @@ function alertFromSlip(s, g, prev){
   const as=nScore(g.awayScore), hs=nScore(g.homeScore);
   if(as+hs>oldT){
     flashAlert({
-      kicker:(s.label||"TICKET")+" · "+(s.name||""),
-      title: (g.awayAb||g.away)+" "+as+" — "+hs+" "+(g.homeAb||g.home),
-      body: g.lastPlay||g.detail||"Score"
+      kicker: playKind(g.lastPlay,g,prev),
+      title: (scorerName(g,prev)||"SCORE").toUpperCase(),
+      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
     });
   }
 }
@@ -2450,17 +2460,17 @@ function alertFromFav(g, prev){
   const nowT=as+hs;
   if(g.state==="in" && nowT>oldT){
     flashAlert({
-      kicker:"FAVORITE · "+who,
-      title: (g.awayAb||g.away)+" "+as+" — "+hs+" "+(g.homeAb||g.home),
-      body: g.lastPlay||g.detail||"Score"
+      kicker: playKind(g.lastPlay,g,prev),
+      title: (scorerName(g,prev)||"SCORE").toUpperCase(),
+      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
     });
     return;
   }
   if(g.state==="post" && wasLive(prev)){
     flashAlert({
-      kicker:"FAVORITE · "+who,
-      title: "Final · "+(g.awayAb||g.away)+" "+(g.awayScore||"–")+" — "+(g.homeScore||"–")+" "+(g.homeAb||g.home),
-      body: g.detail||"Game over"
+      kicker:"END OF GAME",
+      title: scoreboard(g),
+      body: g.detail||"Final"
     });
     return;
   }
