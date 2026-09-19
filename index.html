@@ -14,9 +14,9 @@ body{min-height:100dvh;width:min(1120px,100%);margin:0 auto}
 .scflash{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;pointer-events:none}
 .scflash.show{display:block !important;animation:scdock .45s cubic-bezier(.16,1,.3,1) both}
 .scflash .scwipe{position:absolute;left:0;right:0;top:-4px;height:4px;background:linear-gradient(90deg,var(--ember),var(--orange),#ffd29a);transform-origin:left center;animation:scwipe .55s ease-out both}
-.scflash .scbug{display:flex;align-items:center;gap:10px;padding:8px 16px 6px;background:#0a0b10}
-.scflash .scnet{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.16em;color:#140800;background:var(--orange);padding:4px 10px;line-height:1;box-shadow:0 0 0 1px #8a3a00}
-.scflash .sckind{margin-left:auto;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#ffd0a8;font-weight:800}
+.scflash .scbug{display:grid;grid-template-columns:76px 1fr;align-items:center;gap:12px;padding:0;background:#0a0b10}
+.scflash .scnet{font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:.16em;color:#140800;background:var(--orange);padding:10px 8px;line-height:1.05;text-align:center}
+.scflash .sckind{padding-right:16px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#ffd0a8;font-weight:800;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .scflash .scmain{padding:10px 16px 18px;background:linear-gradient(105deg,transparent 0 12px,var(--orange) 12px 16px,transparent 16px),repeating-linear-gradient(135deg,rgba(255,140,40,.05) 0 8px,transparent 8px 16px),linear-gradient(180deg,#1a1008,#07070a 55%,#05060a);border-top:1px solid rgba(255,140,40,.4);box-shadow:0 -16px 40px rgba(0,0,0,.45)}
 .scflash .scscore{margin:0;font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,8vw,44px);letter-spacing:.02em;line-height:.9;color:#fff}
 .scflash .scline{margin:8px 0 0;color:#e8d7c6;font-size:14px;line-height:1.35;max-width:36em}
@@ -560,7 +560,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
 <div class="scflash" id="scFlash">
   <div class="scwipe"></div>
   <div class="scbug">
-    <span class="scnet">SPORTS SAUCE</span>
+    <span class="scnet">SPORTS<br>SAUCE</span>
     <span class="sckind" id="scKicker">Let's Eat</span>
   </div>
   <div class="scmain">
@@ -805,6 +805,37 @@ function heatWhy(g){
   if((g.lg==="ufc"||LEAGUE==="ufc") && /round\s*5|\br5\b/i.test(d)) return "Last round";
   return "";
 }
+function isTwoMinute(g){
+  if(!g || g.state!=="in") return false;
+  const d=String(g.detail||"");
+  if(!/\b(4th|q4|4th qtr|ot|overtime)\b/i.test(d)) return false;
+  return /\b(2:00|1:\d{2}|0:\d{2})\b/.test(d);
+}
+function scoreboard(g){
+  return (g.awayAb||g.away||"")+" "+nScore(g.awayScore)+" — "+nScore(g.homeScore)+" "+(g.homeAb||g.home||"");
+}
+function playKind(text, g, prev){
+  const t=String(text||"");
+  const lg=g.lg||LEAGUE;
+  if(/touchdown|\bTD\b/i.test(t)) return "TOUCHDOWN";
+  if(/field goal.*good|fg good|field goal is good/i.test(t)) return "FIELD GOAL";
+  if(/\bsafety\b/i.test(t)) return "SAFETY";
+  if(/extra point/i.test(t)) return "PAT";
+  if(/two-point|2-point/i.test(t)) return "2-PT";
+  if(/grand slam/i.test(t)) return "GRAND SLAM";
+  if(/home run|\bHR\b|solos? to/i.test(t)) return "HOME RUN";
+  if(lg==="mlb" && /scores|RBI/i.test(t)) return "RUN";
+  if((lg==="mls") && /\bgoal\b/i.test(t)) return "GOAL";
+  if(/knockout|\bKO\b|\bTKO\b|submission|decision/i.test(t)) return "FINISH";
+  if(prev){
+    const da=nScore(g.awayScore)-nScore(prev.as), dh=nScore(g.homeScore)-nScore(prev.hs);
+    if(lg==="mlb" && (da||dh)) return "RUN";
+    if((lg==="nfl"||lg==="cfb") && (da===3||dh===3)) return "FIELD GOAL";
+    if((lg==="nfl"||lg==="cfb") && (da>=6||dh>=6)) return "TOUCHDOWN";
+    if((lg==="nfl"||lg==="cfb") && (da===2||dh===2)) return "SAFETY";
+  }
+  return "SCORE";
+}
 function isTurnover(text){
   return /\b(intercept(?:ion|ed)?|picked off|pick six|pick-six|fumble(?:d)?|stripped|turnover on downs|turnover)\b/i.test(String(text||""));
 }
@@ -963,7 +994,7 @@ function pulseBoard(g){
   window.ALERT_TOT = window.ALERT_TOT || {};
   const key=gameKey(g);
   if(!key) return;
-  const pack={as:nScore(g.awayScore), hs:nScore(g.homeScore), state:g.state||"", heat:!!isHeat(g), why:heatWhy(g), detail:g.detail||"", play:g.lastPlay||""};
+  const pack={as:nScore(g.awayScore), hs:nScore(g.homeScore), state:g.state||"", heat:!!isHeat(g), why:heatWhy(g), two:!!isTwoMinute(g), detail:g.detail||"", play:g.lastPlay||""};
   const tot=pack.as+pack.hs;
   const prev=window.WATCH_SNAP[key];
   if(!prev){
@@ -976,23 +1007,23 @@ function pulseBoard(g){
   const tracked = slipsForGame(g).filter(s=>!s.pid);
   const favs = gameFavs(g);
   const watching = tracked.length || favs.length;
-  if((liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
+  const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
+  const tag=tracked.length?"LET'S EAT":"FAVORITE";
+  if(watching && (liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
     window.ALERT_TOT[key]=tot;
-    if(tracked.length) tracked.forEach(s=>alertFromSlip(s,g,prev));
-    else if(favs.length) alertFromFav(g, prev);
-  } else if(watching && liveNow && pack.why && pack.why!==prev.why){
-    const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
+    const kind=playKind(g.lastPlay,g,prev);
     flashAlert({
-      kicker:(tracked.length?"LET'S EAT":"FAVORITE")+" · "+who,
-      title: pack.why,
-      body: (g.detail||"")+(g.down?(" · "+g.down):"")
+      kicker: tag+" · "+who,
+      title: scoreboard(g),
+      body: kind+(g.lastPlay?(" · "+g.lastPlay):"")
     });
-  } else if(watching && liveNow && isTurnover(g.lastPlay) && g.lastPlay && g.lastPlay!==prev.play){
-    const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
+  } else if(watching && justFinal){
+    const winner=g.awayWin?(g.awayAb||g.away):(g.homeWin?(g.homeAb||g.home):"");
+    const ufc=g.lg==="ufc"||LEAGUE==="ufc"||g.fightId;
     flashAlert({
-      kicker:(tracked.length?"LET'S EAT":"FAVORITE")+" · "+who,
-      title: "Turnover",
-      body: g.lastPlay
+      kicker: tag+" · "+who,
+      title: ufc?((winner||"Final")+" wins"):("FINAL · "+scoreboard(g)),
+      body: ufc?(g.detail||"Fight over"):(g.detail||"Game over")
     });
   }
   window.WATCH_SNAP[key]=pack;
