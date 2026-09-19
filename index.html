@@ -75,6 +75,20 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .sgrid div{background:#101218;border:1px solid #2a241c;padding:10px 8px}
 .sgrid i{display:block;font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .sgrid b{display:block;font-family:"Bebas Neue",sans-serif;font-size:24px;color:#fff;margin-top:2px}
+.ptable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 18px}
+.ptable th{text-align:right;font-size:10px;letter-spacing:.1em;color:var(--muted);padding:6px 6px;border-bottom:1px solid #2a241c}
+.ptable th:first-child,.ptable td:first-child{text-align:left}
+.ptable td{padding:7px 6px;border-bottom:1px solid #1c1814;color:#e8e0d4}
+.ptable tr.tot td{color:var(--orange);font-weight:700}
+.ptable .nm{display:flex;flex-direction:column}
+.ptable .nm b{font-size:13px}
+.ptable .nm em{font-size:10px;color:var(--muted)}
+.tlead{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 18px}
+@media(max-width:640px){.tlead{grid-template-columns:repeat(2,1fr)}.ptable{font-size:11px}}
+.tlead div{background:#101218;border:1px solid #2a241c;padding:10px;display:flex;gap:8px;align-items:center}
+.tlead img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#222}
+.tlead i{display:block;font-style:normal;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tlead b{font-family:"Bebas Neue",sans-serif;font-size:22px}
 .pollrow b.rk{font-size:18px}
 .pollrow img{width:32px;height:32px;object-fit:contain}
 .pollrow em{font-style:normal;color:var(--muted);font-size:11px}
@@ -1579,16 +1593,18 @@ async function openTeam(tid, name){
   $("playerRoom").innerHTML = "<p class='hint'>Opening "+name+"…</p>";
   const base="https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/"+tid;
   try{
-    const [tRes,sRes,rRes,stRes]=await Promise.all([
+    const [tRes,sRes,rRes,stRes,plRes]=await Promise.all([
       fetch(base,{cache:"no-store"}),
       fetch(base+"/schedule",{cache:"no-store"}),
       fetch(base+"/roster",{cache:"no-store"}),
-      fetch(base+"/statistics",{cache:"no-store"})
+      fetch(base+"/statistics",{cache:"no-store"}),
+      fetch(base+"/athletes/statistics",{cache:"no-store"})
     ]);
     const pack=tRes.ok?await tRes.json():{};
     const sched=sRes.ok?await sRes.json():{};
     const rost=rRes.ok?await rRes.json():{};
     const stat=stRes.ok?await stRes.json():{};
+    const plstat=plRes.ok?await plRes.json():{};
     const t=pack.team||{};
     const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/ncaa/500/"+tid+".png");
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
@@ -1655,7 +1671,44 @@ async function openTeam(tid, name){
       ]]
     ];
     const tiles=[];
-    const groupHtml = groups.map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3><div class="sgrid">${rows.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div></div>`).join("");
+    const sval=(stats, names)=>{
+      const list=stats||[];
+      for(const n of names){
+        const s=list.find(x=>x.name===n || x.abbreviation===n || x.shortDisplayName===n);
+        if(s && (s.displayValue!=null || s.value!=null)) return s.displayValue||String(s.value);
+      }
+      return "—";
+    };
+    const pblocks=plstat.results||[];
+    const ptotals=plstat.teamTotals||[];
+    const cols={
+      passing:[["CMP","completions"],["ATT","passingAttempts"],["YDS","passingYards"],["CMP%","completionPct"],["AVG","yardsPerPassAttempt"],["LNG","longPassing"],["TD","passingTouchdowns"],["INT","interceptions"],["SACK","sacks"],["RTG","QBRating","quarterbackRating"]],
+      rushing:[["CAR","rushingAttempts"],["YDS","rushingYards"],["AVG","yardsPerRushAttempt"],["LNG","longRushing"],["TD","rushingTouchdowns"]],
+      receiving:[["REC","receptions"],["YDS","receivingYards"],["AVG","yardsPerReception"],["LNG","longReception"],["TD","receivingTouchdowns"]],
+      defensive:[["TOT","totalTackles"],["SOLO","soloTackles"],["SACK","sacks"],["TFL","tacklesForLoss"],["INT","interceptions"],["PD","passesDefended"]]
+    };
+    const shotOf=a=> (a.headshot&&(a.headshot.href||a.headshot)) || (a.id?("https://a.espncdn.com/i/headshots/college-football/players/full/"+a.id+".png"):"");
+    const leadHtml = `<div class="tlead">${["passing","rushing","receiving","defensive"].map(nm=>{
+      const blk=pblocks.find(x=>x.name===nm);
+      const L=(blk&&blk.leaders&&blk.leaders[0])||{};
+      const a=L.athlete||{};
+      return `<div class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shotOf(a)}"/><div><i>${(blk&&blk.displayName)||nm}</i><b>${L.displayValue||"—"}</b><em>${a.displayName||""} ${(a.position&&a.position.abbreviation)||""}</em></div></div>`;
+    }).join("")}</div>`;
+    const tableHtml = ["passing","rushing","receiving","defensive"].map(nm=>{
+      const blk=pblocks.find(x=>x.name===nm)||{};
+      const spec=cols[nm];
+      const heads=spec.map(c=>c[0]);
+      const rows=(blk.leaders||[]).map(L=>{
+        const a=L.athlete||{};
+        const pack=((L.statistics||[])[0]||{}).stats||[];
+        const pos=(a.position&&a.position.abbreviation)||"";
+        return `<tr class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><td><span class="nm"><b>${a.displayName||""}</b><em>${pos}</em></span></td>${spec.map(c=>`<td>${sval(pack,c.slice(1))}</td>`).join("")}</tr>`;
+      }).join("");
+      const tot=((ptotals.find(x=>x.name===nm)||{}).stats)||[];
+      const totRow = tot.length?`<tr class="tot"><td>Total</td>${spec.map(c=>`<td>${sval(tot,c.slice(1))}</td>`).join("")}</tr>`:"";
+      return `<div class="sgrp"><h3>${blk.displayName||nm}</h3><div style="overflow:auto"><table class="ptable"><thead><tr><th>NAME</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}${totRow}</tbody></table></div></div>`;
+    }).join("");
+    const groupHtml = leadHtml + tableHtml + groups.slice(4).map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3><div class="sgrid">${rows.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div></div>`).join("");
     const games=(sched.events||[]).map(ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
