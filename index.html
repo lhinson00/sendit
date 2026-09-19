@@ -76,6 +76,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 @media(max-width:560px){.playoffbox{grid-template-columns:1fr}.srow{grid-template-columns:20px 24px 1fr 48px 28px 28px 40px}}
 .pollrow{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #221e18;cursor:pointer}
 .pollrow:hover{background:#16120e}
+.daycut{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);border-bottom:1px solid #3a2a18;padding-bottom:6px}
 .tbook{padding:0 var(--pad) 28px}
 .tsk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
 .tsk i{display:block;font-style:normal;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
@@ -586,7 +587,7 @@ function paint(games){
     host.innerHTML = "<div id='ufcEvents'>"+evHtml+"</div><div id='ufcLineup'></div><div id='ufcRanks'></div>";
     host.querySelectorAll("[data-event]").forEach(b=>b.onclick=()=>showUfcLineup(b.dataset.event, games));
   } else {
-    host.innerHTML = shown.map(g=>{
+    const cardHtml = g=>{
       const live=g.state==="in";
       const pinned=isFav(g.awayId)||isFav(g.homeId);
       let sub="";
@@ -607,7 +608,18 @@ function paint(games){
         </div>
         ${sub?`<div class="sub">${sub}</div>`:""}
       </div>`;
-    }).join("");
+    };
+    if(LEAGUE==="mlb"){
+      const buckets={};
+      shown.forEach(g=>{
+        const k=chiDay(g.start)||"other";
+        (buckets[k]=buckets[k]||[]).push(g);
+      });
+      const keys=Object.keys(buckets).sort((a,b)=>b.localeCompare(a));
+      host.innerHTML=keys.map(k=>`<div class="daycut">${dayCut(k)}</div>`+buckets[k].map(cardHtml).join("")).join("");
+    } else {
+      host.innerHTML=shown.map(cardHtml).join("");
+    }
   }
   host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=e=>{
     if(e.target.closest("[data-fav]")) return;
@@ -630,8 +642,23 @@ function paint(games){
 function boardDates(){
   const fmt=d=>d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
   const now=new Date();
-  const tmr=new Date(now.getTime()+86400000);
-  return [fmt(now), fmt(tmr)];
+  const out=[];
+  for(let i=-4;i<=1;i++) out.push(fmt(new Date(now.getTime()+i*86400000)));
+  return out;
+}
+function chiDay(iso){
+  try{ return new Date(iso).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10); }
+  catch(e){ return ""; }
+}
+function dayCut(k){
+  const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
+  const yest=new Date(Date.now()-86400000).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
+  if(k===today) return "Today";
+  if(k===yest) return "Yesterday";
+  try{
+    const [y,m,d]=k.split("-").map(Number);
+    return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"});
+  }catch(e){ return k; }
 }
 async function pullScoreboard(lg){
   const base=URLS[lg];
