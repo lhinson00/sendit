@@ -102,6 +102,17 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .phero-top img{width:120px;height:168px;object-fit:cover;object-position:top center;background:#16120e}
 .desk18{padding:12px}
 .deskmeta{font-size:12px;color:var(--ember);margin-bottom:8px;letter-spacing:.06em;text-transform:uppercase}
+.tape{width:100%;border-collapse:collapse;margin:8px 0 0}
+.tape th,.tape td{padding:8px 10px;text-align:left;border-bottom:1px solid #221e18;font-size:13px}
+.tape th{color:var(--ember);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.tape td:nth-child(2),.tape td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.tape tr.hit td{color:var(--orange)}
+.tape tr.miss td{color:#8a8478}
+.hitline{display:grid;grid-template-columns:repeat(6,1fr);gap:0;padding-top:8px}
+.hitn{padding:8px 4px;text-align:center;border-bottom:1px solid #221e18;color:#8a8478}
+.hitn.hit{color:var(--orange)}
+.hitn em{display:block;font-style:normal;font-size:10px;letter-spacing:.08em;color:#8a8478}
+.hitn b{display:block;font-size:16px;font-weight:700}
 .phero-copy{padding:16px 14px 12px}
 .phero-copy .kicker{margin:0 0 6px}
 .phero-copy h2{font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,7vw,44px);line-height:.9;margin:0 0 8px}
@@ -1041,10 +1052,10 @@ async function openPlayer(pid, name){
     if(fromKit){
       const games = await loadLog(String(pid));
       const hits = games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
-      last18 = `<div class="desk18"><div class="deskmeta">${hits}/${games.length} on ${labelLine(FILT.stat,FILT.line)} · last 18</div><div class="glog">${games.map(g=>{
+      last18 = `<table class="tape"><thead><tr><th>Last 18</th><th>${labelLine(FILT.stat,FILT.line)}</th><th>${hits}/${games.length}</th></tr></thead><tbody>${games.map(g=>{
         const v=valOf(g, FILT.stat);
-        return "<i class='"+(v>=FILT.line?"hit":"miss")+"'><b>"+v+"</b>"+(g.opp||"—")+"</i>";
-      }).join("")}</div></div>`;
+        return "<tr class='"+(v>=FILT.line?"hit":"miss")+"'><td>"+(g.opp||"—")+"</td><td>"+v+"</td><td>"+(v>=FILT.line?"HIT":"—")+"</td></tr>";
+      }).join("")}</tbody></table>`;
     }
     if($("toGame")) $("toGame").textContent = fromKit ? "← Kitchen" : "← Game";
     window.FROMKIT = fromKit;
@@ -1061,8 +1072,7 @@ async function openPlayer(pid, name){
         <div class="lead3">${leads}</div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
-        <div class="tiles">${tiles}</div>
-        ${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}
+        <table class="tape"><thead><tr><th>Season</th><th></th>${career?`<th>Career</th>`:""}</tr></thead><tbody>${labels.map((lab,i)=>`<tr><td>${lab}</td><td>${season.stats[i]||"—"}</td>${career?`<td>${career.stats[i]||"—"}</td>`:""}</tr>`).join("")}</tbody></table>
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
@@ -1286,7 +1296,7 @@ function paintKitRows(out, host){
     const games=LOGS[x.p.id]||[];
     const log=games.map(g=>{
       const v=valOf(g, FILT.stat);
-      return "<i class='"+(v>=FILT.line?"hit":"miss")+"'><b>"+v+"</b>"+(g.opp||"—")+"</i>";
+      return "<span class='hitn "+(v>=FILT.line?"hit":"miss")+"'><em>"+(g.opp||"")+"</em><b>"+v+"</b></span>";
     }).join("");
     return `<div class="krow">
       <div class="ktop">
@@ -1294,7 +1304,7 @@ function paintKitRows(out, host){
         <div><div class="khit">${x.score}</div><div class="kpct">${x.hits}/${x.n}</div></div>
         <button type="button" class="addline" data-add="${x.p.id}">Add</button>
       </div>
-      <div class="glog">${log}</div>
+      <div class="hitline">${log}</div>
     </div>`;
   }).join("") || "<p class='hint'>Still loading logs…</p>";
   host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
