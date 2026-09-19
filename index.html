@@ -1223,14 +1223,15 @@ async function loadLog(pid){
 }
 function sauceScore(hits, n, l5h, l5n){
   if(!n) return 0;
-  const hr = hits/n;
-  const recent = l5n ? (l5h/l5n) : hr;
-  return Math.round(hr*80 + recent*20);
+  const shrunk = (hits + 4) / (n + 8);
+  const recent = l5n ? (l5h/l5n) : (hits/n);
+  const volume = Math.min(1, n/18);
+  return Math.round(shrunk*70 + recent*15 + volume*15);
 }
 function paintKitRows(out, host){
-  out.sort((a,b)=> (b.score-a.score) || (b.rate-a.rate) || (b.hits-a.hits));
+  out.sort((a,b)=> (b.score-a.score) || (b.hits-a.hits) || (b.n-a.n) || (b.rate-a.rate));
   const rows=out.filter(x=>x.n);
-  $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score = hit rate 80% + last 5 20%";
+  $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score shrinks 1/1 below 17/18";
   host.innerHTML=rows.map(x=>{
     const games=LOGS[x.p.id]||[];
     const log=games.map(g=>{
