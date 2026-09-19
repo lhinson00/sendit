@@ -383,6 +383,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .slip:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#3a2a18}
 .slip.live{border-color:#7a2218;box-shadow:0 0 0 1px #ff3b3b33,0 10px 28px #ff3b3b14}
 .slip.live:before{background:#ff3b3b;box-shadow:0 0 16px #ff3b3b}
+.slip.cover{border-color:#1d5a40;box-shadow:0 0 0 1px #3ee0a033,0 10px 28px #3ee0a014}
+.slip.cover:before{background:#3ee0a0;box-shadow:0 0 16px #3ee0a0}
+.slip.danger{border-color:#7a2218;box-shadow:0 0 0 1px #ff3b3b44,0 10px 24px #ff3b3b18}
+.slip.danger:before{background:#ff6a00;box-shadow:0 0 16px #ff6a00}
 .slip.hit{border-color:#1d5a40}
 .slip.hit:before{background:#3ee0a0}
 .slip.push:before{background:#c9c2b8}
@@ -393,7 +397,14 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .slip .kind{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-top:3px}
 .slip .tag{font-size:10px;letter-spacing:.18em;font-weight:800}
 .slip .tag.LIVE{color:#ff3b3b;animation:pulse 1.2s ease-in-out infinite}
-.slip .tag.HIT{color:#3ee0a0}.slip .tag.MISS{color:#ff8a8a}.slip .tag.PRE{color:var(--ember)}.slip .tag.PUSH{color:#c9c2b8}
+.slip .tag.COVER{color:#3ee0a0;animation:pulse 1.6s ease-in-out infinite}
+.slip .tag.DANGER{color:#ff6a00;animation:pulse 1s ease-in-out infinite}
+.slip .tag.HIT{color:#3ee0a0}.slip .tag.MISS{color:#ff8a8a}.slip .tag.PRE,.slip .tag.WAIT{color:var(--ember)}.slip .tag.PUSH{color:#c9c2b8}
+.slip .sit{font-size:12px;color:#cfc6b8;line-height:1.35;margin:0 0 6px}
+.slip .sit b{color:var(--orange)}
+.slip .board .has{color:var(--orange)}
+.slip.cover .barfill i{background:linear-gradient(90deg,#1d5a40,#3ee0a0)}
+.slip.danger .barfill i{background:linear-gradient(90deg,#ff3b3b,#ff6a00)}
 .slip .goal{font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.9;color:#fff;margin:10px 0 2px;display:flex;align-items:baseline;gap:8px}
 .slip .goal em{font-style:normal;font-size:22px;color:#8a8478}
 .slip .board{display:flex;justify-content:space-between;align-items:center;margin:8px 0 10px;padding:8px 10px;background:#08090d;border:1px solid #242018;border-radius:8px;font-size:12px}
@@ -684,6 +695,7 @@ function mapComp(ev, lg){
       broadcast: ((c.broadcasts||[])[0] && ((c.broadcasts||[])[0].names||[])[0]) || c.broadcast || "",
       lastPlay: ((c.situation||{}).lastPlay && (c.situation.lastPlay.text)) || "",
       down: (c.situation && (c.situation.downDistanceText || c.situation.shortDownDistanceText)) || "",
+      possId: String((c.situation && c.situation.possession) || ""),
       red: !!(c.situation && c.situation.isRedZone),
       balls: c.situation && c.situation.balls,
       strikes: c.situation && c.situation.strikes,
@@ -2001,31 +2013,54 @@ function evalTeamSlip(s, g){
   if(!Number.isFinite(as) || !Number.isFinite(hs)) return;
   s.game=g.away+" @ "+g.home;
   s.status=g.state;
+  s.awayScore=as; s.homeScore=hs;
+  s.detail=g.detail||"";
+  s.lastPlay=g.lastPlay||"";
+  s.down=g.down||"";
+  s.red=!!g.red;
+  s.possAway = g.possId && String(g.possId)===String(g.awayId);
+  s.possHome = g.possId && String(g.possId)===String(g.homeId);
+  const done = g.state==="post";
   if(s.kind==="spread"){
     const margin = s.side==="home" ? (hs-as) : (as-hs);
     s.live=margin;
-    s.hit = (margin + Number(s.line)) > 0;
-    s.push = (margin + Number(s.line)) === 0;
+    s.cover = margin + Number(s.line);
+    s.push = done && s.cover===0;
+    s.hit = done && s.cover>0;
   } else if(s.kind==="ou"){
     s.live=as+hs;
     const tot=as+hs, line=Number(s.line);
-    s.hit = s.side==="over" ? tot>line : tot<line;
-    s.push = tot===line;
+    s.cover = s.side==="over" ? (tot-line) : (line-tot);
+    s.push = done && tot===line;
+    s.hit = done && ((s.side==="over" && tot>line) || (s.side==="under" && tot<line));
   } else if(s.kind==="ml"){
+    const mine = s.side==="home" ? hs : as;
+    const theirs = s.side==="home" ? as : hs;
+    s.live = mine-theirs;
+    s.cover = mine-theirs;
     const win = s.side==="home" ? g.homeWin : g.awayWin;
-    s.live = win?1:0;
-    s.hit = g.state==="post" && !!win;
+    s.push = false;
+    s.hit = done && !!win;
+    if(done && !win && mine===theirs) s.push=true;
   }
 }
 async function tickSlip(){
   if(!SLIP.length) return;
-  const pool=window.LIVE_GAMES||GAMES||[];
+  window.SLIP_GAMES = window.SLIP_GAMES || {};
+  const lgs=[...new Set(SLIP.map(s=>s.lg||LEAGUE).filter(lg=>URLS[lg] && lg!=="tssaa"))];
+  for(const lg of lgs){
+    try{
+      const evs=await pullScoreboard(lg);
+      evs.flatMap(ev=>mapComp(ev,lg)).forEach(g=>{ window.SLIP_GAMES[String(g.eventId)]=g; if(g.fightId) window.SLIP_GAMES["f:"+g.fightId]=g; });
+    }catch(e){}
+  }
+  const pool=Object.values(window.SLIP_GAMES).concat(window.LIVE_GAMES||GAMES||[]);
   SLIP.forEach(s=>{
     if(!s.kind || s.kind==="player") return;
     const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
     if(g) evalTeamSlip(s,g);
   });
-  const games=pool.filter(g=>g.state==="in"||g.state==="post");
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g.state==="in"||g.state==="post");
   if(LEAGUE==="nfl"){
     for(const g of games){
       try{
@@ -2044,18 +2079,26 @@ async function tickSlip(){
   saveSlip();
   if($("eatPanel") && !$("eatPanel").hidden) paintSlip();
 }
+function slipMood(s){
+  if(s.push && s.status==="post") return "PUSH";
+  if(s.hit && s.status==="post") return "HIT";
+  if(s.status==="post") return "MISS";
+  if(s.status==="in"){
+    if(s.kind==="spread" || s.kind==="ou" || s.kind==="ml"){
+      if(s.cover>0) return "COVER";
+      if(s.cover<0) return "DANGER";
+      return "LIVE";
+    }
+    if(s.stat && s.live>=s.line) return "COVER";
+    return "LIVE";
+  }
+  if(s.stat && s.live>=s.line && s.status==="post") return "HIT";
+  return "WAIT";
+}
 function packTag(rows){
-  const tags=rows.map(s=>{
-    if(s.push) return "PUSH";
-    if(s.hit) return "HIT";
-    if(s.status==="in") return "LIVE";
-    if(s.status==="post") return "MISS";
-    if(s.stat && s.live>=s.line) return "HIT";
-    if(s.stat && s.status==="post") return "MISS";
-    return "PRE";
-  });
+  const tags=rows.map(slipMood);
   if(tags.includes("MISS")) return "MISS";
-  if(tags.includes("LIVE") || tags.includes("PRE")) return "LIVE";
+  if(tags.includes("DANGER") || tags.includes("LIVE") || tags.includes("COVER") || tags.includes("WAIT")) return "LIVE";
   if(tags.every(t=>t==="PUSH")) return "PUSH";
   if(tags.every(t=>t==="HIT" || t==="PUSH")) return "HIT";
   return "LIVE";
@@ -2063,7 +2106,7 @@ function packTag(rows){
 function paintSlip(){
   const host=$("eatList");
   if(!host) return;
-  const pool=window.LIVE_GAMES||GAMES||[];
+  const pool=Object.values(window.SLIP_GAMES||{}).concat(window.LIVE_GAMES||GAMES||[]);
   if(!SLIP.length){
     host.innerHTML="<p class='hint'>Board is empty. Add a Kitchen line or tap ATS / ML / O/U on a slate card.</p>";
     if($("eatMeta")) $("eatMeta").textContent="Live ticket board";
@@ -2071,43 +2114,58 @@ function paintSlip(){
     return;
   }
   const ranked=SLIP.slice().sort((a,b)=>{
-    const rk=s=>(s.status==="in"||s.tag==="LIVE")?0:(s.hit?1:(s.status==="pre"?2:3));
+    const rk=s=>s.status==="in"?0:(s.status==="post"?2:1);
     return rk(a)-rk(b);
   });
   const liveN=ranked.filter(s=>s.status==="in").length;
-  const hitN=ranked.filter(s=>s.hit && !s.push).length;
+  const coverN=ranked.filter(s=>s.status==="in" && s.cover>0).length;
+  const hitN=ranked.filter(s=>s.status==="post" && s.hit && !s.push).length;
   if($("eatMeta")) $("eatMeta").textContent=ranked.length+" on the board";
-  if($("eatPulse")) $("eatPulse").innerHTML=`<div><b>${liveN}</b>live</div><div><b>${hitN}</b>hit</div><div><b>${ranked.length-hitN-liveN}</b>wait</div>`;
+  if($("eatPulse")) $("eatPulse").innerHTML=`<div><b>${liveN}</b>live</div><div><b>${coverN}</b>cover</div><div><b>${hitN}</b>final</div>`;
   host.innerHTML=ranked.map(s=>{
     const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
-    if(g){ s.status=g.state; s.game=g.away+" @ "+g.home; }
-    const aAb=(g&&(g.awayAb||g.away))||"";
-    const hAb=(g&&(g.homeAb||g.home))||"";
-    const board = g
-      ? `<div class="board"><span>${aAb}</span><b>${g.awayScore||"–"}</b><span class="clock">${g.detail||g.state||""}</span><b>${g.homeScore||"–"}</b><span>${hAb}</span></div>`
-      : `<div class="board"><span>${s.game||"Waiting"}</span><span class="clock">${s.status||"pre"}</span></div>`;
-    let tag="PRE", goal="", need="", pct=6, kind=s.label||labelLine(s.stat,s.line)||"";
-    if(s.kind==="spread"||s.kind==="ou"||s.kind==="ml"){
-      tag=s.push?"PUSH":s.hit?"HIT":(s.status==="in"?"LIVE":s.status==="post"?"MISS":"PRE");
-      if(s.kind==="ou"){
-        goal=`${s.live||0}<em>/ ${s.line} ${s.side==="over"?"O":"U"}</em>`;
-        const gap=Number(s.line)-(s.live||0);
-        need = s.status==="pre" ? "Waiting on first score" : s.side==="over" ? (gap>0?gap+" to the number":"over the number") : (gap<0?"under the number":Math.abs(gap)+" under the number");
-        pct=Math.min(100, Math.round(((s.live||0)/Math.max(1,Number(s.line)))*100));
-      } else if(s.kind==="ml"){
-        goal=tag==="HIT"?"WIN":tag==="MISS"?"LOSS":"ML";
-        need=s.status==="post"?(s.hit?"Got the W":"Did not finish"):"Needs the W";
-        pct=s.status==="post"?100:(s.status==="in"?50:8);
-      } else {
-        const m=s.live;
-        goal=`${m>=0?"+":""}${m||0}<em>vs ${Number(s.line)>=0?"+":""}${s.line}</em>`;
-        const cover=(Number(m)+Number(s.line));
-        need=s.status==="pre"?"Waiting on kick":(cover>0?"Covering":cover===0?"On the number":Math.abs(cover)+" from covering");
-        pct=s.status==="pre"?8:Math.min(100, Math.max(12, 50+cover*4));
-      }
+    if(g) evalTeamSlip(s,g);
+    const tag=slipMood(s);
+    const aAb=(g&&(g.awayAb||g.away))||s.away||"";
+    const hAb=(g&&(g.homeAb||g.home))||s.home||"";
+    const as=g?g.awayScore:(s.awayScore!=null?s.awayScore:"–");
+    const hs=g?g.homeScore:(s.homeScore!=null?s.homeScore:"–");
+    const aBall = g && g.possId && String(g.possId)===String(g.awayId) ? " 🏈" : "";
+    const hBall = g && g.possId && String(g.possId)===String(g.homeId) ? "🏈 " : "";
+    const board = `<div class="board"><span class="${aBall?"has":""}">${aAb}${aBall}</span><b>${as}</b><span class="clock">${(g&&g.detail)||s.detail||s.status||""}</span><b>${hs}</b><span class="${hBall?"has":""}">${hBall}${hAb}</span></div>`;
+    let goal="", need="", pct=8, kind=s.label||labelLine(s.stat,s.line)||"";
+    const sitBits=[g&&g.down, g&&g.red?"RED ZONE":"", g&&g.lastPlay].filter(Boolean);
+    const sit = sitBits.length ? `<div class="sit">${g&&g.down?`<b>${g.down}</b> · `:""}${g&&g.lastPlay||""}</div>` : "";
+    if(s.kind==="ou"){
+      const tot=Number(s.live)||0, line=Number(s.line);
+      goal=`${tot}<em>/ ${line} ${s.side==="over"?"O":"U"}</em>`;
+      const gap=line-tot;
+      if(s.status==="pre") need="Waiting on first score";
+      else if(s.side==="over") need = gap>0 ? gap+" points to the number" : (gap===0?"On the number":Math.abs(gap)+" over");
+      else need = gap>0 ? tot+" on the board · "+gap+" of air" : (gap===0?"On the number":Math.abs(gap)+" over the under");
+      pct = s.side==="over"
+        ? Math.min(96, Math.round((tot/Math.max(0.5,line))*100))
+        : Math.max(6, Math.min(96, Math.round((gap>=0?(gap/Math.max(0.5,line))*100:4))));
+      if(s.status==="pre") pct=6;
+    } else if(s.kind==="ml"){
+      const lead=Number(s.live)||0;
+      goal = s.status==="post" ? (s.hit?"WIN":"LOSS") : (lead>0?("+"+lead):String(lead));
+      goal += `<em>ML</em>`;
+      if(s.status==="pre") need="Kick pending";
+      else if(s.status==="post") need=s.hit?"Got the W":"Did not finish";
+      else need = lead>0 ? "Leading by "+lead : lead<0 ? "Down "+Math.abs(lead) : "Tied · needs the W";
+      pct = s.status==="pre"?8:s.status==="post"?(s.hit?100:8):Math.max(8, Math.min(94, 50+lead*6));
+    } else if(s.kind==="spread"){
+      const m=Number(s.live)||0, cover=Number(s.cover);
+      goal=`${m>=0?"+":""}${m}<em>vs ${Number(s.line)>=0?"+":""}${s.line}</em>`;
+      if(s.status==="pre") need="Waiting on kick";
+      else if(s.status==="post") need=s.push?"Push":(s.hit?"Covered":"Did not cover");
+      else if(cover>0) need="Covering by "+cover;
+      else if(cover===0) need="On the number";
+      else need=Math.abs(cover)+" from covering";
+      pct = s.status==="pre"?8:Math.max(6, Math.min(94, 50+cover*4));
     } else {
       const hit=s.live>=s.line;
-      tag=hit?"HIT":(s.status==="in"||(g&&g.state==="in")?"LIVE":(g&&g.state==="post"?"MISS":"PRE"));
       goal=`${s.live||0}<em>/ ${s.line}</em>`;
       const left=Math.max(0, Number(s.line)-(s.live||0));
       need=hit?"Cleared the line":(s.status==="in"?left+" to go":labelLine(s.stat,s.line));
@@ -2120,6 +2178,7 @@ function paintSlip(){
       </div>
       <div class="goal">${goal}</div>
       ${board}
+      ${sit}
       <div class="need">${need}</div>
       <div class="barfill"><i style="width:${pct}%"></i></div>
       <button type="button" class="x" data-drop="${s.id}">Remove</button>
