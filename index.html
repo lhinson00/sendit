@@ -117,7 +117,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .lrow img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#1a120c}
 .lrow b{display:block;font-size:14px}
 .lrow em{font-style:normal;font-size:11px;color:var(--muted)}
-.lrow .val{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
+.lrow .val{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange);text-align:right;white-space:nowrap;min-width:52px}
 .vs{color:var(--muted);font-size:11px;font-weight:800}
 .linechip{margin-top:8px;color:var(--ember);font-size:13px}
 .hint{color:var(--muted);padding:0 var(--pad)}
@@ -1813,12 +1813,16 @@ async function openMlbStandings(){
   }
 }
 function prettyLead(name, value, display){
-  if(display!=null && display!=="") return String(display);
   const n=Number(value);
-  if(!Number.isFinite(n)) return value!=null?String(value):"—";
-  if(/avg|obp|slg|ops|whip|era|pct|percentage/i.test(name||"")) return n<1 ? n.toFixed(3).replace(/^0/,"") : n.toFixed(2);
-  if(Number.isInteger(n) || Math.abs(n-Math.round(n))<1e-6) return String(Math.round(n));
-  return n.toFixed(1);
+  const rate=/avg|obp|slg|ops|whip|era|pct|percentage|battingAverage|onBase|slug/i.test(name||"");
+  if(rate && Number.isFinite(n)) return n<1 ? n.toFixed(3).replace(/^0/,"") : n.toFixed(2);
+  const d=display!=null?String(display):"";
+  if(d && d.length<=8 && !/,/.test(d)) return d;
+  if(Number.isFinite(n)){
+    if(Number.isInteger(n) || Math.abs(n-Math.round(n))<1e-6) return String(Math.round(n));
+    return n.toFixed(1);
+  }
+  return d || "—";
 }
 async function openMlbLeaders(){
   const host=$("boardPanel");
