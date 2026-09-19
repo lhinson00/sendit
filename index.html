@@ -688,34 +688,40 @@ function renderFootball(g, sum){
   const cur = drives.current || {};
   const plays = cur.plays || [];
   const lastPlay = plays.slice(-1)[0] || {};
-  const spot = lastPlay.start || lastPlay.end || {};
-  const downTxt = spot.downDistanceText || (lastPlay.end&&lastPlay.end.downDistanceText) || spot.shortDownDistanceText || "";
+  const firstPlay = plays[0] || {};
+  const spotNow = lastPlay.end || lastPlay.start || {};
+  const spotSnap = lastPlay.start || lastPlay.end || {};
   const poss = (cur.team && (cur.team.abbreviation || cur.team.shortDisplayName)) || "";
   const possLogo = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss===aw?aLogo:poss===hm?hLogo:aLogo);
   const driveTxt = cur.description || "";
-  const pin = downTxt.match(/\bat\s+([A-Z]{2,4})\s+(\d{1,2})\b/) || downTxt.match(/\bat\s+(\d{1,2})\b/);
-  const toGo = Number(spot.distance);
   const goingRight = poss===aw;
-  const yardPct = y => 8 + (Math.max(0, Math.min(100, y))/100)*84;
-  let ballYard = null;
-  if(pin){
-    if(pin.length===3){
-      const ab=pin[1], yd=Number(pin[2]);
-      if(ab===aw) ballYard = yd;
-      else if(ab===hm) ballYard = 100-yd;
-      else ballYard = yd;
-    } else ballYard = Number(pin[1]);
-  }
-  const yte = Number(spot.yardsToEndzone);
-  if(ballYard==null && isFinite(yte)) ballYard = goingRight ? (100-yte) : yte;
+  const yardPct = y => 8 + (Math.max(0, Math.min(100, Number(y)))/100)*84;
+  const pinYard = (obj)=>{
+    if(!obj) return null;
+    const blob = [obj.possessionText, obj.downDistanceText, obj.shortDownDistanceText].filter(Boolean).join(" ");
+    const m = blob.match(/\b([A-Z]{2,4})\s+(\d{1,2})\b/) || blob.match(/\bat\s+(\d{1,2})\b/);
+    if(m && m[2]){
+      const ab=m[1], yd=Number(m[2]);
+      if(!isFinite(yd)) return null;
+      if(ab===aw) return yd;
+      if(ab===hm) return 100-yd;
+      return yd;
+    }
+    if(m && m[1] && !m[2]) return Number(m[1]);
+    const yte=Number(obj.yardsToEndzone);
+    if(!isFinite(yte)) return null;
+    return goingRight ? (100-yte) : yte;
+  };
+  const ballYard = pinYard(spotNow) ?? pinYard(spotSnap);
+  const toGoRaw = Number(spotNow.distance!=null?spotNow.distance:spotSnap.distance);
+  const toGo = (isFinite(toGoRaw) && toGoRaw>=0 && toGoRaw<=99) ? toGoRaw : null;
+  const downTxt = spotNow.downDistanceText || spotSnap.downDistanceText || spotNow.shortDownDistanceText || "";
   const fieldPct = ballYard==null ? null : yardPct(ballYard);
-  const fdYard = (ballYard!=null && isFinite(toGo)) ? (goingRight ? ballYard+toGo : ballYard-toGo) : null;
+  const fdYard = (ballYard!=null && toGo!=null) ? (goingRight ? ballYard+toGo : ballYard-toGo) : null;
   const fdPct = fdYard==null ? null : yardPct(fdYard);
-  const firstSpot = (plays[0]&&(plays[0].start||plays[0].end)) || cur.start || {};
-  const startYte = Number(firstSpot.yardsToEndzone);
-  const startYard = isFinite(startYte) ? (goingRight ? (100-startYte) : startYte) : null;
+  const startYard = pinYard(firstPlay.start) ?? pinYard(firstPlay.end) ?? pinYard(cur.start);
   const driveL = (startYard!=null && ballYard!=null) ? yardPct(Math.min(startYard, ballYard)) : null;
-  const driveW = (startYard!=null && ballYard!=null) ? Math.abs(yardPct(ballYard)-yardPct(startYard)) : null;
+  const driveW = (startYard!=null && ballYard!=null) ? Math.max(1.5, Math.abs(yardPct(ballYard)-yardPct(startYard))) : null;
   const arrow = goingRight ? "→" : "←";
   const live = stType.state==="in";
   const prevPlays = ((drives.previous||[]).slice(-1)[0]||{}).plays || [];
