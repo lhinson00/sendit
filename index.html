@@ -1184,21 +1184,23 @@ async function openPlayer(pid, name){
       for(const n of names){ const i=L.indexOf(n); if(i>=0) return i; }
       return -1;
     }
-    const isPitch = /pitch/i.test(st.displayName||"") || labels.includes("ERA") || labels.includes("IP");
-    const isPass = /pass/i.test(st.displayName||"") || labels.includes("CMP") || labels.includes("CMP%");
-    const isRush = /rush/i.test(st.displayName||"");
-    const isRec = /receiv/i.test(st.displayName||"");
+    const labsU = labels.map(x=>String(x).toUpperCase());
+    const has = (...xs)=> xs.some(x=>labsU.includes(String(x).toUpperCase()));
+    const posAb = String((((d.athlete||d.player||{}).position)||{}).abbreviation || ((d.athlete||{}).position) || "").toUpperCase();
+    const isPitch = LEAGUE==="mlb" && ( /pitch/i.test(st.displayName||"") || has("ERA","IP","SO") );
+    const isPass = has("CMP","CMP%","ATT","INT","RTG","QBR") || posAb==="QB" || /pass/i.test(st.displayName||"");
+    const isRush = has("CAR") || posAb==="RB" || /rush/i.test(st.displayName||"");
+    const isRec  = has("REC","TGTS","YAC") || /WR|TE/.test(posAb) || /receiv/i.test(st.displayName||"");
+    const isDef  = has("TOT","SOLO","TFL","SACK","PD") || /LB|DL|DE|DT|CB|S|DB/.test(posAb);
     const fromKit = LEAGUE==="nfl" && !!window.FROMKIT;
-    const kitPos = (ROSTER.find(p=>p.id===String(pid))||{}).pos || FILT.pos || "";
-    const leadKeys = fromKit
-      ? (kitPos==="QB" || isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
-        : kitPos==="RB" || isRush ? [["RUSH","YDS"],["TD","TD"],["REC","REC"]]
-        : [["YDS","YDS"],["REC","REC"],["TD","TD"]])
-      : isPass ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
-      : isRush ? [["YDS","YDS"],["TD","TD"],["AVG","AVG"]]
-      : isRec ? [["YDS","YDS"],["REC","REC"],["TD","TD"]]
-      : isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]]
-      : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]];
+    const kitPos = (ROSTER.find(p=>p.id===String(pid))||{}).pos || FILT.pos || posAb || "";
+    const fbKeys = isPass || kitPos==="QB" ? [["YDS","YDS"],["TD","TD"],["INT","INT"]]
+      : isRush || kitPos==="RB" ? [["YDS","YDS"],["TD","TD"],["CAR","CAR"]]
+      : isDef ? [["TOT","TOT"],["SACK","SACK"],["TFL","TFL"]]
+      : [["YDS","YDS"],["REC","REC"],["TD","TD"]];
+    const leadKeys = (LEAGUE==="mlb")
+      ? (isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]] : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]])
+      : fbKeys;
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
         const w=idx(labels,["W"]), l=idx(labels,["L"]);
