@@ -167,16 +167,19 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .rrow em{font-style:normal;color:var(--muted);font-size:11px}
 .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
 .fface{width:180px;height:180px;object-fit:cover;object-position:center 15%;display:block;background:#120e0c;border-radius:8px;margin:16px}
-.kitbar{display:flex;flex-wrap:wrap;gap:8px;padding:8px var(--pad) 4px}
-.kitbar select{background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:8px 10px;font:inherit}
-.krow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:12px;background:#101218;border:1px solid #2a241c}
-.krow b{display:block}
-.krow em{font-style:normal;color:var(--muted);font-size:12px}
-.khit{font-family:"Bebas Neue",sans-serif;font-size:28px;color:var(--orange)}
-.kpct{font-size:12px;color:var(--ember)}
-.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
-.chips i{font-style:normal;font-size:10px;padding:2px 4px;background:#1a120c;color:#8a8478}
-.chips i.hit{background:#2a1a08;color:var(--orange)}
+.kitbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px var(--pad) 6px}
+.kitbar label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);margin-bottom:4px}
+.kitbar select{width:100%;background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:10px;font:inherit}
+.krow{padding:14px;background:linear-gradient(180deg,#16120e,#101218);border:1px solid #2a241c}
+.krow .ktop{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start}
+.krow b{display:block;font-size:18px}
+.krow em{font-style:normal;color:var(--muted);font-size:12px;display:block;margin-top:4px}
+.khit{font-family:"Bebas Neue",sans-serif;font-size:34px;line-height:1;color:var(--orange);text-align:right}
+.kpct{font-size:12px;color:var(--ember);text-align:right}
+.glog{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:10px}
+.glog i{font-style:normal;font-size:10px;padding:6px 4px;background:#0e0f14;border:1px solid #242018;color:#8a8478;text-align:center}
+.glog i.hit{border-color:#5a3410;color:var(--orange);background:#1a1208}
+.glog i b{display:block;font-size:13px;color:inherit}
 .addline{border:1px solid var(--orange);background:#1a120c;color:var(--orange);padding:8px 10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:11px}
 .slip{padding:14px;background:#101218;border:1px solid #2a241c}
 .slip .goal{font-family:"Bebas Neue",sans-serif;font-size:26px;color:var(--orange)}
@@ -223,9 +226,9 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
   <div id="liveList" class="list"></div>
   <div id="kitPanel" hidden>
     <div class="kitbar">
-      <select id="kPos"><option>WR</option><option>TE</option><option>RB</option><option>QB</option></select>
-      <select id="kStat"></select>
-      <select id="kLine"></select>
+      <div><label>Position</label><select id="kPos"><option>WR</option><option>TE</option><option>RB</option><option>QB</option></select></div>
+      <div><label>Stat</label><select id="kStat"></select></div>
+      <div><label>Line · last 18</label><select id="kLine"></select></div>
     </div>
     <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
     <div id="kitList" class="list"></div>
@@ -1121,7 +1124,7 @@ function parseLog(d){
 }
 async function loadLog(pid){
   if(LOGS[pid] && LOGS[pid].length>=10) return LOGS[pid];
-  const qs=["","?season=2025","?season=2024"];
+  const qs=["","?season=2025"];
   const seen=new Set();
   const rows=[];
   for(const q of qs){
@@ -1151,14 +1154,17 @@ function paintKitRows(out, host){
   $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score = hit rate 80% + last 5 20%";
   host.innerHTML=rows.map(x=>{
     const games=LOGS[x.p.id]||[];
-    const chips=games.map(g=>{
+    const log=games.map(g=>{
       const v=valOf(g, FILT.stat);
-      return "<i class='"+(v>=FILT.line?"hit":"miss")+"'>"+(g.opp?g.opp+" ":"")+v+"</i>";
+      return "<i class='"+(v>=FILT.line?"hit":"miss")+"'><b>"+v+"</b>"+(g.opp||"—")+"</i>";
     }).join("");
     return `<div class="krow">
-      <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} on ${labelLine(FILT.stat,FILT.line)} · L5 ${x.l5h}/${x.l5n}</em><div class="chips">${chips}</div></div>
-      <div><div class="khit">${x.score}</div><div class="kpct">${x.hits}/${x.n}</div></div>
-      <button type="button" class="addline" data-add="${x.p.id}">Add</button>
+      <div class="ktop">
+        <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} on ${labelLine(FILT.stat,FILT.line)} · L5 ${x.l5h}/${x.l5n} · score ${x.score}</em></div>
+        <div><div class="khit">${x.score}</div><div class="kpct">${x.hits}/${x.n}</div></div>
+        <button type="button" class="addline" data-add="${x.p.id}">Add</button>
+      </div>
+      <div class="glog">${log}</div>
     </div>`;
   }).join("") || "<p class='hint'>Still loading logs…</p>";
   host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
