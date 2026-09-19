@@ -698,6 +698,38 @@ function show(name){
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
   window.scrollTo(0,0);
   if(window.trackUse) window.trackUse("view", name);
+  savePlace();
+}
+function savePlace(){
+  try{
+    const eat=!!($("eatPanel")&&!$("eatPanel").hidden);
+    const view = $("viewGame")&&!$("viewGame").hidden ? "game"
+      : $("viewPlayer")&&!$("viewPlayer").hidden ? "player"
+      : $("viewLive")&&!$("viewLive").hidden ? "live"
+      : "home";
+    sessionStorage.setItem("saucePlace", JSON.stringify({
+      view, league:LEAGUE, tab:window.BOARD||"", open:OPEN||"", eat
+    }));
+  }catch(e){}
+}
+async function restorePlace(){
+  let p=null;
+  try{ p=JSON.parse(sessionStorage.getItem("saucePlace")||"null"); }catch(e){}
+  if(!p || !p.view || p.view==="home"){ show("home"); return; }
+  if(p.league && typeof loadLeague==="function"){
+    await loadLeague(p.league);
+    if(p.eat){ showEat({keepFrom:true}); return; }
+    if(p.tab==="kit" && LEAGUE==="nfl") nflTab("kit");
+    else if(p.tab==="lead" && LEAGUE==="nfl") nflTab("lead");
+    else if(p.tab==="stand" && LEAGUE==="nfl") nflTab("stand");
+    else if(p.tab && LEAGUE==="cfb" && p.tab!=="slate") cfbTab(p.tab);
+    else if(p.tab && LEAGUE==="mlb" && p.tab!=="slate") mlbTab(p.tab);
+    if(p.view==="game" && p.open && typeof openGame==="function"){
+      openGame(p.open);
+    }
+    return;
+  }
+  show("home");
 }
 function face(comp, lg){
   if(lg==="ufc" && comp && comp.id)
@@ -4021,7 +4053,7 @@ $("toSlate").onclick = ()=>{
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
-show("home");
+restorePlace();
 (function usageEngine(){
   const NS="lhinson00";
   const A="https://abacus.jasoncameron.dev";
