@@ -1045,7 +1045,8 @@ function fillKitControls(){
   st.innerHTML=opts.map(o=>"<option value='"+o[0]+"'"+(o[0]===FILT.stat?" selected":"")+">"+o[1]+"</option>").join("");
   const lines=LINES[FILT.stat]||[1];
   if(!lines.includes(FILT.line)) FILT.line=lines[0];
-  ln.innerHTML=lines.map(n=>"<option"+(n===FILT.line?" selected":"")+">"+n+(FILT.stat==="rec"?"+ rec":FILT.stat.indexOf("Td")>=0||FILT.stat==="int"?"+":"+ yds")+"</option>").join("");
+  const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",passTd:"+ passing TD",int:"+ interceptions"}[FILT.stat]||"+";
+  ln.innerHTML=lines.map(n=>"<option value='"+n+"'"+(n===FILT.line?" selected":"")+">"+n+suffix+"</option>").join("");
 }
 function valOf(row, stat){
   const names=row.names||[], stats=row.stats||[];
@@ -1097,22 +1098,44 @@ async function loadRosters(){
   }
   return ROSTER;
 }
-async function loadLog(pid){
-  if(LOGS[pid]) return LOGS[pid];
-  const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+pid+"/gamelog",{cache:"no-store"});
-  if(!res.ok){ LOGS[pid]=[]; return []; }
-  const d=await res.json();
+function parseLog(d){
   const names=d.names||[];
   const evMeta=d.events||{};
-  const cats=((d.seasonTypes||[])[0]||{}).categories||[];
   const rows=[];
-  cats.forEach(c=>{
-    (c.events||[]).forEach(ev=>{
-      const meta=evMeta[ev.eventId]||evMeta[String(ev.eventId)]||{};
-      const opp=(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||meta.gameName||"";
-      rows.push({id:ev.eventId, stats:ev.stats||[], names:names, opp:opp, week:meta.week||""});
+  (d.seasonTypes||[]).forEach(st=>{
+    if(/preseason/i.test(st.displayName||"")) return;
+    (st.categories||[]).forEach(c=>{
+      (c.events||[]).forEach(ev=>{
+        const meta=evMeta[ev.eventId]||evMeta[String(ev.eventId)]||{};
+        let opp=(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||"";
+        if(!opp){
+          const nm=meta.shortName||meta.name||"";
+          const parts=nm.split(/ vs | @ | at /i);
+          opp=(parts[1]||parts[0]||"").slice(0,14);
+        }
+        rows.push({id:String(ev.eventId), stats:ev.stats||[], names:names, opp:opp, season:st.displayName||""});
+      });
     });
   });
+  return rows;
+}
+async function loadLog(pid){
+  if(LOGS[pid] && LOGS[pid].length>=10) return LOGS[pid];
+  const qs=["","?season=2025","?season=2024"];
+  const seen=new Set();
+  const rows=[];
+  for(const q of qs){
+    try{
+      const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+pid+"/gamelog"+q,{cache:"no-store"});
+      if(!res.ok) continue;
+      parseLog(await res.json()).forEach(r=>{
+        if(seen.has(r.id)) return;
+        seen.add(r.id);
+        rows.push(r);
+      });
+    }catch(e){}
+    if(rows.length>=18) break;
+  }
   LOGS[pid]=rows.slice(-18);
   return LOGS[pid];
 }
