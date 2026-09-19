@@ -610,12 +610,20 @@ function paint(games){
       </div>`;
     };
     if(LEAGUE==="mlb"){
+      const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
       const buckets={};
       shown.forEach(g=>{
         const k=chiDay(g.start)||"other";
+        if(k && k>today) return;
         (buckets[k]=buckets[k]||[]).push(g);
       });
-      const keys=Object.keys(buckets).sort((a,b)=>b.localeCompare(a));
+      const keys=Object.keys(buckets).sort((a,b)=>{
+        const rank=k=>k===today?0:k<today?1:2;
+        const ra=rank(a), rb=rank(b);
+        if(ra!==rb) return ra-rb;
+        if(ra===1) return b.localeCompare(a);
+        return a.localeCompare(b);
+      });
       host.innerHTML=keys.map(k=>`<div class="daycut">${dayCut(k)}</div>`+buckets[k].map(cardHtml).join("")).join("");
     } else {
       host.innerHTML=shown.map(cardHtml).join("");
@@ -643,7 +651,7 @@ function boardDates(){
   const fmt=d=>d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
   const now=new Date();
   const out=[];
-  for(let i=-4;i<=1;i++) out.push(fmt(new Date(now.getTime()+i*86400000)));
+  for(let i=-3;i<=0;i++) out.push(fmt(new Date(now.getTime()+i*86400000)));
   return out;
 }
 function chiDay(iso){
@@ -653,8 +661,10 @@ function chiDay(iso){
 function dayCut(k){
   const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
   const yest=new Date(Date.now()-86400000).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
-  if(k===today) return "Today";
+  if(k===today) return "Today · "+new Date().toLocaleDateString("en-US",{timeZone:"America/Chicago",weekday:"long"});
   if(k===yest) return "Yesterday";
+  const tmr=new Date(Date.now()+86400000).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
+  if(k===tmr) return "Tomorrow";
   try{
     const [y,m,d]=k.split("-").map(Number);
     return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"});
