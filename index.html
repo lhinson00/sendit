@@ -644,7 +644,9 @@ function renderFootball(g, sum){
     return `<div class="clip"><video controls preload="none" poster="${thumb}" src="${src}"></video><p>${title}</p></div>`;
   }).join("");
   const tab = window.FTAB || "live";
-  $("gameRoom").innerHTML = `
+  const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
+  if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
+  $("gameBody").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
       <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
       <div class="castline">
@@ -691,17 +693,21 @@ function renderFootball(g, sum){
         </div>
       </div>
       <div class="fieldwrap">
-        ${clips?`<p class="hint">Scoring highlights</p><div class="clips">${clips}</div>`:""}
         <p class="hint">Scoring plays</p>
         ${scoreList||"<p class='hint'>No scores yet.</p>"}
       </div>
     </div>
     <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
     <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leads||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
+  if(!playing){
+    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Scoring highlights</p><div class="clips">${clips}</div></div>` : "";
+  }
+  $("clipMount").hidden = tab!=="live";
   document.querySelectorAll("[data-ftab]").forEach(b=>b.onclick=()=>{
     window.FTAB=b.dataset.ftab;
     document.querySelectorAll("[data-ftab]").forEach(x=>x.classList.toggle("on", x===b));
     document.querySelectorAll(".fsec").forEach(s=>s.hidden = s.dataset.sec!==window.FTAB);
+    if($("clipMount")) $("clipMount").hidden = window.FTAB!=="live";
   });
 }
 function renderGame(g, sum){
