@@ -91,13 +91,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .sgrid div{background:#101218;border:1px solid #2a241c;padding:10px 8px}
 .sgrid i{display:block;font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .sgrid b{display:block;font-family:"Bebas Neue",sans-serif;font-size:24px;color:#fff;margin-top:2px}
-.ptable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 18px;table-layout:fixed}
-.ptable th{text-align:right;font-size:10px;letter-spacing:.08em;color:var(--muted);padding:8px 4px;border-bottom:1px solid #2a241c;white-space:nowrap}
-.ptable th:first-child,.ptable td:first-child{text-align:left;width:22%}
+.ptable{width:100%;border-collapse:collapse;font-size:12px;margin:0 0 18px;table-layout:auto}
+.ptable th{text-align:right;font-size:10px;letter-spacing:.08em;color:var(--muted);padding:8px 6px;border-bottom:1px solid #2a241c;white-space:nowrap}
+.ptable th:first-child,.ptable td:first-child{text-align:left;min-width:128px;max-width:42%;padding-right:12px}
 .ptable td{padding:8px 4px;border-bottom:1px solid #1c1814;color:#e8e0d4;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ptable tr.tot td{color:var(--orange);font-weight:700}
 .ptable .nm{display:flex;flex-direction:column}
-.ptable .nm b{font-size:13px}
+.ptable .nm b{font-size:12px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;display:block}
 .ptable .nm em{font-size:10px;color:var(--muted)}
 .tlead{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 18px}
 @media(max-width:640px){.tlead{grid-template-columns:repeat(2,1fr)}.ptable{font-size:11px}}
@@ -1811,6 +1811,14 @@ async function openMlbStandings(){
   }catch(e){
     host.innerHTML="<p class='hint'>Standings missed. "+(e.message||"")+"</p>";
   }
+}
+function prettyLead(name, value, display){
+  if(display!=null && display!=="") return String(display);
+  const n=Number(value);
+  if(!Number.isFinite(n)) return value!=null?String(value):"—";
+  if(/avg|obp|slg|ops|whip|era|pct|percentage/i.test(name||"")) return n<1 ? n.toFixed(3).replace(/^0/,"") : n.toFixed(2);
+  if(Number.isInteger(n) || Math.abs(n-Math.round(n))<1e-6) return String(Math.round(n));
+  return n.toFixed(1);
 }
 async function openMlbLeaders(){
   const host=$("boardPanel");
