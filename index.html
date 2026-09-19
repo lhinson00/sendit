@@ -136,6 +136,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .field .ball{position:absolute;top:8px;width:12px;height:30px;margin-left:-6px;background:var(--orange);border-radius:2px;box-shadow:0 0 10px var(--orange)}
 .field .fd{position:absolute;top:0;bottom:0;width:2px;background:#ffe56a;box-shadow:0 0 8px #ffe56a}
 .field .dir{position:absolute;top:16px;font-size:16px;color:#ffe56a;text-shadow:0 0 6px #000}
+.field .yn{position:absolute;bottom:2px;transform:translateX(-50%);font-size:9px;letter-spacing:.04em;color:#d8f0d8;font-family:"Bebas Neue",sans-serif;text-shadow:0 1px 2px #000}
 .lastbig{margin:0 var(--pad) 12px;padding:14px 16px;background:linear-gradient(90deg,#2a1408,#101218);border:1px solid var(--orange)}
 .lastbig span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin-bottom:6px}
 .lastbig p{margin:0;font-size:18px;line-height:1.35;font-weight:700}
@@ -520,7 +521,7 @@ function renderFootball(g, sum){
         <tr><td>${aw}</td><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}<td>${as}</td></tr>
         <tr><td>${hm}</td><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}<td>${hs}</td></tr>
       </table>
-      ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL"></div><div class="ezR"></div>${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<div class="ball" style="left:${fieldPct}%"></div><div class="dir" style="left:calc(${fieldPct}% + 10px)">→</div></div><p class="hint">${poss||""} going right toward the end zone${downTxt?(" · "+downTxt):""}${driveTxt?(" · "+driveTxt):""}</p>`:""}
+      ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL"></div><div class="ezR"></div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<div class="ball" style="left:${fieldPct}%"></div><div class="dir" style="left:calc(${fieldPct}% + 10px)">→</div></div><p class="hint">${poss||""} → ${downTxt||""}${driveTxt?(" · "+driveTxt):""}</p>`:""}
       ${poss||downTxt?`<div class="drivechip">${poss?("<b>"+poss+"</b> has it"):""}${downTxt?(" · "+downTxt):""}${driveTxt?(" · "+driveTxt):""}</div>`:""}
       ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
     </div>
