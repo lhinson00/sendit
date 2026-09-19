@@ -11,6 +11,19 @@
 *{box-sizing:border-box}html,body{margin:0;background:#05060a;color:var(--text);font-family:Manrope,system-ui,sans-serif}
 body{min-height:100dvh;width:min(1120px,100%);margin:0 auto}
 .top{padding:var(--pad);background:linear-gradient(90deg,#2a1408,#05060a 55%);border-bottom:2px solid var(--orange)}
+.scflash{position:fixed;left:0;right:0;bottom:0;z-index:80;display:none;pointer-events:none}
+.scflash.show{display:block;animation:scdock .45s cubic-bezier(.16,1,.3,1) both}
+.scflash .scwipe{position:absolute;left:0;right:0;top:-4px;height:4px;background:linear-gradient(90deg,#ff2a2a,var(--orange),var(--ember));transform-origin:left center;animation:scwipe .55s ease-out both}
+.scflash .scbug{display:flex;align-items:center;gap:10px;padding:8px 16px 0;background:linear-gradient(90deg,#9b0b0b,#d31212 28%,#1a0505 28.1%,#0a0a0c)}
+.scflash .scnet{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.16em;color:#fff;text-shadow:0 1px 0 #5a0000}
+.scflash .sckind{margin-left:auto;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#ffd0a8;font-weight:800}
+.scflash .scmain{padding:10px 16px 18px;background:linear-gradient(105deg,transparent 0 12px,#ff2a2a 12px 16px,transparent 16px),repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 8px,transparent 8px 16px),linear-gradient(180deg,#140808,#07070a 55%,#050506);border-top:1px solid rgba(255,80,40,.45);box-shadow:0 -16px 40px rgba(0,0,0,.45)}
+.scflash .scscore{margin:0;font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,8vw,44px);letter-spacing:.02em;line-height:.9;color:#fff}
+.scflash .scline{margin:8px 0 0;color:#e8d7c6;font-size:14px;line-height:1.35;max-width:36em}
+@keyframes scdock{from{transform:translateY(110%);opacity:0}to{transform:none;opacity:1}}
+@keyframes scwipe{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.scflash.out{animation:scout .35s ease-in both}
+@keyframes scout{to{transform:translateY(110%);opacity:0}}
 .brand{display:flex;align-items:center;gap:10px;cursor:pointer}
 .mark{width:36px;height:36px;border-radius:8px;background:var(--orange);color:#120800;font-family:"Bebas Neue",sans-serif;font-size:22px;display:grid;place-items:center}
 h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
@@ -50,7 +63,8 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .meta{display:none}
 .list{display:grid;gap:10px;padding:0 var(--pad) 24px}
 .gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
-.gcard.live{border-color:#ff3b3b;background:#160e0c}
+.gcard.live{border-color:#3ee0a0;background:#0c1612;box-shadow:inset 3px 0 0 #3ee0a0}
+.gcard.heat,.ufight.heat{border-color:#ff3b3b;background:linear-gradient(180deg,#2a0c0c,#101218);box-shadow:inset 3px 0 0 #ff3b3b}
 .gcard.pin{border-color:var(--orange);box-shadow:inset 3px 0 0 var(--orange)}
 .star{border:0;background:0;color:#5c564e;font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
 .star.on{color:var(--orange)}
@@ -72,7 +86,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ufc-row em{display:block;font-style:normal;font-size:11px;color:var(--muted)}
 .ufc-row .vs{align-self:center;font-family:"Bebas Neue",sans-serif;letter-spacing:.12em;color:var(--ember);font-size:18px;padding-top:28px;text-align:center}
 .ufight{position:relative;overflow:hidden}
-.ufight.live{border-color:#ff3b3b;background:linear-gradient(180deg,#2a0c0c,#101218)}
+.ufight.live{border-color:#3ee0a0;background:#0c1612;box-shadow:inset 3px 0 0 #3ee0a0}
 .uhero{margin:0 0 12px;padding:16px 14px 14px;border-radius:14px;border:1px solid rgba(255,122,24,.45);background:linear-gradient(160deg,#3a1608 0%,#120c0a 55%,#05060a 100%)}
 .uhero .kicker{margin:0 0 6px}
 .uhero h2{margin:0 0 6px;font-family:"Bebas Neue",sans-serif;font-size:clamp(28px,8vw,44px);line-height:.95;letter-spacing:.02em}
@@ -543,6 +557,17 @@ table.mlstbl td.l{text-align:left;white-space:normal}
     </div>
   </div>
 </header>
+<div class="scflash" id="scFlash" hidden>
+  <div class="scwipe"></div>
+  <div class="scbug">
+    <span class="scnet">SPORTS SAUCE</span>
+    <span class="sckind" id="scKicker">Let's Eat</span>
+  </div>
+  <div class="scmain">
+    <div class="scscore" id="scTitle"></div>
+    <div class="scline" id="scBody"></div>
+  </div>
+</div>
 
 <section id="viewHome">
   <div class="hero">
@@ -738,6 +763,7 @@ function mapComp(ev, lg){
       awayScore: scoreOf(away), homeScore: scoreOf(home),
       awayRec: rec(away), homeRec: rec(home),
       awayWin: !!away.winner, homeWin: !!home.winner,
+      lg: lg,
       venue: (c.venue && (c.venue.fullName||c.venue.displayName)) || "",
       card: ev.shortName || ev.name || "",
       format: (c.format && c.format.regulation && (c.format.regulation.displayName || (c.format.regulation.periods? (c.format.regulation.periods+" rd"):""))) || "",
@@ -767,6 +793,18 @@ function mapComp(ev, lg){
     });
   });
   return rows;
+}
+function isHeat(g){
+  if(!g || g.state!=="in") return false;
+  if(g.red) return true;
+  const d=String(g.detail||"")+" "+String(g.down||"")+" "+String(g.lastPlay||"");
+  if(/\b(9th|top 9|bot(?:tom)? 9|extra inn)/i.test(d)) return true;
+  if(/\b(4th|q4|4th qtr)\b/i.test(d) && /\b([01]:\d{2}|2:00)\b/.test(d)) return true;
+  const rnd=Number((d.match(/round\s*(\d)/i)||[])[1]||0);
+  const scheduled=Number(g.rounds)||0;
+  if((g.lg==="ufc"||LEAGUE==="ufc") && scheduled && rnd>=scheduled) return true;
+  if((g.lg==="ufc"||LEAGUE==="ufc") && /round\s*5|\br5\b/i.test(d)) return true;
+  return false;
 }
 function when(g){
   if(g.state==="in") return "LIVE · " + (g.detail||"");
@@ -941,7 +979,7 @@ function paint(games){
         sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
       }
       return `
-      <div class="gcard${live?" live":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+      <div class="gcard${live?" live":""}${isHeat(g)?" heat":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
           <div class="nm">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
@@ -1755,7 +1793,7 @@ function showUfcLineup(card, games){
     const live=g.state==="in";
     const done=g.state==="post"||g.awayWin||g.homeWin;
     return `
-    <div class="gcard ufight${live?" live":""}${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
+    <div class="gcard ufight${live?" live":""}${isHeat(g)?" heat":""}${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
       <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?"FINAL":when(g))}</span></div>
       <div class="ufc-row">
         <div class="f">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}${g.awayWin?" · W":""}</em></div>
@@ -2196,9 +2234,82 @@ function evalTeamSlip(s, g){
     if(done && !win && mine===theirs) s.push=true;
   }
 }
+let ALERT_SEED = false;
+let ALERT_Q = [];
+let ALERT_SHOWING = false;
+function flashAlert(msg){
+  ALERT_Q.push(msg);
+  pumpAlert();
+}
+function pumpAlert(){
+  if(ALERT_SHOWING || !ALERT_Q.length) return;
+  const msg=ALERT_Q.shift();
+  const box=$("scFlash");
+  if(!box){ ALERT_SHOWING=false; return; }
+  $("scKicker").textContent = msg.kicker||"Let's Eat";
+  $("scTitle").textContent = msg.title||"";
+  $("scBody").textContent = msg.body||"";
+  box.hidden=false;
+  box.classList.remove("out","show");
+  void box.offsetWidth;
+  box.classList.add("show");
+  ALERT_SHOWING=true;
+  setTimeout(()=>{
+    box.classList.add("out");
+    setTimeout(()=>{
+      box.classList.remove("show","out");
+      box.hidden=true;
+      ALERT_SHOWING=false;
+      if(ALERT_Q.length) setTimeout(pumpAlert, 280);
+    }, 360);
+  }, 4800);
+}
+function findSlipGame(s, pool){
+  return pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
+}
+function alertFromSlip(s, g, prev){
+  if(!ALERT_SEED) return;
+  if(s.pid){
+    const before=Number(prev.live)||0, now=Number(s.live)||0;
+    if(now>before){
+      flashAlert({
+        kicker: (s.team||"NFL")+" · "+labelLine(s.stat,s.line),
+        title: s.name+" · "+now+" / "+s.line,
+        body: (now>=s.line?"Line cleared. ":"")+(s.game||"")
+      });
+    }
+    return;
+  }
+  if(s.fightId || s.lg==="ufc"){
+    if(g && g.state==="post" && prev.state!=="post"){
+      const winner = g.awayWin?g.away:(g.homeWin?g.home:"Final");
+      flashAlert({
+        kicker:"UFC · "+(s.label||"ML"),
+        title: winner+" wins",
+        body: (g.detail||"Fight over")+" · "+(g.away||"")+" vs "+(g.home||"")
+      });
+    }
+    return;
+  }
+  if(!(s.kind==="spread"||s.kind==="ou"||s.kind==="ml")) return;
+  const oldT=(Number(prev.as)||0)+(Number(prev.hs)||0);
+  const as=Number(g&&g.awayScore), hs=Number(g&&g.homeScore);
+  if(!Number.isFinite(as)||!Number.isFinite(hs)) return;
+  if(as+hs>oldT){
+    flashAlert({
+      kicker:(s.label||"TICKET")+" · "+(s.name||""),
+      title: (g.awayAb||g.away)+" "+as+" — "+hs+" "+(g.homeAb||g.home),
+      body: g.lastPlay||g.detail||"Score"
+    });
+  }
+}
 async function tickSlip(){
   if(!SLIP.length) return;
   window.SLIP_GAMES = window.SLIP_GAMES || {};
+  const snap={};
+  SLIP.forEach(s=>{
+    snap[s.id]={live:s.live, as:s.awayScore, hs:s.homeScore, state:s.status, detail:s.detail};
+  });
   const lgs=[...new Set(SLIP.map(s=>s.lg||LEAGUE).filter(lg=>URLS[lg] && lg!=="tssaa"))];
   for(const lg of lgs){
     try{
@@ -2208,26 +2319,43 @@ async function tickSlip(){
   }
   const pool=Object.values(window.SLIP_GAMES).concat(window.LIVE_GAMES||GAMES||[]);
   SLIP.forEach(s=>{
-    if(!s.kind || s.kind==="player") return;
-    const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
+    if(s.pid) return;
+    const g=findSlipGame(s, pool);
     if(g) evalTeamSlip(s,g);
+    alertFromSlip(s, g, snap[s.id]||{});
   });
-  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g.state==="in"||g.state==="post");
-  if(LEAGUE==="nfl"){
-    for(const g of games){
+  const playerSlips=SLIP.filter(s=>s.pid);
+  if(playerSlips.length){
+    const ids=[...new Set(playerSlips.map(s=>String(s.eventId||"")).filter(Boolean))];
+    let nflGames=pool.filter(g=>g.lg==="nfl" && (g.state==="in"||g.state==="post"));
+    if(!nflGames.length){
+      try{
+        const evs=await pullScoreboard("nfl");
+        nflGames=evs.flatMap(ev=>mapComp(ev,"nfl")).filter(g=>g.state==="in"||g.state==="post");
+        nflGames.forEach(g=>window.SLIP_GAMES[String(g.eventId)]=g);
+      }catch(e){}
+    }
+    const want = ids.length ? nflGames.filter(g=>ids.includes(String(g.eventId))) : nflGames;
+    for(const g of want){
       try{
         const res=await fetch(SUM.nfl(g.eventId),{cache:"no-store"});
         if(!res.ok) continue;
         const sum=await res.json();
-        SLIP.forEach(s=>{
-          if(s.kind && s.kind!=="player") return;
-          if(!s.pid) return;
+        playerSlips.forEach(s=>{
+          if(s.eventId && String(s.eventId)!==String(g.eventId)){
+            if(!(g.awayAb===s.team||g.homeAb===s.team)) return;
+          } else if(!s.eventId && !(g.awayAb===s.team||g.homeAb===s.team)) return;
           const v=liveStatFromBox(sum, s.pid, s.stat);
-          if(v!=null){ s.live=v; s.game=g.away+" @ "+g.home; s.eventId=s.eventId||g.eventId; s.lg=s.lg||"nfl"; s.status=g.state; }
+          if(v!=null){
+            const prev=snap[s.id]||{};
+            s.live=v; s.game=g.away+" @ "+g.home; s.eventId=s.eventId||g.eventId; s.lg=s.lg||"nfl"; s.status=g.state;
+            alertFromSlip(s, g, prev);
+          }
         });
       }catch(e){}
     }
   }
+  ALERT_SEED = true;
   saveSlip();
   if($("eatPanel") && !$("eatPanel").hidden) paintSlip();
 }
