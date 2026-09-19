@@ -565,6 +565,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
   </div>
   <div class="scmain">
     <div class="scscore" id="scTitle"></div>
+    <div class="scnums" id="scNums"></div>
     <div class="scline" id="scBody"></div>
   </div>
 </div>
@@ -814,6 +815,9 @@ function isTwoMinute(g){
 function scoreboard(g){
   return (g.away||g.awayAb||"")+" "+nScore(g.awayScore)+", "+(g.home||g.homeAb||"")+" "+nScore(g.homeScore);
 }
+function scorebug(g){
+  return (g.awayAb||g.away||"")+" "+nScore(g.awayScore)+"  —  "+nScore(g.homeScore)+" "+(g.homeAb||g.home||"");
+}
 function scorerName(g, prev){
   const da=nScore(g.awayScore)-nScore(prev&&prev.as);
   const dh=nScore(g.homeScore)-nScore(prev&&prev.hs);
@@ -826,24 +830,40 @@ function scorerName(g, prev){
 function playKind(text, g, prev){
   const t=String(text||"");
   const lg=g.lg||LEAGUE;
+  if(/extra point/i.test(t)) return "EXTRA POINT GOOD";
+  if(/two-point|2-point/i.test(t)) return "2-PT GOOD";
+  if(/field goal/i.test(t)) return "FG GOOD";
   if(/touchdown|\bTD\b/i.test(t)) return "TOUCHDOWN";
-  if(/field goal.*good|fg good|field goal is good/i.test(t)) return "FIELD GOAL";
   if(/\bsafety\b/i.test(t)) return "SAFETY";
-  if(/extra point/i.test(t)) return "PAT";
-  if(/two-point|2-point/i.test(t)) return "2-PT";
   if(/grand slam/i.test(t)) return "GRAND SLAM";
-  if(/home run|\bHR\b|solos? to/i.test(t)) return "HOME RUN";
-  if(lg==="mlb" && /scores|RBI/i.test(t)) return "RUN";
-  if((lg==="mls") && /\bgoal\b/i.test(t)) return "GOAL";
-  if(/knockout|\bKO\b|\bTKO\b|submission|decision/i.test(t)) return "FINISH";
+  if(/home run|\bHR\b/i.test(t)) return "HR";
+  if(lg==="mlb" && /scores|RBI|run scored/i.test(t)) return "RUN SCORED";
+  if(lg==="mls" && /\bgoal\b/i.test(t)) return "GOAL";
+  if(/\bdraw\b/i.test(t)) return "DRAW";
+  if(/\bdecision\b|\bUD\b|\bSD\b|\bMD\b/i.test(t)) return "DECISION";
+  if(/knockout|\bKO\b|\bTKO\b/i.test(t)) return "KNOCKOUT";
+  if(/submission|\bSUB\b/i.test(t)) return "SUBMISSION";
   if(prev){
     const da=nScore(g.awayScore)-nScore(prev.as), dh=nScore(g.homeScore)-nScore(prev.hs);
-    if(lg==="mlb" && (da||dh)) return "RUN";
-    if((lg==="nfl"||lg==="cfb") && (da===3||dh===3)) return "FIELD GOAL";
-    if((lg==="nfl"||lg==="cfb") && (da>=6||dh>=6)) return "TOUCHDOWN";
-    if((lg==="nfl"||lg==="cfb") && (da===2||dh===2)) return "SAFETY";
+    const pts=Math.max(da,dh);
+    if(lg==="mlb" && pts) return "RUN SCORED";
+    if((lg==="nfl"||lg==="cfb") && pts===1) return "EXTRA POINT GOOD";
+    if((lg==="nfl"||lg==="cfb") && pts===3) return "FG GOOD";
+    if((lg==="nfl"||lg==="cfb") && pts>=6) return "TOUCHDOWN";
+    if((lg==="nfl"||lg==="cfb") && pts===2) return /two-point/i.test(t)?"2-PT GOOD":"SAFETY";
   }
   return "SCORE";
+}
+function fightKind(g){
+  const d=String(g.detail||"")+" "+String(g.lastPlay||"");
+  if(/\bdraw\b/i.test(d)) return "DRAW";
+  if(/\bdecision\b|\bUD\b|\bSD\b|\bMD\b/i.test(d)) return "DECISION";
+  if(/knockout|\bKO\b|\bTKO\b/i.test(d)) return "KNOCKOUT";
+  if(/submission|\bSUB\b/i.test(d)) return "SUBMISSION";
+  return "END OF FIGHT";
+}
+function isHalftime(g){
+  return /\bhalf(?:time)?\b/i.test(String(g.detail||""));
 }
 function isTurnover(text){
   return /\b(intercept(?:ion|ed)?|picked off|pick six|pick-six|fumble(?:d)?|stripped|turnover on downs|turnover)\b/i.test(String(text||""));
@@ -1003,7 +1023,7 @@ function pulseBoard(g){
   window.ALERT_TOT = window.ALERT_TOT || {};
   const key=gameKey(g);
   if(!key) return;
-  const pack={as:nScore(g.awayScore), hs:nScore(g.homeScore), state:g.state||"", heat:!!isHeat(g), why:heatWhy(g), two:!!isTwoMinute(g), detail:g.detail||"", play:g.lastPlay||""};
+  const pack={as:nScore(g.awayScore), hs:nScore(g.homeScore), state:g.state||"", heat:!!isHeat(g), why:heatWhy(g), two:!!isTwoMinute(g), half:!!isHalftime(g), detail:g.detail||"", play:g.lastPlay||""};
   const tot=pack.as+pack.hs;
   const prev=window.WATCH_SNAP[key];
   if(!prev){
@@ -1024,16 +1044,25 @@ function pulseBoard(g){
     flashAlert({
       kicker: kind,
       title: (scorerName(g,prev)||kind).toUpperCase(),
-      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
+      score: scorebug(g),
+      body: g.lastPlay||g.detail||""
     });
   } else if(watching && justFinal){
     const ufc=g.lg==="ufc"||LEAGUE==="ufc"||!!g.fightId;
     const winner=g.awayWin?(g.away||g.awayAb):(g.homeWin?(g.home||g.homeAb):"");
     const loser=g.awayWin?(g.home||g.homeAb):(g.homeWin?(g.away||g.awayAb):"");
     flashAlert({
-      kicker: ufc?"END OF FIGHT":"END OF GAME",
-      title: ufc?(winner+" def. "+loser):scoreboard(g),
-      body: ufc?(g.detail||"Official result"):((winner?winner+" wins. ":"")+(g.detail||""))
+      kicker: ufc?fightKind(g):"END OF GAME",
+      title: ufc?(winner?winner+" def. "+loser:"DRAW"):(winner||"FINAL").toUpperCase(),
+      score: ufc?"":scorebug(g),
+      body: ufc?(g.detail||"Official result"):(g.detail||"")
+    });
+  } else if(watching && liveNow && pack.half && !prev.half){
+    flashAlert({
+      kicker: "HALFTIME",
+      title: (g.away||g.awayAb||"").toUpperCase(),
+      score: scorebug(g),
+      body: (g.home||"")+" · "+(g.detail||"Halftime")
     });
   }
   window.WATCH_SNAP[key]=pack;
@@ -2390,6 +2419,8 @@ function pumpAlert(){
   if(!box){ ALERT_SHOWING=false; return; }
   $("scKicker").textContent = msg.kicker||"Let's Eat";
   $("scTitle").textContent = msg.title||"";
+  const nums=$("scNums");
+  if(nums) nums.textContent = msg.score||"";
   $("scBody").textContent = msg.body||"";
   box.hidden=false;
   box.classList.remove("out","show");
@@ -2428,7 +2459,7 @@ function alertFromSlip(s, g, prev){
     if(g && g.state==="post" && prev.state==="in"){
       const winner = g.awayWin?g.away:(g.homeWin?g.home:"Final");
       flashAlert({
-        kicker:"END OF FIGHT",
+        kicker: fightKind(g),
         title: winner+" def. "+(g.awayWin?g.home:g.homeWin?g.away:""),
         body: (g.detail||"Official result")
       });
@@ -2443,7 +2474,8 @@ function alertFromSlip(s, g, prev){
     flashAlert({
       kicker: playKind(g.lastPlay,g,prev),
       title: (scorerName(g,prev)||"SCORE").toUpperCase(),
-      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
+      score: scorebug(g),
+      body: g.lastPlay||g.detail||""
     });
   }
 }
@@ -2462,7 +2494,8 @@ function alertFromFav(g, prev){
     flashAlert({
       kicker: playKind(g.lastPlay,g,prev),
       title: (scorerName(g,prev)||"SCORE").toUpperCase(),
-      body: scoreboard(g)+(g.lastPlay?(" · "+g.lastPlay):"")
+      score: scorebug(g),
+      body: g.lastPlay||g.detail||""
     });
     return;
   }
