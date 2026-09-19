@@ -841,13 +841,7 @@ function renderFootball(g, sum){
     const kind = (p.type&&p.type.abbreviation)||"";
     return "<div class='play"+(kind==="TD"||kind==="FG"?" hot":"")+"'><span>"+tm+" "+kind+" · "+q+" "+clk+" · "+p.awayScore+"–"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
   }).join("");
-  const clips=(sum.videos||[]).map(v=>{
-    const src=((((v.links||{}).source)||{}).href)||((((v.links||{}).mobile)||{}).source||{}).href||"";
-    const thumb=v.thumbnail||"";
-    const title=v.headline||v.description||"Highlight";
-    if(!src && !thumb) return "";
-    return `<div class="clip"><video controls preload="none" poster="${thumb}" src="${src}"></video><p>${title}</p></div>`;
-  }).join("");
+  const clips=videoClips(sum);
   const tab = window.FTAB || "live";
   const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
   if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
@@ -909,6 +903,18 @@ function renderFootball(g, sum){
     if($("clipMount")) $("clipMount").hidden = window.FTAB!=="live";
   });
 }
+function videoClips(sum){
+  return (sum.videos||[]).map(v=>{
+    const src=((((v.links||{}).source)||{}).href)
+      || ((((v.links||{}).mobile)||{}).source||{}).href
+      || ((((v.links||{}).source)||{}).full||{}).href
+      || "";
+    const thumb=typeof v.thumbnail==="string"?v.thumbnail:(v.thumbnail&&v.thumbnail.href)||"";
+    const title=v.headline||v.description||"Highlight";
+    if(!src && !thumb) return "";
+    return `<div class="clip"><video controls preload="none" poster="${thumb}" src="${src}"></video><p>${title}</p></div>`;
+  }).join("");
+}
 function renderGame(g, sum){
   if(LEAGUE==="nfl" || LEAGUE==="cfb"){ renderFootball(g,sum); return; }
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
@@ -934,7 +940,10 @@ function renderGame(g, sum){
   const aR=rheOf(away), hR=rheOf(home);
   const dots=(n,max,cls)=>Array.from({length:max},(_,i)=>`<i class="${cls}${i<n?" on":""}"></i>`).join("");
   const scoring=(sum.plays||[]).filter(p=>p.scoringPlay||(p.scoreValue>0)).slice(-8).reverse();
-  $("gameRoom").innerHTML = `
+  const clips=videoClips(sum);
+  const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
+  if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
+  $("gameBody").innerHTML = `
     <div class="scorebug mlb-bug${((hdr.status||{}).type||{}).state==="in"?" islive":""}">
       <div class="mlb-inning">${st||"Pregame"}</div>
       <div class="castline">
@@ -959,6 +968,9 @@ function renderGame(g, sum){
     ${scoring.length?scoring.map(p=>`<div class="play hot"><span>${(p.period&&p.period.displayValue)||""} · ${(p.team&&p.team.abbreviation)||""}</span><p>${p.text||""}</p></div>`).join(""):""}
     ${venue?`<p class="hint">${venue}</p>`:""}
     ${boxHtml(sum)}`;
+  if(!playing){
+    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"?"":"<p class='hint'>Highlights post after ESPN cuts them.</p>");
+  }
 }
 function renderFight(g){
   $("gameRoom").innerHTML = `
