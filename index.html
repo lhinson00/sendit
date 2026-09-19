@@ -1697,6 +1697,10 @@ function mlbTab(which){
   if(which==="stand") openMlbStandings();
   if(which==="lead") openMlbLeaders();
 }
+function stv(stats, name){
+  const s=(stats||[]).find(x=>x.name===name || x.abbreviation===name);
+  return s ? String(s.displayValue!=null?s.displayValue:s.value??"") : "";
+}
 async function openNflStandings(){
   const host=$("boardPanel");
   host.hidden=false;
@@ -1880,9 +1884,38 @@ async function openMlbTeam(tid, name){
       ["SV", grab("pitching",["saves","SV"])],
       ["FPCT", grab("fielding",["fieldingPercentage","FPCT"])]
     ];
-    const groups=cats.map(c=>{
-      const bits=(c.stats||[]).filter(s=>s.displayValue!=null).slice(0,18);
-      return `<h3 class="kicker">${c.displayName||c.name}</h3><p class="seasonline">${bits.map(s=>`<span><i>${s.abbreviation||s.name}</i> ${s.displayValue}</span>`).join("")}</p>`;
+    const sval=(stats, names)=>{
+      const list=stats||[];
+      for(const n of names){
+        const s=list.find(x=>x.name===n || x.abbreviation===n || x.shortDisplayName===n);
+        if(s && (s.displayValue!=null || s.value!=null)) return s.displayValue||String(s.value);
+      }
+      return "—";
+    };
+    const cols={
+      batting:[["AVG","avg","AVG"],["AB","AB","atBats"],["H","H","hits"],["HR","HR","homeRuns"],["RBI","RBI","RBIs"],["R","R","runs"],["SB","SB","stolenBases"],["OPS","OPS","ops"],["OBP","OBP","onBasePct"],["SLG","SLG","slugAvg"]],
+      pitching:[["ERA","ERA"],["W","W","wins"],["L","L","losses"],["IP","IP","innings"],["K","K","SO","strikeouts"],["BB","BB","walks"],["WHIP","WHIP"],["SV","SV","saves"],["QS","QS"]],
+      fielding:[["PO","PO"],["A","A"],["E","E"],["DP","DP"],["FP","FP","FPCT"]]
+    };
+    const shotOf=a=>(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/mlb/players/full/"+a.id+".png"):"");
+    const pblocks=pl.results||[];
+    const leadHtml=`<div class="tlead">${["batting","pitching"].map(nm=>{
+      const blk=pblocks.find(x=>x.name===nm);
+      const L=(blk&&blk.leaders&&blk.leaders[0])||{};
+      const a=L.athlete||{};
+      const line = nm==="batting" ? sval(((L.statistics||[])[0]||{}).stats||[],["AVG","avg"]) : sval(((L.statistics||[])[0]||{}).stats||[],["ERA"]);
+      return `<div class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shotOf(a)}"/><div><i>${(blk&&blk.displayName)||nm}</i><b>${line||L.displayValue||"—"}</b><em>${a.displayName||""}</em></div></div>`;
+    }).join("")}</div>`;
+    const tableHtml=["batting","pitching","fielding"].map(nm=>{
+      const blk=pblocks.find(x=>x.name===nm)||{};
+      const spec=cols[nm];
+      const rows=(blk.leaders||[]).slice(0,18).map(L=>{
+        const a=L.athlete||{};
+        const pack=((L.statistics||[]).find(p=>p.name===nm)||(L.statistics||[])[0]||{}).stats||[];
+        const pos=(a.position&&a.position.abbreviation)||"";
+        return `<tr class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><td><span class="nm"><b>${a.displayName||""}</b><em>${pos}</em></span></td>${spec.map(c=>`<td>${sval(pack,c.slice(1))}</td>`).join("")}</tr>`;
+      }).join("");
+      return `<div class="sgrp"><h3>${blk.displayName||nm}</h3><div style="overflow:auto"><table class="ptable"><thead><tr><th>NAME</th>${spec.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join("");
     const games=(sched.events||[]).slice(-20).map(ev=>{
       const c=(ev.competitions||[])[0]||{};
@@ -1909,23 +1942,15 @@ async function openMlbTeam(tid, name){
           </div>
         </div>
         <div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div>
-        <h3 class="kicker" style="margin-top:16px">Player categories</h3>
-        ${(pl.results||[]).map(cat=>{
-          const rows=(cat.leaders||[]).slice(0,20).map(L=>{
-            const a=L.athlete||{};
-            const shot=(a.headshot&&(a.headshot.href||a.headshot))||("https://a.espncdn.com/i/headshots/mlb/players/full/"+a.id+".png");
-            return `<div class="lrow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${a.displayName||a.shortName||""}</b><em>${packStat(L, cat.name)}</em></div><span class="val">${L.displayValue||""}</span></div>`;
-          }).join("");
-          return `<div class="divblock"><h3>${cat.displayName||cat.name}</h3>${rows||"<p class='hint'>No leaders yet.</p>"}</div>`;
-        }).join("")}
-        ${groups}
+        ${leadHtml}
+        ${tableHtml}
         <h3 class="kicker" style="margin-top:18px">Schedule</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
-        ${(rost.athletes||[]).map(g=>`<div class="divblock"><h3>${g.position||"Roster"}</h3>${(g.items||[]).map(p=>{
+        <div class="sgrp"><h3>Roster</h3>${(rost.athletes||[]).map(g=>`<p class="hint">${g.position||""}</p>${(g.items||[]).map(p=>{
           const shot=(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/mlb/players/full/"+p.id+".png");
           const pos=(p.position&&p.position.abbreviation)||"";
           return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${p.displayName||""}</b><em>#${p.jersey||"—"} · ${pos}</em></div></div>`;
-        }).join("")}</div>`).join("")}
+        }).join("")}`).join("")}</div>
       </div>`;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
