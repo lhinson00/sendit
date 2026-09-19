@@ -32,6 +32,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .list{display:grid;gap:10px;padding:0 var(--pad) 24px}
 .gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
 .gcard.live{border-color:#ff3b3b;background:#160e0c}
+.gcard.pin{border-color:var(--orange);box-shadow:inset 3px 0 0 var(--orange)}
+.star{border:0;background:0;color:#5c564e;font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
+.star.on{color:var(--orange)}
 .gcard .bigline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:6px 0 4px}
 .gcard .nm{font-family:"Bebas Neue",sans-serif;font-size:20px;display:flex;align-items:center;gap:8px}
 .gcard .nm.r{justify-content:flex-end}
@@ -199,7 +202,8 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .leadrow em{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .leadrow b{display:block;font-size:15px}
 .leadrow span{color:var(--ember);font-size:13px}
-.ftabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 var(--pad) 12px}
+.ftabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 var(--pad) 12px}
+@media(max-width:560px){.ftabs{grid-template-columns:1fr 1fr}}
 .ftabs button{border:1px solid #2a241c;background:#101218;color:var(--muted);padding:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
 .ftabs button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .drivechip{margin-top:12px;padding:10px 12px;background:#14110e;border:1px solid #3a2a18;font-size:13px}
@@ -213,18 +217,19 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .lp b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lp em{font-style:normal;font-size:11px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cside img{width:44px;height:44px;object-fit:contain}
-.cside b{display:block;font-size:16px}
-.cside em{font-style:normal;color:var(--muted);font-size:12px}
-.cscore{font-family:"Bebas Neue",sans-serif;font-size:52px;line-height:.9;color:#fff}
+.cside b{display:block;font-size:14px;line-height:1.15;max-height:2.4em;overflow:hidden}
+.cside em{font-style:normal;color:var(--muted);font-size:11px}
+.cscore{font-family:"Bebas Neue",sans-serif;font-size:clamp(34px,11vw,52px);line-height:.9;color:#fff}
 .cast2{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:0 var(--pad) 20px}
 @media(max-width:800px){.cast2{grid-template-columns:1fr}}
 .fieldwrap{padding:0 var(--pad) 8px}
-.statpair{display:grid;grid-template-columns:1fr 110px 1fr;gap:6px 8px;align-items:center;padding:12px 0;border-bottom:1px solid #222}
-.statpair b:first-of-type{text-align:right;font-size:22px}
-.statpair b:last-of-type{text-align:left;font-size:22px}
-.statpair span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
-.statpair.head b{font-size:16px;letter-spacing:.08em}
-.cmpbar{grid-column:1/-1;height:6px;background:#1c1c22;border-radius:2px;display:flex;justify-content:center;order:-1}
+.statpair{display:grid;grid-template-columns:minmax(52px,1fr) minmax(72px,auto) minmax(52px,1fr);gap:4px 8px;align-items:end;padding:10px 0;border-bottom:1px solid #222}
+.statpair > b:first-of-type{text-align:right;font-size:20px;font-variant-numeric:tabular-nums}
+.statpair > b:last-of-type{text-align:left;font-size:20px;font-variant-numeric:tabular-nums}
+.statpair span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center;padding-bottom:3px}
+.statpair.head{align-items:center}
+.statpair.head b{font-size:14px;letter-spacing:.08em}
+.cmpbar{grid-column:1/-1;height:6px;background:#1c1c22;border-radius:2px;display:flex;justify-content:center;margin-top:2px}
 .cmpbar i{display:block;height:6px}
 .cmpbar i.l{background:var(--orange);border-radius:2px 0 0 2px}
 .cmpbar i.r{background:#6a645c;border-radius:0 2px 2px 0}
@@ -538,7 +543,14 @@ function paintCfbPills(){
 function paint(games){
   window.LIVE_GAMES = games;
   const host=$("liveList");
-  const shown = filterCfb(games);
+  const shown = filterCfb(games).slice().sort((a,b)=>{
+    const af=isFav(a.awayId)||isFav(a.homeId);
+    const bf=isFav(b.awayId)||isFav(b.homeId);
+    if(af!==bf) return af?-1:1;
+    const al=a.state==="in", bl=b.state==="in";
+    if(al!==bl) return al?-1:1;
+    return 0;
+  });
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+shown.length+(LEAGUE==="cfb"&&CFB_FILT!=="all"?" · "+(CONF.find(x=>x[0]===CFB_FILT)||[])[1]:"");
   paintCfbPills();
   if(!shown.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
@@ -560,6 +572,7 @@ function paint(games){
   } else {
     host.innerHTML = shown.map(g=>{
       const live=g.state==="in";
+      const pinned=isFav(g.awayId)||isFav(g.homeId);
       let sub="";
       if(LEAGUE==="mlb"){
         if(g.state==="in" && g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"");
@@ -569,18 +582,25 @@ function paint(games){
         sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
       }
       return `
-      <button type="button" class="gcard${live?" live":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+      <div class="gcard${live?" live":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
-          <div class="nm"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
+          <div class="nm">${starBtn(g.awayId,g.away)}<span class="logoplate"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
           <div class="sc"><em>${g.awayScore||"–"}</em><span>–</span><em>${g.homeScore||"–"}</em></div>
-          <div class="nm r"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+          <div class="nm r"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
         </div>
         ${sub?`<div class="sub">${sub}</div>`:""}
-      </button>`;
+      </div>`;
     }).join("");
   }
-  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
+  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=e=>{
+    if(e.target.closest("[data-fav]")) return;
+    openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid);
+  });
+  host.querySelectorAll("[data-fav]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    toggleFav(b.dataset.fav, b.dataset.fname);
+  });
   if(LEAGUE==="ufc") loadUfcRankings();
 }
 function boardDates(){
@@ -849,13 +869,13 @@ function renderFootball(g, sum){
     <div class="scorebug mlb-bug${live?" islive":""}">
       <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
       <div class="castline">
-        <div class="cside"><img alt="" src="${aLogo}"/><div><b>${awN}</b><em>${aRec||aw}</em></div><span class="cscore">${as}</span></div>
+        <div class="cside"><img alt="" src="${aLogo}"/><div><b>${aw}</b><em>${aRec||""}</em></div><span class="cscore">${as}</span></div>
         <table class="qtr mini">
           <tr><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}</tr>
           <tr><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}</tr>
           <tr><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}</tr>
         </table>
-        <div class="cside r"><span class="cscore">${hs}</span><div><b>${hmN}</b><em>${hRec||hm}</em></div><img alt="" src="${hLogo}"/></div>
+        <div class="cside r"><span class="cscore">${hs}</span><div><b>${hm}</b><em>${hRec||""}</em></div><img alt="" src="${hLogo}"/></div>
       </div>
     </div>
     ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
@@ -1072,17 +1092,28 @@ async function openGame(id, fid){
 function showUfcLineup(card, games){
   const host=$("ufcLineup");
   if(!host) return;
-  const fights=games.filter(g=>(g.card||"UFC")===card);
+  const fights=games.filter(g=>(g.card||"UFC")===card).slice().sort((a,b)=>{
+    const af=isFav(a.awayId)||isFav(a.homeId);
+    const bf=isFav(b.awayId)||isFav(b.homeId);
+    return (bf-af);
+  });
   host.innerHTML = "<p class='hint'>Lineup · "+card+"</p>"+fights.map(g=>`
-    <button type="button" class="gcard" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
+    <div class="gcard${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
       <div class="gstat"><span>${g.format||"Bout"}</span><span>${g.awayWin||g.homeWin?"FINAL":when(g)}</span></div>
       <div class="ufc-row">
-        <div class="f"><img alt="" src="${g.awayImg}"/><div><b>${g.away}</b><em>${g.awayRec||""}${g.awayWin?" · W":""}</em></div></div>
+        <div class="f">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><div><b>${g.away}</b><em>${g.awayRec||""}${g.awayWin?" · W":""}</em></div></div>
         <span class="vs">VS</span>
-        <div class="f r"><div><b>${g.home}</b><em>${g.homeRec||""}${g.homeWin?" · W":""}</em></div><img alt="" src="${g.homeImg}"/></div>
+        <div class="f r"><div><b>${g.home}</b><em>${g.homeRec||""}${g.homeWin?" · W":""}</em></div><img alt="" src="${g.homeImg}"/>${starBtn(g.homeId,g.home)}</div>
       </div>
-    </button>`).join("");
-  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=()=>openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid));
+    </div>`).join("");
+  host.querySelectorAll("[data-gid]").forEach(b=>b.onclick=e=>{
+    if(e.target.closest("[data-fav]")) return;
+    openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid);
+  });
+  host.querySelectorAll("[data-fav]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    toggleFav(b.dataset.fav, b.dataset.fname);
+  });
   host.scrollIntoView({behavior:"smooth",block:"start"});
 }
 const UFC_OFFICIAL = {
@@ -1229,7 +1260,16 @@ async function openPlayer(pid, name){
     const labsU = labels.map(x=>String(x).toUpperCase());
     const has = (...xs)=> xs.some(x=>labsU.includes(String(x).toUpperCase()));
     const posAb = String((((d.athlete||d.player||{}).position)||{}).abbreviation || ((d.athlete||{}).position) || "").toUpperCase();
-    const isPitch = LEAGUE==="mlb" && ( /pitch/i.test(st.displayName||"") || has("ERA","IP","SO") );
+    const splitLabs = (splitsPack.labels||[]).map(x=>String(x).toUpperCase());
+    const splitVals = ((((splitsPack.splitCategories||[])[0]||{}).splits||[])[0]||{}).stats || [];
+    const splitAt = names => {
+      for(const n of names){
+        const i=splitLabs.indexOf(String(n).toUpperCase());
+        if(i>=0 && splitVals[i]!=null && splitVals[i]!=="") return String(splitVals[i]);
+      }
+      return "";
+    };
+    const isPitch = LEAGUE==="mlb" && (/pitch/i.test(st.displayName||"") || (has("ERA","IP","ER") && !has("AB","RBI","2B")));
     const isPass = has("CMP","CMP%","ATT","INT","RTG","QBR") || posAb==="QB" || /pass/i.test(st.displayName||"");
     const isRush = has("CAR") || posAb==="RB" || /rush/i.test(st.displayName||"");
     const isRec  = has("REC","TGTS","YAC") || /WR|TE/.test(posAb) || /receiv/i.test(st.displayName||"");
@@ -1245,12 +1285,27 @@ async function openPlayer(pid, name){
       : fbKeys;
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
-        const w=idx(labels,["W"]), l=idx(labels,["L"]);
-        const val = (w>=0||l>=0) ? ((season.stats[w]||"0")+"-"+ (season.stats[l]||"0")) : "—";
+        const w=splitAt(["W"]) || (idx(labels,["W"])>=0?season.stats[idx(labels,["W"])]:"");
+        const l=splitAt(["L"]) || (idx(labels,["L"])>=0?season.stats[idx(labels,["L"])]:"");
+        const val = (w!==""||l!=="") ? ((w||"0")+"-"+(l||"0")) : "—";
         return "<div class='lead'><em>W-L</em><b>"+val+"</b></div>";
       }
+      if(pair[0]==="ERA"){
+        const v=splitAt(["ERA"]) || (idx(labels,["ERA"])>=0?season.stats[idx(labels,["ERA"])]:"");
+        return "<div class='lead'><em>ERA</em><b>"+(v||"—")+"</b></div>";
+      }
+      if(pair[0]==="AVG"){
+        let v=splitAt(["AVG","BA"]) || (idx(labels,["AVG","BA"])>=0?season.stats[idx(labels,["AVG","BA"])]:"");
+        if(!v){
+          const h=Number((idx(labels,["H"])>=0?season.stats[idx(labels,["H"])]:0));
+          const ab=Number((idx(labels,["AB"])>=0?season.stats[idx(labels,["AB"])]:0));
+          if(ab>0) v=(h/ab).toFixed(3).replace(/^0/,".");
+        }
+        return "<div class='lead'><em>AVG</em><b>"+(v||"—")+"</b></div>";
+      }
+      const fromSplit=splitAt(pair.slice(1));
       const i=idx(labels, pair.slice(1));
-      return "<div class='lead'><em>"+pair[0]+"</em><b>"+(i>=0?(season.stats[i]||"—"):"—")+"</b></div>";
+      return "<div class='lead'><em>"+pair[0]+"</em><b>"+(fromSplit||(i>=0?(season.stats[i]||"—"):"—"))+"</b></div>";
     }).join("");
     const nxt = ((((d.nextGame||{}).league||{}).events)||[])[0] || {};
     const nextLine = nxt.shortName || nxt.name || "";
@@ -1297,6 +1352,22 @@ async function openPlayer(pid, name){
 const LOGS = {};
 const ROSTER = [];
 const FILT = {pos:"WR", stat:"recYds", line:20};
+let FAV = {nfl:{},cfb:{},mlb:{},ufc:{}};
+try{ FAV = Object.assign(FAV, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
+function saveFav(){ try{ localStorage.setItem("sauceFav", JSON.stringify(FAV)); }catch(e){} }
+function isFav(id){ return !!(id && FAV[LEAGUE] && FAV[LEAGUE][String(id)]); }
+function toggleFav(id, name){
+  if(!id) return;
+  FAV[LEAGUE]=FAV[LEAGUE]||{};
+  const k=String(id);
+  if(FAV[LEAGUE][k]) delete FAV[LEAGUE][k];
+  else FAV[LEAGUE][k]=name||k;
+  saveFav();
+  paint(window.LIVE_GAMES||GAMES||[]);
+}
+function starBtn(id, name){
+  return `<button type="button" class="star${isFav(id)?" on":""}" data-fav="${id||""}" data-fname="${String(name||"").replace(/"/g,"")}">${isFav(id)?"★":"☆"}</button>`;
+}
 let SLIP = [];
 try{ SLIP = JSON.parse(localStorage.getItem("sauceSlip")||"[]")||[]; }catch(e){ SLIP=[]; }
 function saveSlip(){ try{ localStorage.setItem("sauceSlip", JSON.stringify(SLIP)); }catch(e){} }
@@ -1806,15 +1877,53 @@ async function openTeam(tid, name){
 }
 const OFF_CAT = /pass|rush|receiv|quarterback|touchdown|point|totalPoints|totalTouchdowns/i;
 const DEF_CAT = /sack|interception|tackle|defend/i;
+function refId(ref){
+  const m=String(ref||"").match(/\/(?:athletes|teams)\/(\d+)/);
+  return m?m[1]:"";
+}
 async function openLeaders(lg){
   const host=$("boardPanel");
   host.hidden=false;
-  const path = lg==="nfl" ? "football/nfl" : "football/college-football";
   host.innerHTML="<p class='hint'>Loading "+lg.toUpperCase()+" leaders…</p>";
   try{
-    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/"+path+"/statistics",{cache:"no-store"});
-    const d=await res.json();
-    const cats=((d.stats||{}).categories)||[];
+    let cats=[];
+    if(lg==="nfl"){
+      const res=await fetch("https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/types/2/leaders?limit=20",{cache:"no-store"});
+      if(!res.ok) throw new Error("ESPN "+res.status);
+      const d=await res.json();
+      cats=(d.categories||[]).map(c=>{
+        const leaders=(c.leaders||[]).slice(0,15).map(L=>{
+          const aid=refId((L.athlete&&L.athlete.$ref)||L.athlete);
+          const tid=refId((L.team&&L.team.$ref)||L.team);
+          return {displayValue:L.displayValue||L.value, athlete:{id:aid, displayName:""}, team:{id:tid, abbreviation:""}};
+        });
+        return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
+      });
+      const ids=[...new Set(cats.flatMap(c=>c.leaders.map(L=>L.athlete.id).filter(Boolean)))].slice(0,36);
+      const book={};
+      await Promise.all(ids.map(async id=>{
+        try{
+          const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/overview",{cache:"no-store"});
+          if(!r.ok) return;
+          const a=await r.json();
+          const ath=a.athlete||a;
+          book[id]={name:ath.displayName||ath.fullName||"", team:(ath.team&&(ath.team.abbreviation||ath.team.displayName))||((ath.teamAbbr)||"")};
+        }catch(e){}
+      }));
+      cats.forEach(c=>c.leaders.forEach(L=>{
+        const b=book[L.athlete.id];
+        if(!b) return;
+        L.athlete.displayName=b.name;
+        L.team.abbreviation=b.team;
+        L.team.displayName=b.team;
+      }));
+      window.LEAD_NOTE="2026 regular season";
+    }else{
+      const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/statistics",{cache:"no-store"});
+      const d=await res.json();
+      cats=((d.stats||{}).categories)||[];
+      window.LEAD_NOTE="College season";
+    }
     window.LEAD_CATS = cats;
     window.LEAD_SIDE = "off";
     paintLeaders();
@@ -1836,6 +1945,7 @@ function paintLeaders(){
       <button type="button" class="${side==="off"?"on":""}" data-side="off">Offense</button>
       <button type="button" class="${side==="def"?"on":""}" data-side="def">Defense</button>
     </div>
+    <p class="hint">${window.LEAD_NOTE||""}</p>
     <div class="ltable">${shown.map(c=>{
       const rows=(c.leaders||[]).slice(0,15).map((L,i)=>{
         const a=L.athlete||{};
