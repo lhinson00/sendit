@@ -68,6 +68,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .tgame .dec{font-family:"Bebas Neue",sans-serif;font-size:22px}
 .tgame .dec.W{color:#3ee0a0}.tgame .dec.L{color:#ff8a8a}
 .tgame button{border:0;background:0;color:inherit;font:inherit;text-align:left;padding:0}
+.sgrp{margin:16px 0 8px}
+.sgrp h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:640px){.sgrid{grid-template-columns:repeat(2,1fr)}}
+.sgrid div{background:#101218;border:1px solid #2a241c;padding:10px 8px}
+.sgrid i{display:block;font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sgrid b{display:block;font-family:"Bebas Neue",sans-serif;font-size:24px;color:#fff;margin-top:2px}
 .pollrow b.rk{font-size:18px}
 .pollrow img{width:32px;height:32px;object-fit:contain}
 .pollrow em{font-style:normal;color:var(--muted);font-size:11px}
@@ -1587,16 +1594,68 @@ async function openTeam(tid, name){
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
     const recSum=rec.summary||"";
     const cats=((((stat.results||{}).stats)||{}).categories)||[];
-    const tiles=[
-      ["Record", recSum||"—"],
-      ["PF/G", pickStat(cats,"scoring","pointsPerGame")],
-      ["PA/G", pickStat(cats,"scoring","pointsPerGamePerGame")!=="—"?pickStat(cats,"scoring","pointsPerGamePerGame"):pickStat(cats,"miscellaneous","pointsAgainst")],
-      ["Pass Yds", pickStat(cats,"passing","netPassingYards")!=="—"?pickStat(cats,"passing","netPassingYards"):pickStat(cats,"passing","passingYards")],
-      ["Rush Yds", pickStat(cats,"rushing","rushingYards")],
-      ["Total Yds", pickStat(cats,"passing","totalYards")!=="—"?pickStat(cats,"passing","totalYards"):pickStat(cats,"miscellaneous","totalYards")],
-      ["3rd Down", pickStat(cats,"miscellaneous","thirdDownEff")!=="—"?pickStat(cats,"miscellaneous","thirdDownEff"):pickStat(cats,"passing","thirdDownEff")],
-      ["Turnovers", pickStat(cats,"miscellaneous","turnovers")]
+    const grab=(cat,names)=>{
+      const c=(cats||[]).find(x=>x.name===cat);
+      for(const n of names){
+        const s=((c&&c.stats)||[]).find(x=>x.name===n || x.abbreviation===n);
+        if(s && (s.displayValue!=null || s.value!=null)) return s.displayValue||String(s.value);
+      }
+      return "—";
+    };
+    const groups=[
+      ["Passing", [
+        ["CMP-ATT", grab("passing",["completions"])+"-"+grab("passing",["passingAttempts"])],
+        ["YDS", grab("passing",["passingYards","netPassingYards"])],
+        ["TD", grab("passing",["passingTouchdowns"])],
+        ["INT", grab("passing",["interceptions"])],
+        ["YDS/G", grab("passing",["netPassingYardsPerGame"])],
+        ["AVG", grab("passing",["yardsPerPassAttempt"])],
+        ["RTG", grab("passing",["quarterbackRating"])],
+        ["SACK", grab("passing",["totalSacks"])]
+      ]],
+      ["Rushing", [
+        ["CAR", grab("rushing",["rushingAttempts"])],
+        ["YDS", grab("rushing",["rushingYards"])],
+        ["TD", grab("rushing",["rushingTouchdowns"])],
+        ["AVG", grab("rushing",["yardsPerRushAttempt"])],
+        ["YDS/G", grab("rushing",["rushingYardsPerGame"])],
+        ["LNG", grab("rushing",["longRushing"])],
+        ["FUM", grab("rushing",["rushingFumblesLost","rushingFumbles"])],
+        ["FD", grab("rushing",["rushing1stDowns"])]
+      ]],
+      ["Receiving", [
+        ["REC", grab("receiving",["receptions"])],
+        ["YDS", grab("receiving",["receivingYards"])],
+        ["TD", grab("receiving",["receivingTouchdowns"])],
+        ["AVG", grab("receiving",["yardsPerReception"])],
+        ["YDS/G", grab("receiving",["receivingYardsPerGame"])],
+        ["LNG", grab("receiving",["longReception"])],
+        ["YAC", grab("receiving",["receivingYardsAfterCatch"])],
+        ["FD", grab("receiving",["receivingFirstDowns"])]
+      ]],
+      ["Defense", [
+        ["TOT", grab("defensive",["totalTackles"])],
+        ["SOLO", grab("defensive",["soloTackles"])],
+        ["SACK", grab("defensive",["sacks"])],
+        ["TFL", grab("defensive",["tacklesForLoss"])],
+        ["INT", grab("defensiveInterceptions",["interceptions"])],
+        ["PD", grab("defensive",["passesDefended"])],
+        ["STF", grab("defensive",["stuffs"])],
+        ["SCK YDS", grab("defensive",["sackYards"])]
+      ]],
+      ["Scoring / tape", [
+        ["PTS", grab("scoring",["totalPoints"])],
+        ["PPG", grab("scoring",["totalPointsPerGame"])],
+        ["TD", grab("scoring",["totalTouchdowns"])],
+        ["3RD", grab("miscellaneous",["thirdDownConvPct"])+"%"],
+        ["1ST", grab("miscellaneous",["firstDowns"])],
+        ["TAKE", grab("miscellaneous",["totalTakeaways"])],
+        ["PEN", grab("miscellaneous",["totalPenalties"])],
+        ["PEN YDS", grab("miscellaneous",["totalPenaltyYards"])]
+      ]]
     ];
+    const tiles=[];
+    const groupHtml = groups.map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3><div class="sgrid">${rows.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div></div>`).join("");
     const games=(sched.events||[]).map(ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -1633,7 +1692,7 @@ async function openTeam(tid, name){
             <p>${recSum} · ${t.abbreviation||""}</p>
           </div>
         </div>
-        <div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div>
+        ${groupHtml}
         <h3 class="kicker">Schedule</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
         <h3 class="kicker" style="margin-top:18px">Skill</h3>
