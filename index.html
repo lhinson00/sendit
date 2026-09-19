@@ -126,9 +126,14 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .ftabs button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .drivechip{margin-top:12px;padding:10px 12px;background:#14110e;border:1px solid #3a2a18;font-size:13px}
 .drivechip b{color:var(--orange)}
-.cast{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.castline{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:10px 0}
 .cside{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center}
-.cside.r{grid-template-columns:auto 1fr 44px}
+.cside.r{grid-template-columns:auto 1fr 44px;text-align:right}
+.qtr.mini{width:auto;margin:0;font-size:11px}
+.lp{display:flex;align-items:center;gap:6px}
+.lp img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:#1a120c}
+.lp b{display:block;font-size:14px}
+.lp em{font-style:normal;font-size:11px;color:var(--muted)}
 .cside img{width:44px;height:44px;object-fit:contain}
 .cside b{display:block;font-size:16px}
 .cside em{font-style:normal;color:var(--muted);font-size:12px}
@@ -555,16 +560,27 @@ function renderFootball(g, sum){
   }).join("");
   const aQ = qtrCells(away), hQ = qtrCells(home);
   const hasOT = aQ[4] || hQ[4];
-  const leads = (sum.leaders||[]).map(block=>{
+  const leadMap={};
+  (sum.leaders||[]).forEach(block=>{
     const team=(block.team&&block.team.abbreviation)||"";
-    const bits=(block.leaders||[]).slice(0,4).map(L=>{
+    const side = team===hm ? "h" : "a";
+    (block.leaders||[]).forEach(L=>{
       const a=((L.leaders||[])[0]||{});
-      const nm=(a.athlete&&a.athlete.displayName)||"";
-      const pid=a.athlete&&a.athlete.id||"";
-      const val=a.displayValue||"";
-      return "<div class='leadrow"+(pid?" prow":"")+"' data-pid='"+pid+"' data-pname='"+String(nm).replace(/"/g,"")+"'><em>"+(L.displayName||L.name)+"</em><b>"+nm+"</b><span>"+val+"</span></div>";
-    }).join("");
-    return "<div class='box'><h3>"+team+"</h3>"+bits+"</div>";
+      const ath=a.athlete||{};
+      const key=L.displayName||L.name||"";
+      if(!leadMap[key]) leadMap[key]={};
+      leadMap[key][side]={
+        nm:ath.displayName||ath.shortName||"",
+        pid:ath.id||"",
+        shot:(typeof ath.headshot==="string"?ath.headshot:(ath.headshot&&ath.headshot.href))||"",
+        val:a.displayValue||""
+      };
+    });
+  });
+  const faceBit = o => o ? `<div class="lp ${o.pid?"prow":""}" data-pid="${o.pid}" data-pname="${String(o.nm).replace(/"/g,"")}"><img alt="" src="${o.shot}"/><div><b>${o.val||"—"}</b><em>${o.nm||"—"}</em></div></div>` : "<div class='lp'></div>";
+  const leads = Object.keys(leadMap).map(k=>{
+    const row=leadMap[k];
+    return `<div class="leadmini"><div>${faceBit(row.a)}</div><span>${k}</span><div>${faceBit(row.h)}</div></div>`;
   }).join("");
   const scoreList = scores.slice().reverse().map(p=>{
     const q = (p.period&&p.period.number) ? ("Q"+p.period.number) : "";
@@ -577,18 +593,15 @@ function renderFootball(g, sum){
   $("gameRoom").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
       <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
-      <div class="cast">
+      <div class="castline">
         <div class="cside"><img alt="" src="${aLogo}"/><div><b>${awN}</b><em>${aRec||aw}</em></div><span class="cscore">${as}</span></div>
+        <table class="qtr mini">
+          <tr><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}</tr>
+          <tr><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}</tr>
+          <tr><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}</tr>
+        </table>
         <div class="cside r"><span class="cscore">${hs}</span><div><b>${hmN}</b><em>${hRec||hm}</em></div><img alt="" src="${hLogo}"/></div>
       </div>
-      <table class="qtr">
-        <tr><th></th><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}<th>T</th></tr>
-        <tr><td>${aw}</td><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}<td>${as}</td></tr>
-        <tr><td>${hm}</td><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}<td>${hs}</td></tr>
-      </table>
-      ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL">${poss||aw}</div><div class="ezR">${poss===hm?aw:hm}</div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<img class="ball" alt="" src="${possLogo}" style="left:${fieldPct}%"/><div class="dir" style="left:calc(${fieldPct}% + 22px)">→</div></div><p class="hint">${poss||""} → ${downTxt||""}${driveTxt?(" · "+driveTxt):""}</p>`:""}
-      ${poss||downTxt?`<div class="drivechip">${poss?("<b>"+poss+"</b> has it"):""}${downTxt?(" · "+downTxt):""}${driveTxt?(" · "+driveTxt):""}</div>`:""}
-      ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
     </div>
     ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
     <div class="ftabs">
@@ -600,6 +613,7 @@ function renderFootball(g, sum){
       <div class="cast3">
         <div class="box">
           <h3>Team tape</h3>
+          <div class="statpair"><b>${aw}</b><span></span><b>${hm}</b></div>
           ${[["totalYards","Total Yards"],["turnovers","Turnovers"],["firstDowns","1st Downs"],["totalPenaltiesYards","Penalties"],["thirdDownEff","3rd Down"],["fourthDownEff","4th Down"],["possessionTime","Possession"]].map(([k,lab])=>`<div class="statpair"><b>${tstat(sum,aw,k)}</b><span>${lab}</span><b>${tstat(sum,hm,k)}</b></div>`).join("")}
         </div>
         <div>
