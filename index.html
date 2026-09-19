@@ -1375,7 +1375,7 @@ async function runKitchen(){
         out.push({p,hits,n,l5h,l5n,rate:n?hits/n:0,score:sauceScore(hits,n,l5h,l5n)});
       }catch(e){}
     }));
-    paintKitRows(out, host);
+    $("kitMeta").textContent="Loading "+out.length+" / "+pool.length+" "+FILT.pos+"s…";
   }
   paintKitRows(out, host);
   }catch(e){
