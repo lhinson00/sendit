@@ -2056,6 +2056,21 @@ let FAV = {nfl:{},cfb:{},mlb:{},ufc:{},tssaa:{},mls:{}};
 try{ FAV = Object.assign(FAV, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
 function saveFav(){ try{ localStorage.setItem("sauceFav", JSON.stringify(FAV)); }catch(e){} }
 function isFav(id){ return !!(id && FAV[LEAGUE] && FAV[LEAGUE][String(id)]); }
+function favName(id){
+  const k=String(id||"");
+  if(!k) return "";
+  for(const lg of Object.keys(FAV||{})){
+    if(FAV[lg] && FAV[lg][k]) return FAV[lg][k];
+  }
+  return "";
+}
+function gameFavs(g){
+  if(!g) return [];
+  const out=[];
+  const a=favName(g.awayId); if(a) out.push({side:"away", name:a});
+  const h=favName(g.homeId); if(h) out.push({side:"home", name:h});
+  return out;
+}
 function toggleFav(id, name){
   if(!id) return;
   FAV[LEAGUE]=FAV[LEAGUE]||{};
@@ -2303,14 +2318,53 @@ function alertFromSlip(s, g, prev){
     });
   }
 }
+function alertFromFav(g, prev){
+  if(!ALERT_SEED || !g) return;
+  const favs=gameFavs(g);
+  if(!favs.length) return;
+  if(SLIP.some(s=>!s.pid && (String(s.eventId)===String(g.eventId) || (s.fightId && String(s.fightId)===String(g.fightId))))) return;
+  const who=favs.map(f=>f.name).join(" / ");
+  const as=Number(g.awayScore), hs=Number(g.homeScore);
+  const oldT=(Number(prev.as)||0)+(Number(prev.hs)||0);
+  const nowT=(Number.isFinite(as)?as:0)+(Number.isFinite(hs)?hs:0);
+  if(nowT>oldT && (Number.isFinite(as)||Number.isFinite(hs))){
+    flashAlert({
+      kicker:"FAVORITE · "+who,
+      title: (g.awayAb||g.away)+" "+(Number.isFinite(as)?as:"–")+" — "+(Number.isFinite(hs)?hs:"–")+" "+(g.homeAb||g.home),
+      body: g.lastPlay||g.detail||"Score"
+    });
+    return;
+  }
+  if(g.state==="post" && prev.state!=="post"){
+    flashAlert({
+      kicker:"FAVORITE · "+who,
+      title: "Final · "+(g.awayAb||g.away)+" "+(g.awayScore||"–")+" — "+(g.homeScore||"–")+" "+(g.homeAb||g.home),
+      body: g.detail||"Game over"
+    });
+    return;
+  }
+  if(isHeat(g) && !prev.heat){
+    let why="Critical moment";
+    if(g.red) why="Red zone";
+    else if(/9th|extra/i.test(String(g.detail||""))) why="Late inning";
+    else if(/2:00|1:\d\d|0:\d\d/.test(String(g.detail||""))) why="Two-minute";
+    else if(/round/i.test(String(g.detail||""))) why="Last round";
+    flashAlert({
+      kicker:"FAVORITE · "+who,
+      title: why,
+      body: (g.detail||"")+(g.down?(" · "+g.down):"")
+    });
+  }
+}
 async function tickSlip(){
-  if(!SLIP.length) return;
+  window.SLIP_GAMES = window.SLIP_GAMES || {};
+  window.FAV_SNAP = window.FAV_SNAP || {};
   window.SLIP_GAMES = window.SLIP_GAMES || {};
   const snap={};
   SLIP.forEach(s=>{
     snap[s.id]={live:s.live, as:s.awayScore, hs:s.homeScore, state:s.status, detail:s.detail};
   });
-  const lgs=[...new Set(SLIP.map(s=>s.lg||LEAGUE).filter(lg=>URLS[lg] && lg!=="tssaa"))];
+  const lgs=[...new Set(SLIP.map(s=>s.lg||LEAGUE).concat(Object.keys(FAV||{}).filter(lg=>FAV[lg]&&Object.keys(FAV[lg]).length)).filter(lg=>URLS[lg] && lg!=="tssaa"))];
   for(const lg of lgs){
     try{
       const evs=await pullScoreboard(lg);
@@ -2355,6 +2409,15 @@ async function tickSlip(){
       }catch(e){}
     }
   }
+  const seen={};
+  Object.values(window.SLIP_GAMES).concat(window.LIVE_GAMES||GAMES||[]).forEach(g=>{
+    const key=String(g.fightId||g.eventId||g.id||"");
+    if(!key || seen[key]) return;
+    seen[key]=1;
+    const prev=window.FAV_SNAP[key]||{};
+    alertFromFav(g, prev);
+    window.FAV_SNAP[key]={as:g.awayScore, hs:g.homeScore, state:g.state, heat:isHeat(g), detail:g.detail};
+  });
   ALERT_SEED = true;
   saveSlip();
   if($("eatPanel") && !$("eatPanel").hidden) paintSlip();
