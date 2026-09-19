@@ -863,6 +863,7 @@ function renderFootball(g, sum){
       <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Gamecast</button>
       <button type="button" data-ftab="box" class="${tab==="box"?"on":""}">Box</button>
       <button type="button" data-ftab="lead" class="${tab==="lead"?"on":""}">Leaders</button>
+      <button type="button" data-ftab="hl" class="${tab==="hl"?"on":""}">Highlights</button>
     </div>
     <div class="fsec" data-sec="live" ${tab==="live"?"":"hidden"}>
       <div class="fieldwrap">
@@ -893,14 +894,16 @@ function renderFootball(g, sum){
     <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
     <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leadBoard||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
   if(!playing){
-    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Scoring highlights</p><div class="clips">${clips}</div></div>` : "";
+    $("clipMount").innerHTML = clips
+      ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>`
+      : `<p class="hint">Highlights post when ESPN cuts them.</p>`;
   }
-  $("clipMount").hidden = tab!=="live";
+  $("clipMount").hidden = tab!=="hl" && tab!=="live";
   document.querySelectorAll("[data-ftab]").forEach(b=>b.onclick=()=>{
     window.FTAB=b.dataset.ftab;
     document.querySelectorAll("[data-ftab]").forEach(x=>x.classList.toggle("on", x===b));
     document.querySelectorAll(".fsec").forEach(s=>s.hidden = s.dataset.sec!==window.FTAB);
-    if($("clipMount")) $("clipMount").hidden = window.FTAB!=="live";
+    if($("clipMount")) $("clipMount").hidden = window.FTAB!=="hl" && window.FTAB!=="live";
   });
 }
 function videoClips(sum){
