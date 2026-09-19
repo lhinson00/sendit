@@ -1580,14 +1580,16 @@ function ufcBar(a,b,label){
   const pct=t?Math.round(100*x/t):50;
   return `<div class="ubar"><span>${x}</span><i title="${label}"><b style="width:${pct}%"></b></i><span>${y}</span></div>`;
 }
-function paintFightShell(g, extra){
+function ufcLiveBoard(g, extra){
   extra=extra||{};
   const live=g.state==="in";
-  const clock=extra.clock||g.detail||when(g);
   const sa=extra.away||{}, sh=extra.home||{};
+  if(!(live || extra.away || extra.home)){
+    return `<p class="hint">${live?"Waiting on ESPN live stats…":"Stats post when the cage door shuts — or the second the fight goes live."}</p>`;
+  }
   const sigA=(sa.sigStrikesLanded||"0")+"/"+(sa.sigStrikesAttempted||"0");
   const sigH=(sh.sigStrikesLanded||"0")+"/"+(sh.sigStrikesAttempted||"0");
-  const liveBoard = (live || extra.away || extra.home) ? `
+  return `
     <div class="ustats">
       <div class="uv ul">${sa.knockDowns||0}</div><div class="uh">KD</div><div class="uv ur">${sh.knockDowns||0}</div>
       <div class="uv ul">${sigA}</div><div class="uh">Sig strikes</div><div class="uv ur">${sigH}</div>
@@ -1599,8 +1601,19 @@ function paintFightShell(g, extra){
     <div class="ubars">
       ${ufcBar(sa.sigStrikesLanded, sh.sigStrikesLanded, "Sig landed")}
       ${ufcBar(sa.takedownsLanded, sh.takedownsLanded, "TD")}
-    </div>` : `<p class="hint">${live?"Waiting on ESPN live stats…":"Stats post when the cage door shuts — or the second the fight goes live."}</p>`;
+    </div>`;
+}
+function paintFightShell(g, extra){
+  extra=extra||{};
+  const live=g.state==="in";
+  const clock=extra.clock||g.detail||when(g);
+  if($("ufcShell") && $("ufcLive") && $("ufcClock")){
+    $("ufcClock").innerHTML = (live?"<span class='livepulse'></span>":"")+clock;
+    $("ufcLive").innerHTML = ufcLiveBoard(g, extra);
+    return;
+  }
   $("gameRoom").innerHTML = `
+    <div id="ufcShell">
     <div class="scorebug mlb-bug">
       <div class="mlb-inning">${g.card||"UFC"} · ${g.weight||g.format||"Bout"}</div>
       <div class="gduo" style="margin-top:12px">
@@ -1616,13 +1629,14 @@ function paintFightShell(g, extra){
           <span class="rec">${g.homeRec||""}</span>
         </button>
       </div>
-      <div class="outs">${live?"<span class='livepulse'></span>":""}${clock}</div>
+      <div class="outs" id="ufcClock">${live?"<span class='livepulse'></span>":""}${clock}</div>
     </div>
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
-    ${liveBoard}
+    <div id="ufcLive">${ufcLiveBoard(g, extra)}</div>
     <p class="hint">${[g.venue,g.broadcast].filter(Boolean).join(" · ")} · tap a face for the full book</p>
-    <div class="hist" id="histA">${$("histA")?$("histA").innerHTML:"<p class='hint'>Loading "+(g.away||"")+"…</p>"}</div>
-    <div class="hist" id="histB">${$("histB")?$("histB").innerHTML:"<p class='hint'>Loading "+(g.home||"")+"…</p>"}</div>`;
+    <div class="hist" id="histA"><p class="hint">Loading ${g.away||"fighter"}…</p></div>
+    <div class="hist" id="histB"><p class="hint">Loading ${g.home||"fighter"}…</p></div>
+    </div>`;
   bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
 }
 async function fetchUfcLive(g){
@@ -1648,28 +1662,25 @@ async function fetchUfcLive(g){
 }
 function renderFight(g){
   paintFightShell(g);
-  if(g.awayId) loadFightHistory(g.awayId, g.away, "histA");
-  if(g.homeId) loadFightHistory(g.homeId, g.home, "histB");
-  const fid=g.fightId||g.id;
+  loadFightHistory(g.awayId, g.away, "histA");
+  loadFightHistory(g.homeId, g.home, "histB");
+  const fid=String(g.fightId||g.id||"");
   async function tickFight(){
-    if(OPEN!==fid && OPEN!==g.eventId && OPEN!==g.id) return;
+    if(String(OPEN)!==fid && String(OPEN)!==String(g.eventId||"") && String(OPEN)!==String(g.id||"")) return;
     const extra=await fetchUfcLive(g);
-    const keepA=$("histA")&&$("histA").innerHTML, keepB=$("histB")&&$("histB").innerHTML;
     paintFightShell(g, extra);
-    if(keepA && $("histA")) $("histA").innerHTML=keepA;
-    if(keepB && $("histB")) $("histB").innerHTML=keepB;
     if(g.state==="post"){ if(poll){ clearInterval(poll); poll=null; } }
   }
-  tickFight();
   if(poll) clearInterval(poll);
   poll=setInterval(tickFight, 8000);
+  if(g.state==="in") tickFight();
 }
 async function loadFightHistory(aid, name, hostId){
-  const host=$(hostId);
-  if(!host) return;
+  const write = html => { const host=$(hostId); if(host) host.innerHTML=html; };
+  if(!aid){ write("<div class='box'><h3>"+(name||"Fighter")+" · history</h3><p class='hint'>No ESPN id for this fighter.</p></div>"); return; }
   try{
     const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/"+aid,{cache:"no-store"});
-    if(!res.ok) throw new Error("no book");
+    if(!res.ok) throw new Error("ESPN "+res.status);
     const data=await res.json();
     const keys=data.events||[];
     const map=data.eventsMap||{};
@@ -1685,11 +1696,11 @@ async function loadFightHistory(aid, name, hostId){
       const title=e.titleFight?" <span class='titlechip'>Title</span>":"";
       return "<tr><td>"+dt+"</td><td>"+(e.shortName||e.name||"")+" "+title+"</td><td>"+opp+"</td><td>"+method+(rnd?(" · "+rnd):"")+"</td><td>"+tag+"</td></tr>";
     }).filter(Boolean);
-    if(!rows.length){ host.innerHTML="<div class='box'><h3>"+name+" · history</h3><p class='hint'>No ESPN history.</p></div>"; return; }
+    if(!rows.length){ write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>No ESPN history posted yet.</p></div>"); return; }
     const w=rows.filter(x=>x.indexOf("chipwin")>=0).length, l=rows.filter(x=>x.indexOf("chiploss")>=0).length;
-    host.innerHTML="<div class='box'><h3>"+name+" · "+rows.length+" fights · "+w+"-"+l+" on ESPN</h3><table class='bx'><thead><tr><th>Date</th><th>Event</th><th>Opp</th><th>Method</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>";
+    write("<div class='box'><h3>"+name+" · "+rows.length+" fights · "+w+"-"+l+" on ESPN</h3><table class='bx'><thead><tr><th>Date</th><th>Event</th><th>Opp</th><th>Method</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>");
   }catch(e){
-    host.innerHTML="<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history.</p></div>";
+    write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history. "+(e.message||"")+"</p></div>");
   }
 }
 async function openGame(id, fid){
