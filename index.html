@@ -152,11 +152,15 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .cast2{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:0 var(--pad) 20px}
 @media(max-width:800px){.cast2{grid-template-columns:1fr}}
 .fieldwrap{padding:0 var(--pad) 8px}
-.statpair{display:grid;grid-template-columns:1fr auto 1fr;gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #222}
-.statpair b{font-size:22px}
+.statpair{display:grid;grid-template-columns:1fr 110px 1fr;gap:6px 8px;align-items:center;padding:12px 0;border-bottom:1px solid #222}
+.statpair b:first-of-type{text-align:right;font-size:22px}
+.statpair b:last-of-type{text-align:left;font-size:22px}
 .statpair span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
-.cmpbar{grid-column:1/-1;height:6px;background:#2a241c;border-radius:2px;overflow:hidden}
-.cmpbar i{display:block;height:6px;background:var(--orange)}
+.statpair.head b{font-size:16px;letter-spacing:.08em}
+.cmpbar{grid-column:1/-1;height:6px;background:#1c1c22;border-radius:2px;display:flex;justify-content:center;order:-1}
+.cmpbar i{display:block;height:6px}
+.cmpbar i.l{background:var(--orange);border-radius:2px 0 0 2px}
+.cmpbar i.r{background:#6a645c;border-radius:0 2px 2px 0}
 .hbar{height:4px;background:#222;margin-top:4px}
 .hbar i{display:block;height:4px;background:var(--orange)}
 .leadmini{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #222}
@@ -656,14 +660,17 @@ function renderFootball(g, sum){
       </div>
       <div class="cast2">
         <div>
-          <p class="hint">${aw} &nbsp; tape &nbsp; ${hm}</p>
-          <div class="statpair"><b>${aw}</b><span></span><b>${hm}</b></div>
-          ${[["totalYards","Total Yards"],["netPassingYards","Passing"],["rushingYards","Rushing"],["turnovers","Turnovers"],["firstDowns","1st Downs"],["totalPenaltiesYards","Penalties"],["thirdDownEff","3rd Down"],["fourthDownEff","4th Down"],["possessionTime","Possession"]].map(([k,lab])=>{
+          <div class="statpair head"><b>${aw}</b><span>tape</span><b>${hm}</b></div>
+          ${[["totalYards","Total Yards",1],["netPassingYards","Passing",1],["rushingYards","Rushing",1],["turnovers","Turnovers",1],["firstDowns","1st Downs",1],["totalPenaltiesYards","Penalties",0],["thirdDownEff","3rd Down",0],["fourthDownEff","4th Down",0],["possessionTime","Possession",2]].map(([k,lab,kind])=>{
             const L=tstat(sum,aw,k), R=tstat(sum,hm,k);
-            const ln=parseFloat(String(L).replace(/[^0-9.]/g,""))||0;
-            const rn=parseFloat(String(R).replace(/[^0-9.]/g,""))||0;
-            const tot=ln+rn, lp=tot?Math.round(ln/tot*100):50;
-            return `<div class="statpair"><b>${L}</b><span>${lab}</span><b>${R}</b><div class="cmpbar"><i style="width:${lp}%"></i></div></div>`;
+            const num=v=>{
+              if(kind===2){ const p=String(v).split(":"); return p.length===2?(Number(p[0])*60+Number(p[1]||0)):0; }
+              const n=parseFloat(String(v).split("-")[0]);
+              return isFinite(n)?n:0;
+            };
+            const ln=num(L), rn=num(R), tot=ln+rn;
+            const bar = (kind && tot) ? `<div class="cmpbar"><i class="l" style="width:${Math.round(ln/tot*50)}%"></i><i class="r" style="width:${Math.round(rn/tot*50)}%"></i></div>` : "";
+            return `<div class="statpair">${bar}<b>${L}</b><span>${lab}</span><b>${R}</b></div>`;
           }).join("")}
         </div>
         <div>
