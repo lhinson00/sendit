@@ -701,23 +701,23 @@ async function loadUfcRankings(){
   host.innerHTML = "<div class='rankwrap'><p class='hint'>Official UFC rankings · "+UFC_OFFICIAL.asOf+"</p>"+
     block(p4p)+"<div class='rankgrid'>"+block(divs)+"</div></div>";
 }
+async function findMmaId(name){
+  if(!name) return "";
+  try{
+    const res=await fetch("https://site.web.api.espn.com/apis/common/v3/search?query="+encodeURIComponent(name)+"&limit=12&type=player",{cache:"no-store"});
+    if(!res.ok) return "";
+    const items=(await res.json()).items||[];
+    const exact=items.find(x=>x.sport==="mma" && String(x.displayName||"").toLowerCase()===String(name).toLowerCase());
+    const any=items.find(x=>x.sport==="mma");
+    return String((exact||any||{}).id||"");
+  }catch(e){ return ""; }
+}
 async function openFighter(pid, name){
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
+  if(!pid) pid = await findMmaId(name);
   if(!pid){
-    let rec="", note="", board="";
-    (UFC_OFFICIAL.boards||[]).forEach(b=> (b.rows||[]).forEach(r=>{
-      if(r[1]===name){ rec=r[2]; note=r[3]; board=b.name; }
-    }));
-    $("playerRoom").innerHTML=`
-      <div class="phero">
-        <div class="phero-copy" style="padding:16px">
-          <p class="kicker">${board||"Ranked"}</p>
-          <h2>${name}</h2>
-          <p>${rec||""} ${note?("· "+note):""}</p>
-        </div>
-        <p class="hint">Full fight book needs an ESPN id. Open this name from the 331 lineup when they're on the card.</p>
-      </div>`;
+    $("playerRoom").innerHTML="<p class='hint'>Could not match "+name+" on ESPN.</p>";
     return;
   }
   try{
