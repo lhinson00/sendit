@@ -58,10 +58,14 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .logoplate{width:36px;height:36px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
 .logoplate img{width:28px;height:28px;object-fit:contain}
 .gcard .nm{font-size:15px;line-height:1.15;flex-wrap:wrap}
-.gcard.tncard .nm{font-size:22px;letter-spacing:.02em;line-height:1.05;flex-wrap:nowrap}
-.gcard.tncard .nm span{display:block;white-space:normal;max-width:100%}
-.gcard.tncard .nm em{display:block;font-family:Manrope,sans-serif;font-style:normal;font-size:11px;letter-spacing:.08em;margin-top:2px}
-.gcard.tncard .sc{font-size:40px}
+.gcard.tncard .bigline{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:start}
+.gcard.tncard .nm{display:flex;flex-direction:row;align-items:flex-start;gap:4px;min-width:0;flex-wrap:nowrap;font-size:18px;letter-spacing:.02em;line-height:1.08}
+.gcard.tncard .nm .who{min-width:0;flex:1}
+.gcard.tncard .nm span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.gcard.tncard .nm em{display:block;font-family:Manrope,sans-serif;font-style:normal;font-size:11px;letter-spacing:.06em;margin-top:3px;color:#9a9388}
+.gcard.tncard .nm.r{text-align:right;justify-content:flex-end}
+.gcard.tncard .nm.r .who{text-align:right}
+.gcard.tncard .sc{font-size:34px;padding-top:2px;align-self:center}
 .regcut{margin:10px 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a8478}
 .rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
@@ -978,9 +982,9 @@ function paintTnSlate(){
     return `<div class="gcard tncard${pinned?" pin":""}" data-tn="${g.id}" data-away="${aid}" data-home="${hid}" data-an="${String(g.away).replace(/"/g,"")}" data-hn="${String(g.home).replace(/"/g,"")}">
       <div class="gstat"><span>${g.status||"Final"}</span><span>${g.region||""}</span></div>
       <div class="bigline">
-        <div class="nm">${starBtn(aid,g.away)}<span>${g.away}</span><em>${g.ar||""}</em></div>
+        <div class="nm">${starBtn(aid,g.away)}<div class="who"><span>${g.away}</span><em>${g.ar||""}</em></div></div>
         <div class="sc"><em>${g.as||"–"}</em><span>–</span><em>${g.hs||"–"}</em></div>
-        <div class="nm r"><span>${g.home}</span><em>${g.hr||""}</em></div>${starBtn(hid,g.home)}
+        <div class="nm r"><div class="who"><span>${g.home}</span><em>${g.hr||""}</em></div>${starBtn(hid,g.home)}</div>
       </div>
     </div>`;
   };
