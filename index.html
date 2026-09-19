@@ -134,7 +134,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .rrow b{display:block}
 .rrow em{font-style:normal;color:var(--muted);font-size:11px}
 .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange)}
-.fface{width:100%;max-height:280px;object-fit:cover;object-position:top;display:block;background:#120e0c}
+.fface{width:180px;height:180px;object-fit:cover;object-position:center 15%;display:block;background:#120e0c;border-radius:8px;margin:16px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -734,19 +734,24 @@ async function openFighter(pid, name){
       const rr=await fetch("https://sports.core.api.espn.com/v2/sports/mma/athletes/"+pid+"/records",{cache:"no-store"});
       if(rr.ok){ const rd=await rr.json(); recSum=((rd.items||[])[0]||{}).summary||""; }
     }catch(e){}
+    const gym=(a.association&&(a.association.name||a.association.text))||"—";
+    const stance=(a.stance&&(a.stance.text||a.stance.name))||"";
+    const style=Array.isArray(a.styles)?a.styles.map(s=>s.text||s.name||"").filter(Boolean).join(" / "):"—";
     $("playerRoom").innerHTML = `
       <div class="phero">
-        <img class="fface" alt="" src="${shot}"/>
-        <div class="phero-copy" style="padding:16px">
-          <p class="kicker">${(a.weightClass&&a.weightClass.text)||"Fighter"}</p>
-          <h2>${a.displayName||name}</h2>
-          <p>${recSum} · ${a.displayHeight||""} · ${a.displayReach?("reach "+a.displayReach):""} · ${a.stance||""} · ${a.citizenship||""}</p>
+        <div class="phero-top">
+          <img class="fface" alt="" src="${shot}"/>
+          <div class="phero-copy">
+            <p class="kicker">${(a.weightClass&&a.weightClass.text)||"Fighter"}</p>
+            <h2>${a.displayName||name}</h2>
+            <p>${recSum} · ${a.displayHeight||""} · ${a.displayReach?("reach "+a.displayReach):""} · ${stance} · ${a.citizenship||""}</p>
+          </div>
         </div>
         <div class="tiles">
           <div class="tile"><em>Age</em><b>${a.age||"—"}</b></div>
           <div class="tile"><em>Weight</em><b>${a.displayWeight||"—"}</b></div>
-          <div class="tile"><em>Gym</em><b>${a.association||"—"}</b></div>
-          <div class="tile"><em>Style</em><b>${(a.styles||"—")}</b></div>
+          <div class="tile"><em>Gym</em><b>${gym}</b></div>
+          <div class="tile"><em>Style</em><b>${style}</b></div>
         </div>
       </div>
       <div class="hist" id="histF"><p class="hint">Loading fight history…</p></div>`;
