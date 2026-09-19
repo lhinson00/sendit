@@ -1776,24 +1776,7 @@ async function openMlbLeaders(){
       });
       return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
     });
-    const ids=[...new Set(cats.flatMap(c=>c.leaders.map(L=>L.athlete.id).filter(Boolean)))].slice(0,40);
-    const book={};
-    await Promise.all(ids.map(async id=>{
-      try{
-        const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/baseball/mlb/athletes/"+id,{cache:"no-store"});
-        if(!r.ok) return;
-        const a=await r.json();
-        const ath=a.athlete||a;
-        book[id]={name:ath.displayName||ath.fullName||ath.shortName||"", team:(ath.team&&(ath.team.abbreviation||ath.team.displayName))||""};
-      }catch(e){}
-    }));
-    cats.forEach(c=>c.leaders.forEach(L=>{
-      const b=book[L.athlete.id];
-      if(!b) return;
-      L.athlete.displayName=b.name;
-      L.team.displayName=b.team;
-      L.team.abbreviation=b.team;
-    }));
+    await fillLeadNames("mlb", cats);
     window.LEAD_CATS=cats;
     window.LEAD_SIDE="off";
     window.LEAD_NOTE="2026 regular season";
@@ -2104,6 +2087,36 @@ function refId(ref){
   const m=String(ref||"").match(/\/(?:athletes|teams)\/(\d+)/);
   return m?m[1]:"";
 }
+async function fillLeadNames(sport, cats){
+  const ids=[...new Set(cats.flatMap(c=>(c.leaders||[]).map(L=>L.athlete&&L.athlete.id).filter(Boolean)))];
+  const league = sport==="mlb"?"mlb":"nfl";
+  const path = sport==="mlb"?"baseball/mlb":"football/nfl";
+  const book={};
+  const chunk=ids.slice();
+  await Promise.all(chunk.map(async id=>{
+    try{
+      const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+id,{cache:"no-store"});
+      if(r.ok){
+        const a=await r.json();
+        const ath=a.athlete||a;
+        book[id]={name:ath.displayName||ath.fullName||ath.shortName||"", team:(ath.team&&(ath.team.abbreviation||ath.team.displayName))||""};
+        return;
+      }
+    }catch(e){}
+    try{
+      const r=await fetch("https://sports.core.api.espn.com/v2/sports/"+(sport==="mlb"?"baseball/leagues/mlb":"football/leagues/nfl")+"/seasons/2026/athletes/"+id,{cache:"no-store"});
+      if(!r.ok) return;
+      const ath=await r.json();
+      book[id]={name:ath.displayName||((ath.firstName||"")+" "+(ath.lastName||"")).trim(), team:""};
+    }catch(e){}
+  }));
+  cats.forEach(c=>(c.leaders||[]).forEach(L=>{
+    const b=book[L.athlete&&L.athlete.id];
+    if(!b) return;
+    L.athlete.displayName=b.name||L.athlete.displayName;
+    if(b.team){ L.team=L.team||{}; L.team.abbreviation=b.team; L.team.displayName=b.team; }
+  }));
+}
 async function openLeaders(lg){
   const host=$("boardPanel");
   host.hidden=false;
@@ -2122,24 +2135,7 @@ async function openLeaders(lg){
         });
         return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
       });
-      const ids=[...new Set(cats.flatMap(c=>c.leaders.map(L=>L.athlete.id).filter(Boolean)))].slice(0,36);
-      const book={};
-      await Promise.all(ids.map(async id=>{
-        try{
-          const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id,{cache:"no-store"});
-          if(!r.ok) return;
-          const a=await r.json();
-          const ath=a.athlete||a;
-          book[id]={name:ath.displayName||ath.fullName||ath.shortName||"", team:(ath.team&&(ath.team.abbreviation||ath.team.displayName))||""};
-        }catch(e){}
-      }));
-      cats.forEach(c=>c.leaders.forEach(L=>{
-        const b=book[L.athlete.id];
-        if(!b) return;
-        L.athlete.displayName=b.name;
-        L.team.abbreviation=b.team;
-        L.team.displayName=b.team;
-      }));
+      await fillLeadNames("nfl", cats);
       window.LEAD_NOTE="2026 regular season";
     }else{
       const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/statistics",{cache:"no-store"});
