@@ -277,7 +277,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .career{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 14px}
 .career span{font-size:11px;color:#c9c2b8;background:#14110e;border:1px solid #2a241c;padding:6px 8px}
 .career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
-.glog{display:grid;gap:8px;padding:0 var(--pad) 24px}
+.glog{display:block;width:100%;max-width:100%;padding:0 var(--pad) 24px;box-sizing:border-box}
+.glog .lastg{width:100%;max-width:100%;margin:12px 0;box-sizing:border-box}
+.lastg{width:100%;max-width:100%;box-sizing:border-box}
+.lastg-stats{display:flex;flex-wrap:wrap;width:100%}
 .glog h3{margin:0 0 4px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
 
 .lastg{margin:12px var(--pad) 8px;padding:12px;background:#101218;border:1px solid #3a2a18;border-radius:10px}
@@ -2306,10 +2309,10 @@ async function openPlayer(pid, name){
           const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM|SOLO|TOT|SACK|TFL)$/i;
           const bits=labels.map((lab,i)=>({lab,s:season.stats[i]})).filter(x=>keep.test(x.lab));
           const line = bits.length ? `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>` : (fromKit?"":`<div class="tiles">${tiles}</div>`);
-          if(fromKit) return line;
-          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}${lastGame}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No earlier games posted</p>"}</div>`;
+          if(fromKit) return line+"</div>";
+          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}</div>${lastGame}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No earlier games posted</p>"}</div>`;
         })()}
-      </div>`;
+      `;
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
