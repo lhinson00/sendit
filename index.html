@@ -304,6 +304,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .career{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 14px}
 .career span{font-size:11px;color:#c9c2b8;background:#14110e;border:1px solid #2a241c;padding:6px 8px}
 .career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
+.kitnote{padding:2px var(--pad) 0;color:var(--ember)!important;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
 .kitlog{padding:0 var(--pad) 8px}
 .kitlogrow{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #221e18;font-size:13px}
 .kitlogrow span{color:var(--muted)}
@@ -485,6 +486,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .krow em{font-style:normal;color:var(--muted);font-size:12px;display:block;margin-top:4px}
 .khit{font-family:"Bebas Neue",sans-serif;font-size:34px;line-height:1;color:var(--orange);text-align:right}
 .kpct{font-size:12px;color:var(--ember);text-align:right}
+.kitnote{padding:2px var(--pad) 0;color:var(--ember)!important;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
 .kitlog{padding:0 var(--pad) 8px}
 .kitlogrow{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #221e18;font-size:13px}
 .kitlogrow span{color:var(--muted)}
@@ -675,9 +677,9 @@ table.mlstbl td.l{text-align:left;white-space:normal}
     <button type="button" class="tabbtn" id="tabEatAny" hidden>Tracker</button>
     <span class="tabs" id="nflTabs" hidden>
       <button type="button" class="tabbtn on" id="tabLive">Slate</button>
-      <button type="button" class="tabbtn" id="tabKit">Trends</button>
       <button type="button" class="tabbtn" id="tabLeadN">Leaders</button>
       <button type="button" class="tabbtn" id="tabStandN">Standings</button>
+      <button type="button" class="tabbtn" id="tabKit">Trends</button>
       <button type="button" class="tabbtn" id="tabEat">Tracker</button>
     </span>
     <span class="tabs" id="cfbTabs" hidden>
@@ -688,9 +690,9 @@ table.mlstbl td.l{text-align:left;white-space:normal}
     </span>
     <span class="tabs" id="mlbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabMlbSlate">Slate</button>
-      <button type="button" class="tabbtn" id="tabMlbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabStand">Standings</button>
       <button type="button" class="tabbtn" id="tabLeadM">Leaders</button>
+      <button type="button" class="tabbtn" id="tabMlbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabEatM">Tracker</button>
     </span>
     <span class="tabs" id="mlsTabs" hidden>
@@ -714,6 +716,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
       <div><label>Stat</label><select id="kStat"></select></div>
       <div><label>Line · last 18</label><select id="kLine"></select></div>
     </div>
+    <p class="hint kitnote">Track a trend to put it on Tracker.</p>
     <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
     <div id="kitLog" class="kitlog"></div>
     <div id="kitList" class="list"></div>
@@ -2567,7 +2570,7 @@ function paintKitLog(){
   if(host) host.innerHTML="";
 }
 function addSlip(pid){
-  const p=ROSTER.find(x=>x.id===String(pid));
+  const p=(window.KIT_POOL||[]).concat(ROSTER).find(x=>x.id===String(pid));
   if(!p) return;
   const id=kitMarkId(pid);
   if(KIT_MARK.some(x=>x.id===id)) return;
@@ -2576,11 +2579,11 @@ function addSlip(pid){
   paintKitLog();
   const g=(window.LIVE_GAMES||GAMES||[]).find(x=>x.awayAb===p.team||x.homeAb===p.team||String(x.away||"").includes(p.team)||String(x.home||"").includes(p.team));
   if(!SLIP.some(s=>s.id===id)){
-    SLIP.unshift({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:g?(g.away+" @ "+g.home):"", eventId:g&&g.eventId, lg:"nfl", status:"pre"});
+    SLIP.unshift({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:g?(g.away+" @ "+g.home):"", eventId:g&&g.eventId, lg:LEAGUE||"nfl", status:"pre"});
     saveSlip();
   }
   const btn=document.querySelector('[data-add="'+pid+'"]');
-  if(btn){ btn.textContent="Added"; btn.classList.add("on"); }
+  if(btn){ btn.textContent="Tracking"; btn.classList.add("on"); }
 }
 function liveStatFromBox(sum, pid, stat){
   const sides=((sum.boxscore||{}).players)||[];
@@ -3007,8 +3010,8 @@ function fillKitGameList(){
   const lg=LEAGUE==="mlb"?"mlb":"nfl";
   const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg===lg||LEAGUE===lg));
   const cur=FILT.game||"";
-  const all=lg==="mlb"?"":"<option value=''>All games</option>";
-  if(lg==="mlb" && !cur && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
+    const all="";
+  if(!cur && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
   sel.innerHTML=all+games.map(g=>{
     const id=String(g.eventId||g.id||"");
     const lab=(g.awayAb||g.away||"?")+" @ "+(g.homeAb||g.home||"?");
@@ -3176,7 +3179,7 @@ function paintKitRows(out, host){
       <div class="ktop">
         <div class="khit">${x.score}</div>
         <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} · L5 ${x.l5h}/${x.l5n} · ${labelLine(FILT.stat,FILT.line)}</em></div>
-        <button type="button" class="addline${isKitMarked(x.p.id)?" on":""}" data-add="${x.p.id}">${isKitMarked(x.p.id)?"Added":"Add"}</button>
+        <button type="button" class="addline${isKitMarked(x.p.id)?" on":""}" data-add="${x.p.id}">${isKitMarked(x.p.id)?"Tracking":"Track"}</button>
       </div>
       <div class="spark">${spark}</div>
     </div>`;
@@ -3219,6 +3222,7 @@ async function runMlbKitchen(host){
     return;
   }
   const roster=[].concat(await loadMlbSide(g.awayId), await loadMlbSide(g.homeId));
+  window.KIT_POOL=roster;
   const want=FILT.pos==="SP"?"SP":"BAT";
   const pool=roster.filter(p=>p.pos===want);
   if(!pool.length){
@@ -3245,24 +3249,45 @@ async function runMlbKitchen(host){
   paintKitRows(out, host);
 }
 
+
+async function loadNflSide(tid){
+  const out=[];
+  try{
+    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/roster",{cache:"no-store"});
+    if(!r.ok) return out;
+    const d=await r.json();
+    const team=(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||"";
+    (d.athletes||[]).forEach(grp=>{
+      const items=grp.items||grp.athletes||[];
+      items.forEach(a=>{
+        if(!a||!a.id) return;
+        const pos=((a.position&&a.position.abbreviation)||"").toUpperCase();
+        if(!/^(WR|TE|RB|QB)$/.test(pos)) return;
+        out.push({id:String(a.id), name:a.displayName||a.fullName||"", pos, team});
+      });
+    });
+  }catch(e){}
+  return out;
+}
 async function runKitchen(){
   const host=$("kitList");
   if(!host) return;
   try{
   fillKitControls();
   if(LEAGUE==="mlb") return runMlbKitchen(host);
-  host.innerHTML="<p class='hint'>Opening Trends… pulling NFL rosters.</p>";
-  $("kitMeta").textContent="Trends · "+FILT.pos;
-  await loadRosters();
   fillKitGameList();
-  let pool=ROSTER.filter(p=>p.pos===FILT.pos);
-  if(FILT.game){
-    const g=(window.LIVE_GAMES||GAMES||[]).find(x=>String(x.eventId||x.id||"")===String(FILT.game));
-    if(g){
-      const abs=new Set([g.awayAb,g.homeAb,g.away,g.home].map(x=>String(x||"").toUpperCase()).filter(Boolean));
-      pool=pool.filter(p=>abs.has(String(p.team||"").toUpperCase()));
-    }
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g&&(g.lg==="nfl"||LEAGUE==="nfl"));
+  if(!FILT.game && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
+  const g=games.find(x=>String(x.eventId||x.id||"")===String(FILT.game));
+  if(!g){
+    host.innerHTML="<p class='hint'>Pick a game to load Trends.</p>";
+    return;
   }
+  host.innerHTML="<p class='hint'>Trends · "+(g.awayAb||g.away)+" @ "+(g.homeAb||g.home)+" · two rosters…</p>";
+  $("kitMeta").textContent="Trends · "+(g.awayAb||"")+" @ "+(g.homeAb||"")+" · "+FILT.pos;
+  const roster=[].concat(await loadNflSide(g.awayId), await loadNflSide(g.homeId));
+  window.KIT_POOL=roster;
+  let pool=roster.filter(p=>p.pos===FILT.pos);
   if(!pool.length){
     host.innerHTML="<p class='hint'>No "+FILT.pos+" roster rows yet. Tap Trends again.</p>";
     return;
