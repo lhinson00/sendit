@@ -2529,6 +2529,11 @@ function addSlip(pid){
   KIT_MARK.unshift({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, at:Date.now()});
   saveKitMark();
   paintKitLog();
+  const g=(window.LIVE_GAMES||GAMES||[]).find(x=>x.awayAb===p.team||x.homeAb===p.team||String(x.away||"").includes(p.team)||String(x.home||"").includes(p.team));
+  if(!SLIP.some(s=>s.id===id)){
+    SLIP.unshift({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:g?(g.away+" @ "+g.home):"", eventId:g&&g.eventId, lg:"nfl", status:"pre"});
+    saveSlip();
+  }
   const btn=document.querySelector('[data-add="'+pid+'"]');
   if(btn){ btn.textContent="Added"; btn.classList.add("on"); }
 }
@@ -2790,9 +2795,18 @@ function packTag(rows){
   if(tags.every(t=>t==="HIT" || t==="PUSH")) return "HIT";
   return "LIVE";
 }
+let EAT_STAT="";
+function syncKitToSlip(){
+  (KIT_MARK||[]).forEach(m=>{
+    if(!m||!m.id) return;
+    if(SLIP.some(s=>s.id===m.id || (String(s.pid)===String(m.pid) && s.stat===m.stat && Number(s.line)===Number(m.line)))) return;
+    SLIP.unshift({id:m.id, pid:m.pid, name:m.name, team:m.team, pos:m.pos, stat:m.stat, line:m.line, live:0, game:"", eventId:"", lg:"nfl", status:"pre"});
+  });
+}
 function paintSlip(){
   const host=$("eatList");
   if(!host) return;
+  syncKitToSlip();
   const pool=Object.values(window.SLIP_GAMES||{}).concat(window.LIVE_GAMES||GAMES||[]);
   if(!SLIP.length){
     host.innerHTML="<p class='hint'>Board is empty. Add a Kitchen line or tap ATS / ML / O/U on a slate card.</p>";
@@ -2809,7 +2823,15 @@ function paintSlip(){
   const hitN=ranked.filter(s=>s.status==="post" && s.hit && !s.push).length;
   if($("eatMeta")) $("eatMeta").textContent=ranked.length+" on the board";
   if($("eatPulse")) $("eatPulse").innerHTML=`<div><b>${liveN}</b>live</div><div><b>${coverN}</b>cover</div><div><b>${hitN}</b>final</div>`;
-  host.innerHTML=ranked.map(s=>{
+  const cats=[["","All"],["rushYds","Rush yds"],["recYds","Rec yds"],["rec","Rec"],["passYds","Pass yds"],["passTd","Pass TD"],["rushTd","Rush TD"],["recTd","Rec TD"],["anytimeTd","Anytime TD"]];
+  const present=new Set(ranked.map(s=>s.stat||s.kind||""));
+  if(EAT_STAT && !ranked.some(s=>(s.stat||"")===EAT_STAT)) EAT_STAT="";
+  const shown=EAT_STAT?ranked.filter(s=>(s.stat||"")===EAT_STAT):ranked;
+  const eatPills=`<div class="pills" id="eatStats">`+cats.filter((c,i)=>!c[0]||present.has(c[0])).map(([id,lab])=>
+    `<button type="button" data-estat="${id}" class="${EAT_STAT===id?"on":""}">${lab}</button>`
+  ).join("")+`</div>`;
+  host.innerHTML=eatPills+shown.map(s=>{
+
 
     const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
     if(g) evalTeamSlip(s,g);
