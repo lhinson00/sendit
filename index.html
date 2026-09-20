@@ -670,6 +670,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
   <div id="kitPanel" hidden>
     <div class="kitbar">
       <div><label>Position</label><select id="kPos"><option>WR</option><option>TE</option><option>RB</option><option>QB</option></select></div>
+      <div><label>Game</label><select id="kGame"><option value="">All games</option></select></div>
       <div><label>Stat</label><select id="kStat"></select></div>
       <div><label>Line · last 18</label><select id="kLine"></select></div>
     </div>
@@ -791,7 +792,11 @@ function face(comp, lg){
   if(t.logos && t.logos[0] && t.logos[0].href) return t.logos[0].href;
   const ab = (t.abbreviation||"").toLowerCase();
   if(lg==="mlb") return "https://a.espncdn.com/i/teamlogos/mlb/500/"+ab+".png";
-  if(lg==="mls" && t.id) return "https://a.espncdn.com/i/teamlogos/soccer/500/"+t.id+".png";
+  if(lg==="mls"){
+    if(t.logo) return t.logo;
+    const sid=t.id||(comp&&comp.id)||"";
+    if(sid) return "https://a.espncdn.com/i/teamlogos/soccer/500/"+sid+".png";
+  }
   if(lg==="cfb" && t.id) return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+t.id+".png";
   return "https://a.espncdn.com/i/teamlogos/nfl/500/"+ab+".png";
 }
@@ -2349,7 +2354,7 @@ async function openPlayer(pid, name){
 }
 const LOGS = {};
 const ROSTER = [];
-const FILT = {pos:"WR", stat:"recYds", line:20};
+const FILT = {pos:"WR", stat:"recYds", line:20, game:""};
 let FAV = {nfl:{},cfb:{},mlb:{},ufc:{},tssaa:{},mls:{}};
 try{ FAV = Object.assign(FAV, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
 function saveFav(){ try{ localStorage.setItem("sauceFav", JSON.stringify(FAV)); }catch(e){} }
@@ -2772,6 +2777,7 @@ function paintSlip(){
   if($("eatMeta")) $("eatMeta").textContent=ranked.length+" on the board";
   if($("eatPulse")) $("eatPulse").innerHTML=`<div><b>${liveN}</b>live</div><div><b>${coverN}</b>cover</div><div><b>${hitN}</b>final</div>`;
   host.innerHTML=ranked.map(s=>{
+
     const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
     if(g) evalTeamSlip(s,g);
     const tag=slipMood(s);
@@ -2833,7 +2839,7 @@ function paintSlip(){
       <button type="button" class="x" data-drop="${s.id}">Remove</button>
     </div>`;
   }).join("");
-  host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=e=>{
+host.querySelectorAll("[data-drop]").forEach(b=>b.onclick=e=>{
     e.stopPropagation();
     SLIP=SLIP.filter(x=>x.id!==b.dataset.drop); saveSlip(); paintSlip();
   });
@@ -2874,7 +2880,20 @@ const LINES = {
   rec:[2,3,4,5,6,7,8,10],
   recTd:[1], rushTd:[1], passTd:[1,2], int:[1]
 };
+function fillKitGameList(){
+  const sel=$("kGame");
+  if(!sel) return;
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg==="nfl"||LEAGUE==="nfl"));
+  const cur=FILT.game||"";
+  sel.innerHTML="<option value=''>All games</option>"+games.map(g=>{
+    const id=String(g.eventId||g.id||"");
+    const lab=(g.awayAb||g.away||"?")+" @ "+(g.homeAb||g.home||"?");
+    return "<option value='"+id+"'"+(id===cur?" selected":"")+">"+lab+"</option>";
+  }).join("");
+  if(cur && ![...sel.options].some(o=>o.value===cur)) { FILT.game=""; sel.value=""; }
+}
 function fillKitControls(){
+  fillKitGameList();
   const st=$("kStat"), ln=$("kLine");
   if(!st) return;
   const opts=STATS[FILT.pos]||STATS.WR;
@@ -3014,7 +3033,15 @@ async function runKitchen(){
   host.innerHTML="<p class='hint'>Opening Kitchen… pulling NFL rosters.</p>";
   $("kitMeta").textContent="Kitchen · "+FILT.pos;
   await loadRosters();
-  const pool=ROSTER.filter(p=>p.pos===FILT.pos);
+  fillKitGameList();
+  let pool=ROSTER.filter(p=>p.pos===FILT.pos);
+  if(FILT.game){
+    const g=(window.LIVE_GAMES||GAMES||[]).find(x=>String(x.eventId||x.id||"")===String(FILT.game));
+    if(g){
+      const abs=new Set([g.awayAb,g.homeAb,g.away,g.home].map(x=>String(x||"").toUpperCase()).filter(Boolean));
+      pool=pool.filter(p=>abs.has(String(p.team||"").toUpperCase()));
+    }
+  }
   if(!pool.length){
     host.innerHTML="<p class='hint'>No "+FILT.pos+" roster rows yet. Tap Kitchen again.</p>";
     return;
@@ -3398,7 +3425,7 @@ function renderSoccer(g, sum){
     const lv=byId[aId], rv=byId[hId];
     const L=lv?(lv.displayValue!=null?lv.displayValue:lv.value):"—";
     const R=rv?(rv.displayValue!=null?rv.displayValue:rv.value):"—";
-    return `<div class="statpair"><span>${L}</span><b>${lab}</b><span>${R}</span></div>`;
+    return `<div class="statpair"><b>${L}</b><span>${lab}</span><b>${R}</b></div>`;
   }).join("");
   const keys=sum.keyEvents||[];
   const feed=(sum.commentary||[]).slice().reverse().slice(0,40).map(c=>{
@@ -3436,9 +3463,9 @@ function renderSoccer(g, sum){
   const pitch=plays.length?pitchSvg(plays,aId):`<p class="hint">Pitch tracking loads with the play feed…</p>`;
   $("gameRoom").innerHTML=`
     <div class="mlshead">
-      <div class="side logoplate" data-tid="${aId}" data-tname="${String(aName).replace(/"/g,"")}"><img alt="" src="${aImg}"/><div><b>${aName}</b></div></div>
-      <div class="sc">${as}<span>–</span>${hs}</div>
-      <div class="side r logoplate" data-tid="${hId}" data-tname="${String(hName).replace(/"/g,"")}"><div><b>${hName}</b></div><img alt="" src="${hImg}"/></div>
+      <div class="cside" data-tid="${aId}" data-tname="${String(aName).replace(/"/g,"")}"><span class="logoplate"><img alt="" src="${aImg}" onerror="this.style.opacity=.25"/></span><div><b>${aName}</b></div><span class="cscore">${as}</span></div>
+      <div class="mlsmid">${st||""}</div>
+      <div class="cside r" data-tid="${hId}" data-tname="${String(hName).replace(/"/g,"")}"><span class="cscore">${hs}</span><div><b>${hName}</b></div><span class="logoplate"><img alt="" src="${hImg}" onerror="this.style.opacity=.25"/></span></div>
     </div>
     <p class="hint" style="padding:0 var(--pad)">${st}${g.venue?" · "+g.venue:""} · away attacks left, home attacks right</p>
     <div class="pitchwrap">${pitch}</div>
@@ -4091,6 +4118,7 @@ $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls(); runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls(); runKitchen(); });
 $("kLine") && ($("kLine").onchange=e=>{ FILT.line=parseInt(e.target.value,10)||FILT.line; runKitchen(); });
+$("kGame") && ($("kGame").onchange=e=>{ FILT.game=e.target.value||""; runKitchen(); });
 fillKitControls();
 document.addEventListener("click", ev=>{
   const row = ev.target.closest && ev.target.closest(".prow[data-pid]");
