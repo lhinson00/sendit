@@ -699,6 +699,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
       </div>
       <div class="eatpulse" id="eatPulse"></div>
     </div>
+    <div id="eatFilters" class="pills"></div>
     <div id="eatList" class="eatboard"></div>
   </div>
 </section>
@@ -2830,7 +2831,18 @@ function paintSlip(){
   const eatPills=`<div class="pills" id="eatStats">`+cats.filter((c,i)=>!c[0]||present.has(c[0])).map(([id,lab])=>
     `<button type="button" data-estat="${id}" class="${EAT_STAT===id?"on":""}">${lab}</button>`
   ).join("")+`</div>`;
-  host.innerHTML=eatPills+shown.map(s=>{
+  const filt=$("eatFilters");
+  if(filt){
+    filt.innerHTML=cats.filter((c,i)=>!c[0]||present.has(c[0])).map(([id,lab])=>
+      `<button type="button" data-estat="${id}" class="${EAT_STAT===id?"on":""}">${lab}</button>`
+    ).join("");
+    filt.querySelectorAll("[data-estat]").forEach(b=>b.onclick=e=>{
+      e.preventDefault(); e.stopPropagation();
+      EAT_STAT=b.getAttribute("data-estat")||"";
+      paintSlip();
+    });
+  }
+  host.innerHTML=shown.map(s=>{
 
 
     const g=pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
