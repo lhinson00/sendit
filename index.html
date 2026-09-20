@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#05060a"/>
 <title>Sports Sauce</title>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Sports Sauce"/>
+<meta property="og:title" content="Sports Sauce"/>
+<meta property="og:description" content="Live scores, slates, and the Kitchen. NFL, college, MLB, MLS, UFC."/>
+<meta property="og:url" content="https://www.sportssauceapp.com/"/>
+<meta property="og:image" content="https://www.sportssauceapp.com/og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Sports Sauce"/>
+<meta name="twitter:description" content="Live scores, slates, and the Kitchen."/>
+<meta name="twitter:image" content="https://www.sportssauceapp.com/og.png"/>
 <script async src="https://plausible.io/js/pa-RkC5ljffAxaN_j-J33No5.js"></script>
 <script>
 window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
@@ -54,6 +66,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ownlock{display:flex;gap:8px;margin-top:10px}
 .ownlock input{flex:1;background:#0c0d12;border:1px solid #3a3228;color:#fff;padding:10px;border-radius:8px}
 .ownlock button,.ownbtn{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;border-radius:8px}
+.wire{padding:4px 0 20px}
+.wire .kicker{padding:0 var(--pad)}
+.ticker{overflow:hidden;border-top:1px solid #2a241c;border-bottom:1px solid #2a241c;background:#0c0d12;padding:8px 0}
+.ticker .track{display:flex;align-items:center;gap:18px;width:max-content;animation:tick 48s linear infinite;padding-left:16px}
+.ticker span{font-size:13px;letter-spacing:.02em;white-space:nowrap;color:#e8dfd0}
+.ticker i{color:var(--orange);font-style:normal}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .hub{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px var(--pad) 32px}
 .hubcard{text-align:left;padding:18px;border-radius:16px;border:1px solid rgba(255,122,24,.3);background:#120e0c;color:#fff}
 .hubcard img{width:40px;height:40px;object-fit:contain;margin-bottom:8px}
@@ -642,6 +661,10 @@ table.mlstbl td.l{text-align:left;white-space:normal}
     <button class="hubcard" data-lg="ufc"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/><b>UFC</b><span>The card</span></button>
     <button class="hubcard tssaa" data-lg="tssaa"><img alt="" src="https://cms-files.tssaa.org/images/logos/tssaa-logo.png"/><b>TSSAA</b><span>Tennessee</span></button>
   </div>
+  <div class="wire">
+    <p class="kicker">Wire · game news, not takes</p>
+    <div id="wireList" class="wirelist"><p class="hint">Loading headlines…</p></div>
+  </div>
 </section>
 
 <section id="viewLive" hidden>
@@ -758,6 +781,24 @@ function viewPop(name){
   const y = window.VIEW_Y[k] || 0;
   requestAnimationFrame(function(){ window.scrollTo(0, y); setTimeout(function(){ window.scrollTo(0,y); }, 80); });
 }
+async function loadWire(){
+  const host=$("wireList");
+  if(!host) return;
+  const skip=/pride month|gay pride|black lives matter|\bblm\b|transgender|trans athlete|pronouns|first take|get up\b|undisputed|hot take|column:|opinion:|op-ed|skip bayless/i;
+  const rss="https://news.google.com/rss/headlines/section/topic/SPORTS?hl=en-US&gl=US&ceid=US:en";
+  fetch("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(rss),{cache:"no-store"})
+    .then(r=>r.json())
+    .then(d=>{
+      const items=(d.items||[]).map(it=>String(it.title||"").replace(/\s+[-–|]\s+[^\-–|]{2,40}$/,"").trim()).filter(title=>title && !skip.test(title));
+      const uniq=[];
+      items.forEach(x=>{ if(!uniq.includes(x)) uniq.push(x); });
+      const line=uniq.slice(0,16);
+      if(!line.length){ host.innerHTML="<p class='hint'>Wire is quiet.</p>"; return; }
+      const bits=line.map(x=>"<span>"+x+"</span>").join("<i>•</i>");
+      host.innerHTML="<div class='ticker'><div class='track'>"+bits+"<i>•</i>"+bits+"</div></div>";
+    })
+    .catch(()=>{ host.innerHTML="<p class='hint'>Wire is quiet.</p>"; });
+}
 function show(name, opts){
   opts = opts||{};
   viewPin();
@@ -769,6 +810,7 @@ function show(name, opts){
   window.VIEW_NOW = name;
   if(opts.keep) viewPop(name);
   else window.scrollTo(0,0);
+  if(name==="home") loadWire();
   if(window.trackUse) window.trackUse("view", name);
   savePlace();
 }
@@ -3106,6 +3148,7 @@ async function runKitchen(){
   if(!host) return;
   try{
   fillKitControls();
+try{loadWire()}catch(e){}
   host.innerHTML="<p class='hint'>Opening Kitchen… pulling NFL rosters.</p>";
   $("kitMeta").textContent="Kitchen · "+FILT.pos;
   await loadRosters();
@@ -4191,11 +4234,14 @@ $("tabStand") && ($("tabStand").onclick=()=>mlbTab("stand"));
 $("tabLeadM") && ($("tabLeadM").onclick=()=>mlbTab("lead"));
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
-$("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls(); runKitchen(); });
-$("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls(); runKitchen(); });
+$("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
+try{loadWire()}catch(e){} runKitchen(); });
+$("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls();
+try{loadWire()}catch(e){} runKitchen(); });
 $("kLine") && ($("kLine").onchange=e=>{ FILT.line=parseInt(e.target.value,10)||FILT.line; runKitchen(); });
 $("kGame") && ($("kGame").onchange=e=>{ FILT.game=e.target.value||""; runKitchen(); });
 fillKitControls();
+try{loadWire()}catch(e){}
 document.addEventListener("click", ev=>{
   const row = ev.target.closest && ev.target.closest(".prow[data-pid]");
   if(row && (row.dataset.pid || row.dataset.pname)){
