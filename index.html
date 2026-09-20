@@ -101,10 +101,15 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ustats .uh{text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .ustats .uv{font-family:"Bebas Neue",sans-serif;font-size:26px;text-align:center;line-height:1}
 .ustats .ul{text-align:left}.ustats .ur{text-align:right}
-.ubars{margin:0 var(--pad) 14px}
-.ubar{display:grid;grid-template-columns:42px 1fr 42px;gap:8px;align-items:center;margin:6px 0;font-size:11px;color:var(--muted)}
-.ubar i{display:block;height:8px;border-radius:99px;background:#1a1b22;overflow:hidden}
-.ubar i b{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--ember));width:50%}
+.ubars{margin:4px var(--pad) 16px}
+.ubar{margin:10px 0}
+.ubar-lab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:800;text-align:center;margin-bottom:4px}
+.ubar-row{display:grid;grid-template-columns:36px 1fr 36px;gap:8px;align-items:center}
+.ubar-n{font-size:12px;font-weight:800;color:#f2ebe3;text-align:center}
+.ubar-track{position:relative;height:10px;border-radius:99px;background:#14151c;overflow:hidden}
+.ubar-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#f2ebe3;opacity:.55;z-index:2}
+.ubar-l{position:absolute;right:50%;top:0;bottom:0;background:linear-gradient(270deg,var(--orange),#8a3a00);border-radius:99px 0 0 99px}
+.ubar-r{position:absolute;left:50%;top:0;bottom:0;background:linear-gradient(90deg,var(--ember),var(--orange));border-radius:0 99px 99px 0}
 .livepulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 8px #ff3b3b;margin-right:6px;animation:upulse 1.2s ease-in-out infinite}
 @keyframes upulse{50%{opacity:.35}}
 .gstat{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
@@ -817,6 +822,8 @@ function mapComp(ev, lg){
       start: c.startDate || ev.date || c.date || "",
       broadcast: ((c.broadcasts||[])[0] && ((c.broadcasts||[])[0].names||[])[0]) || c.broadcast || "",
       lastPlay: ((c.situation||{}).lastPlay && (c.situation.lastPlay.text)) || "",
+      method: (st.description && !/^(final|scheduled|in progress|pre-fight)/i.test(String(st.description))?st.description:"") || ((c.notes||[])[0] && ((c.notes[0].headline)||(c.notes[0].text))) || "",
+      note: ((c.notes||[])[0] && ((c.notes[0].headline)||(c.notes[0].text))) || "",
       down: (c.situation && (c.situation.downDistanceText || c.situation.shortDownDistanceText)) || "",
       possId: String((c.situation && c.situation.possession) || ""),
       red: !!(c.situation && c.situation.isRedZone),
@@ -896,13 +903,20 @@ function playKind(text, g, prev){
   }
   return "SCORE";
 }
-function fightKind(g){
-  const d=String(g.detail||"")+" "+String(g.lastPlay||"");
-  if(/\bdraw\b/i.test(d)) return "DRAW";
-  if(/\bdecision\b|\bUD\b|\bSD\b|\bMD\b/i.test(d)) return "DECISION";
-  if(/knockout|\bKO\b|\bTKO\b/i.test(d)) return "KNOCKOUT";
+function fightMethod(g){
+  const d=[g&&g.method,g&&g.note,g&&g.detail,g&&g.lastPlay].join(" ");
+  if(/no contest|\bNC\b/i.test(d)) return "NO CONTEST";
+  if(/disqualif|\bDQ\b/i.test(d)) return "DQ";
+  if(/split decision|\bSD\b/i.test(d)) return "SPLIT DECISION";
+  if(/majority decision|\bMD\b/i.test(d)) return "MAJORITY DECISION";
+  if(/unanimous|decision|\bUD\b/i.test(d)) return "DECISION";
+  if(/\bTKO\b|technical knockout/i.test(d)) return "TKO";
+  if(/knockout|\bKO\b/i.test(d)) return "KNOCKOUT";
   if(/submission|\bSUB\b/i.test(d)) return "SUBMISSION";
-  return "END OF FIGHT";
+  return "";
+}
+function fightKind(g){
+  return fightMethod(g) || "END OF FIGHT";
 }
 function isHalftime(g){
   const d=String(g.detail||"");
@@ -1812,8 +1826,20 @@ function ufcStatPack(json){
 }
 function ufcBar(a,b,label){
   const x=Number(a)||0, y=Number(b)||0, t=x+y;
-  const pct=t?Math.round(100*x/t):50;
-  return `<div class="ubar"><span>${x}</span><i title="${label}"><b style="width:${pct}%"></b></i><span>${y}</span></div>`;
+  const lp=t?Math.round(50*x/t):0;
+  const rp=t?Math.round(50*y/t):0;
+  return `<div class="ubar">
+    <div class="ubar-lab">${label}</div>
+    <div class="ubar-row">
+      <span class="ubar-n">${x}</span>
+      <div class="ubar-track" aria-label="${label}">
+        <i class="ubar-mid"></i>
+        <b class="ubar-l" style="width:${lp}%"></b>
+        <b class="ubar-r" style="width:${rp}%"></b>
+      </div>
+      <span class="ubar-n">${y}</span>
+    </div>
+  </div>`;
 }
 function ufcLiveBoard(g, extra){
   extra=extra||{};
@@ -1834,8 +1860,8 @@ function ufcLiveBoard(g, extra){
       <div class="uv ul">${sa.timeInControl||"0:00"}</div><div class="uh">Control</div><div class="uv ur">${sh.timeInControl||"0:00"}</div>
     </div>
     <div class="ubars">
-      ${ufcBar(sa.sigStrikesLanded, sh.sigStrikesLanded, "Sig landed")}
-      ${ufcBar(sa.takedownsLanded, sh.takedownsLanded, "TD")}
+      ${ufcBar(sa.sigStrikesLanded, sh.sigStrikesLanded, "Sig strikes landed")}
+      ${ufcBar(sa.takedownsLanded, sh.takedownsLanded, "Takedowns")}
     </div>`;
 }
 function paintFightShell(g, extra){
@@ -1844,7 +1870,7 @@ function paintFightShell(g, extra){
   const clock=extra.clock||g.detail||when(g);
   if($("ufcShell") && $("ufcLive") && $("ufcClock")){
     const result = (!live && g.state==="post")
-      ? ((g.awayWin||g.homeWin)?((g.awayWin?g.away:g.home)+" wins"+(g.detail && !/final/i.test(String(g.detail))?(" · "+g.detail):"")):"FINAL")
+      ? ((g.awayWin||g.homeWin)?((g.awayWin?g.away:g.home)+" wins"+(fightMethod(g)?(" · "+fightMethod(g)):"")):"FINAL")
       : clock;
     $("ufcClock").innerHTML = (live?"<span class='livepulse'></span>":"")+result;
     $("ufcLive").innerHTML = ufcLiveBoard(g, extra);
@@ -1869,7 +1895,7 @@ function paintFightShell(g, extra){
           ${g.homeWin?"<span class='wintag'>WINNER</span>":""}
         </button>
       </div>
-      <div class="outs" id="ufcClock">${live?"<span class='livepulse'></span>":""}${g.state==="post"?(g.awayWin||g.homeWin?((g.awayWin?g.away:g.home)+" wins"+(g.detail && !/final/i.test(g.detail)?(" · "+g.detail):"")):"FINAL"):clock}</div>
+      <div class="outs" id="ufcClock">${live?"<span class='livepulse'></span>":""}${g.state==="post"?((g.awayWin||g.homeWin)?((g.awayWin?g.away:g.home)+" wins"+(fightMethod(g)?(" · "+fightMethod(g)):"")):"FINAL"):clock}</div>
     </div>
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
     <div id="ufcLive">${ufcLiveBoard(g, extra)}</div>
@@ -2005,7 +2031,7 @@ function showUfcLineup(card, games){
     const done=g.state==="post"||g.awayWin||g.homeWin;
     return `
     <div class="gcard ufight${live?" live":""}${isHeat(g)?" heat":""}${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
-      <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?((g.awayWin?g.away:(g.homeWin?g.home:"FINAL"))+(g.awayWin||g.homeWin?" WINS":"")):when(g))}</span></div>
+      <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?((g.awayWin||g.homeWin)?((g.awayWin?g.away:g.home)+" WINS"+(fightMethod(g)?(" · "+fightMethod(g)):"")):"FINAL"):when(g))}</span></div>
       <div class="ufc-row">
         <div class="f${g.awayWin?" won":""}${g.homeWin?" lost":""}">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}</em>${g.awayWin?"<span class='wintag'>WINNER</span>":""}</div>
         <span class="vs">${done?(g.awayWin||g.homeWin?"FINAL":"FINAL"):"VS"}</span>
