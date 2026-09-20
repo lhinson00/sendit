@@ -101,10 +101,15 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ustats .uh{text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .ustats .uv{font-family:"Bebas Neue",sans-serif;font-size:26px;text-align:center;line-height:1}
 .ustats .ul{text-align:left}.ustats .ur{text-align:right}
-.ubars{margin:0 var(--pad) 14px}
-.ubar{display:grid;grid-template-columns:42px 1fr 42px;gap:8px;align-items:center;margin:6px 0;font-size:11px;color:var(--muted)}
-.ubar i{display:block;height:8px;border-radius:99px;background:#1a1b22;overflow:hidden}
-.ubar i b{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--ember));width:50%}
+.ubars{margin:4px var(--pad) 16px}
+.ubar{margin:10px 0}
+.ubar-lab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:800;text-align:center;margin-bottom:4px}
+.ubar-row{display:grid;grid-template-columns:36px 1fr 36px;gap:8px;align-items:center}
+.ubar-n{font-size:12px;font-weight:800;color:#f2ebe3;text-align:center}
+.ubar-track{position:relative;height:10px;border-radius:99px;background:#14151c;overflow:hidden}
+.ubar-mid{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:#f2ebe3;opacity:.55;z-index:2}
+.ubar-l{position:absolute;right:50%;top:0;bottom:0;background:linear-gradient(270deg,var(--orange),#8a3a00);border-radius:99px 0 0 99px}
+.ubar-r{position:absolute;left:50%;top:0;bottom:0;background:linear-gradient(90deg,var(--ember),var(--orange));border-radius:0 99px 99px 0}
 .livepulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 8px #ff3b3b;margin-right:6px;animation:upulse 1.2s ease-in-out infinite}
 @keyframes upulse{50%{opacity:.35}}
 .gstat{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
@@ -1811,9 +1816,21 @@ function ufcStatPack(json){
   return out;
 }
 function ufcBar(a,b,label){
-  const x=Number(a)||0, y=Number(b)||0, t=x+y;
-  const pct=t?Math.round(100*x/t):50;
-  return `<div class="ubar"><span>${x}</span><i title="${label}"><b style="width:${pct}%"></b></i><span>${y}</span></div>`;
+  const x=Number(a)||0, y=Number(b)||0, tot=x+y;
+  const lp=tot?Math.round(50*x/tot):0;
+  const rp=tot?Math.round(50*y/tot):0;
+  return `<div class="ubar">
+    <div class="ubar-lab">${label}</div>
+    <div class="ubar-row">
+      <span class="ubar-n">${x}</span>
+      <div class="ubar-track">
+        <i class="ubar-mid"></i>
+        <b class="ubar-l" style="width:${lp}%"></b>
+        <b class="ubar-r" style="width:${rp}%"></b>
+      </div>
+      <span class="ubar-n">${y}</span>
+    </div>
+  </div>`;
 }
 function ufcLiveBoard(g, extra){
   extra=extra||{};
@@ -1834,8 +1851,8 @@ function ufcLiveBoard(g, extra){
       <div class="uv ul">${sa.timeInControl||"0:00"}</div><div class="uh">Control</div><div class="uv ur">${sh.timeInControl||"0:00"}</div>
     </div>
     <div class="ubars">
-      ${ufcBar(sa.sigStrikesLanded, sh.sigStrikesLanded, "Sig landed")}
-      ${ufcBar(sa.takedownsLanded, sh.takedownsLanded, "TD")}
+      ${ufcBar(sa.sigStrikesLanded, sh.sigStrikesLanded, "Sig strikes landed")}
+      ${ufcBar(sa.takedownsLanded, sh.takedownsLanded, "Takedowns")}
     </div>`;
 }
 function paintFightShell(g, extra){
