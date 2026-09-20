@@ -1479,8 +1479,14 @@ function boxHtml(sum){
     const team = (side.team && (side.team.abbreviation||side.team.displayName)) || "";
     let groups = (side.statistics||[]).filter(g=>g && (g.athletes||[]).length);
     if(prefer){
-      const rank = n => { const i=prefer.indexOf(n); return i<0?99:i; };
-      groups = groups.filter(g=>rank(g.name)<99).sort((a,b)=>rank(a.name)-rank(b.name));
+      const key = g => String((g.name||g.displayName||g.label||"")).toLowerCase();
+      const rank = g => {
+        const n=key(g);
+        const i=prefer.findIndex(p=>n===p || n.includes(p));
+        return i<0?99:i;
+      };
+      const filtered=groups.filter(g=>rank(g)<99).sort((a,b)=>rank(a)-rank(b));
+      if(filtered.length) groups=filtered;
     }
     return groups.map(grp=>{
       const labels = (grp.labels||grp.names||[]).slice(0,8);
@@ -1608,7 +1614,7 @@ function renderFootball(g, sum){
   const ballYard = pinFromText(downTxt) ?? pinYard(spotNow) ?? pinYard(spotSnap);
   const toGoRaw = Number(spotNow.distance!=null?spotNow.distance:spotSnap.distance);
   const toGo = (isFinite(toGoRaw) && toGoRaw>=0 && toGoRaw<=99) ? toGoRaw : null;
-  const fieldPct = ballYard==null ? null : yardPct(ballYard);
+  const fieldPct = yardPct(ballYard==null?50:ballYard);
   const fdYard = (ballYard!=null && toGo!=null) ? (goingRight ? ballYard+toGo : ballYard-toGo) : null;
   const fdPct = fdYard==null ? null : yardPct(Math.max(0, Math.min(100, fdYard)));
   const startRaw = (firstPlay.start && firstPlay.start.yardLine>0 ? firstPlay.start : null) || firstPlay.start;
@@ -1638,22 +1644,46 @@ function renderFootball(g, sum){
   const aQ = qtrCells(away), hQ = qtrCells(home);
   const hasOT = aQ[4] || hQ[4];
   const leadMap={};
+  const putLead = (key, side, a) => {
+    if(!key || !a) return;
+    const ath=a.athlete||a||{};
+    if(!leadMap[key]) leadMap[key]={};
+    leadMap[key][side]={
+      nm:ath.displayName||ath.shortName||a.displayName||"",
+      pid:ath.id||"",
+      shot:(typeof ath.headshot==="string"?ath.headshot:(ath.headshot&&ath.headshot.href))||"",
+      val:a.displayValue||a.value||""
+    };
+  };
   (sum.leaders||[]).forEach(block=>{
-    const team=(block.team&&block.team.abbreviation)||"";
-    const side = team===hm ? "h" : "a";
-    (block.leaders||[]).forEach(L=>{
-      const a=((L.leaders||[])[0]||{});
-      const ath=a.athlete||{};
-      const key=L.displayName||L.name||"";
-      if(!leadMap[key]) leadMap[key]={};
-      leadMap[key][side]={
-        nm:ath.displayName||ath.shortName||"",
-        pid:ath.id||"",
-        shot:(typeof ath.headshot==="string"?ath.headshot:(ath.headshot&&ath.headshot.href))||"",
-        val:a.displayValue||""
-      };
+    if(block.team && (block.leaders||[]).length){
+      const team=(block.team.abbreviation||block.team.displayName||"");
+      const side = (team===hm || team===hmN) ? "h" : "a";
+      (block.leaders||[]).forEach(L=>{
+        putLead(L.displayName||L.name||"", side, ((L.leaders||[])[0]||L));
+      });
+      return;
+    }
+    const L=block;
+    const key=L.displayName||L.name||"";
+    (L.leaders||[]).slice(0,2).forEach(a=>{
+      const tid=String((a.team&&a.team.id)||(a.athlete&&a.athlete.team&&a.athlete.team.id)||"");
+      const tab=(a.team&&(a.team.abbreviation||a.team.displayName))||"";
+      const side = (tab===hm || tab===hmN || tid===String(home.id||g.homeId||"")) ? "h" : "a";
+      putLead(key, side, a);
     });
   });
+  if(!Object.keys(leadMap).length && sum.boxscore && sum.boxscore.players){
+    (sum.boxscore.players||[]).forEach(side=>{
+      const tab=(side.team&&(side.team.abbreviation||side.team.displayName))||"";
+      const sh = (tab===hm || tab===hmN) ? "h" : "a";
+      (side.statistics||[]).forEach(grp=>{
+        const a=(grp.athletes||[])[0];
+        if(!a) return;
+        putLead(grp.label||grp.displayName||grp.name||"Stat", sh, {athlete:a.athlete, displayValue:(a.stats||[])[0]||""});
+      });
+    });
+  }
   const faceBit = o => {
     if(!o || !o.nm) return "<div class='lp empty'>—</div>";
     const img = o.shot ? `<img alt="" src="${o.shot}"/>` : `<span class="ph"></span>`;
@@ -1975,11 +2005,12 @@ async function openGame(id, fid){
   if(window.trackUse) window.trackUse("game", (LEAGUE||"")+" "+String(id||fid||""));
   if(poll){ clearInterval(poll); poll=null; }
   show("game");
+  window.FTAB = "live";
   $("gameRoom").innerHTML = "<p class='hint'>Opening…</p>";
   const pool = window.LIVE_GAMES||GAMES||[];
   const g = LEAGUE==="ufc"
     ? (pool.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(id) || String(x.eventId)===String(id)) || {})
-    : (pool.find(x => x.eventId===id) || {});
+    : (pool.find(x => String(x.eventId)===String(id) || String(x.id)===String(id)) || {});
   if(LEAGUE==="ufc"){
     if(!g.away && !g.home){
       $("gameRoom").innerHTML = "<p class='hint'>Could not match that bout. Back out and tap it again.</p>";
@@ -1989,9 +2020,16 @@ async function openGame(id, fid){
     return;
   }
   async function tickGame(){
-    if(OPEN!==id) return;
+    const eid=String((g&&g.eventId)||id||"");
+    if(String(OPEN)!==String(id) && String(OPEN)!==eid && String(OPEN)!==String(fid||"")) return;
     try{
-      const res = await fetch(SUM[LEAGUE](id), {cache:"no-store"});
+      const urls=[SUM[LEAGUE]&&SUM[LEAGUE](eid)].filter(Boolean);
+      if(LEAGUE==="nfl") urls.push("https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+eid);
+      if(LEAGUE==="cfb") urls.push("https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+eid);
+      let res={ok:false};
+      for(const u of urls){
+        try{ res=await fetch(u,{cache:"no-store"}); if(res.ok) break; }catch(e){}
+      }
       const sum = res.ok ? await res.json() : {};
       if(LEAGUE==="mls"){
         window.MLS_PLAYS=window.MLS_PLAYS||{};
