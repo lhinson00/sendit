@@ -1672,9 +1672,21 @@ function renderFootball(g, sum){
     return "<div class='drivebook'><p class='hint'>"+head+"</p>"+(rows||"<p class='hint'>No plays yet.</p>")+"</div>";
   };
   const prevDrives = (Array.isArray(drives.previous)?drives.previous:[]).slice();
+  const teamAb = drv => (drv && drv.team && (drv.team.abbreviation || drv.team.shortDisplayName)) || "";
   const twoPoss = [];
-  if(cur && ((cur.plays||[]).length || cur.description)) twoPoss.push({drv:cur, title:"This possession"});
-  for(let i=prevDrives.length-1;i>=0 && twoPoss.length<2;i--) twoPoss.push({drv:prevDrives[i], title:twoPoss.length?"Prior possession":"This possession"});
+  const curTeam = teamAb(cur);
+  if(cur && ((cur.plays||[]).length || cur.description)) twoPoss.push({drv:cur, title:(curTeam||"This")+" · this possession"});
+  const curId=String((cur&&cur.id)||"");
+  for(let i=prevDrives.length-1;i>=0;i--){
+    const d=prevDrives[i];
+    if(!d) continue;
+    if(curId && String(d.id||"")===curId) continue;
+    const tAb=teamAb(d);
+    if(curTeam && tAb && tAb===curTeam) continue;
+    if(!((d.plays||[]).length || d.description)) continue;
+    twoPoss.push({drv:d, title:(tAb||"Prior")+" · last possession"});
+    break;
+  }
   const thisDriveHtml = twoPoss[0]?driveBook(twoPoss[0].drv, twoPoss[0].title):"";
   const lastDriveHtml = twoPoss[1]?driveBook(twoPoss[1].drv, twoPoss[1].title):"";
   const aQ = qtrCells(away), hQ = qtrCells(home);
