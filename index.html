@@ -3109,8 +3109,8 @@ function sauceScore(hits, n, l5h, l5n){
 }
 function paintKitRows(out, host){
   out.sort((a,b)=> (b.score-a.score) || (b.hits-a.hits) || (b.n-a.n) || (b.rate-a.rate));
-  const rows=out.filter(x=>x.n);
-  $("kitMeta").textContent=FILT.pos+" · last 18 · "+labelLine(FILT.stat,FILT.line)+" · score shrinks 1/1 below 17/18";
+  const rows=out.filter(x=>x.n>=6);
+  $("kitMeta").textContent=FILT.pos+" · last 18 · min 6 games · "+labelLine(FILT.stat,FILT.line);
   host.innerHTML=rows.map(x=>{
     const games=LOGS[x.p.id]||[];
     const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
