@@ -702,13 +702,28 @@ let OPEN = null;
 let poll = null;
 let slateT = null;
 const $ = id => document.getElementById(id);
-function show(name){
+window.VIEW_Y = window.VIEW_Y || {};
+window.VIEW_NOW = window.VIEW_NOW || "home";
+function viewPin(){
+  const k = (window.VIEW_NOW||"home")+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
+  window.VIEW_Y[k] = window.scrollY || document.documentElement.scrollTop || 0;
+}
+function viewPop(name){
+  const k = name+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
+  const y = window.VIEW_Y[k] || 0;
+  requestAnimationFrame(function(){ window.scrollTo(0, y); setTimeout(function(){ window.scrollTo(0,y); }, 80); });
+}
+function show(name, opts){
+  opts = opts||{};
+  viewPin();
   $("viewHome").hidden = name!=="home";
   $("viewLive").hidden = name!=="live";
   $("viewGame").hidden = name!=="game";
   if($("viewPlayer")) $("viewPlayer").hidden = name!=="player";
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
-  window.scrollTo(0,0);
+  window.VIEW_NOW = name;
+  if(opts.keep) viewPop(name);
+  else window.scrollTo(0,0);
   if(window.trackUse) window.trackUse("view", name);
   savePlace();
 }
@@ -2374,8 +2389,8 @@ function leaveEat(){
   const from = window.EAT_FROM || {lg:LEAGUE, tab:"slate"};
   if($("eatPanel")) $("eatPanel").hidden=true;
   markEatBack();
-  if(from.view==="game" && OPEN){ show("game"); return; }
-  show("live");
+  if(from.view==="game" && OPEN){ show("game", {keep:true}); return; }
+  show("live", {keep:true});
   if(from.lg==="nfl") nflTab(from.tab||"live");
   else if(from.lg==="cfb") cfbTab(from.tab==="eat"?"slate":(from.tab||"slate"));
   else if(from.lg==="mlb") mlbTab(from.tab==="eat"?"slate":(from.tab||"slate"));
@@ -4080,7 +4095,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
 $("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
 $("toHome").onclick = ()=>{
   if($("eatPanel") && !$("eatPanel").hidden){ leaveEat(); return; }
-  if(poll) clearInterval(poll); poll=null; OPEN=null; show("home");
+  if(poll) clearInterval(poll); poll=null; OPEN=null; show("home", {keep:true});
 };
 $("toSlate").onclick = ()=>{
   if(poll) clearInterval(poll); poll=null; OPEN=null;
@@ -4089,7 +4104,7 @@ $("toSlate").onclick = ()=>{
     showEat({keepFrom:true});
     return;
   }
-  show("live");
+  show("live", {keep:true});
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
