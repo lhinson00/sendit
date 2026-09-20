@@ -2682,6 +2682,8 @@ function alertFromSlip(s, g, prev){
   if(!ALERT_SEED) return;
   if(s.pid){
     const before=Number(prev.live)||0, now=Number(s.live)||0;
+    const line=Number(s.line)||0;
+    if(before>=line && line>0) return;
     const step = s.stat==="rushYds"||s.stat==="recYds"?10 : s.stat==="passYds"?25 : 0;
     const crossed = step ? Math.floor(now/step)>Math.floor(before/step) : now>before;
     if(now>before && crossed){
