@@ -8,14 +8,14 @@
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Sports Sauce"/>
 <meta property="og:title" content="Sports Sauce"/>
-<meta property="og:description" content="Live scores, slates, and the Kitchen. NFL, college, MLB, MLS, UFC."/>
+<meta property="og:description" content="Live scores, slates, trends, and a live tracker. NFL, college, MLB, MLS, UFC."/>
 <meta property="og:url" content="https://www.sportssauceapp.com/"/>
 <meta property="og:image" content="https://www.sportssauceapp.com/og.png"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Sports Sauce"/>
-<meta name="twitter:description" content="Live scores, slates, and the Kitchen."/>
+<meta name="twitter:description" content="Live scores, slates, trends, and a live tracker."/>
 <meta name="twitter:image" content="https://www.sportssauceapp.com/og.png"/>
 <script async src="https://plausible.io/js/pa-RkC5ljffAxaN_j-J33No5.js"></script>
 <script>
@@ -639,7 +639,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
   <div class="scwipe"></div>
   <div class="scbug">
     <span class="scnet">SPORTS<br>SAUCE</span>
-    <span class="sckind" id="scKicker">Let's Eat</span>
+    <span class="sckind" id="scKicker">Tracker</span>
   </div>
   <div class="scmain">
     <div class="scscore" id="scTitle"></div>
@@ -672,25 +672,26 @@ table.mlstbl td.l{text-align:left;white-space:normal}
       <button class="back" id="toHome">← Home</button>
       <span class="meta" id="liveMeta" hidden></span>
     </div>
-    <button type="button" class="tabbtn" id="tabEatAny" hidden>Let's Eat</button>
+    <button type="button" class="tabbtn" id="tabEatAny" hidden>Tracker</button>
     <span class="tabs" id="nflTabs" hidden>
       <button type="button" class="tabbtn on" id="tabLive">Slate</button>
-      <button type="button" class="tabbtn" id="tabKit">Kitchen</button>
+      <button type="button" class="tabbtn" id="tabKit">Trends</button>
       <button type="button" class="tabbtn" id="tabLeadN">Leaders</button>
       <button type="button" class="tabbtn" id="tabStandN">Standings</button>
-      <button type="button" class="tabbtn" id="tabEat">Let's Eat</button>
+      <button type="button" class="tabbtn" id="tabEat">Tracker</button>
     </span>
     <span class="tabs" id="cfbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabSlate">Slate</button>
       <button type="button" class="tabbtn" id="tabPolls">Rankings</button>
       <button type="button" class="tabbtn" id="tabLeadC">Leaders</button>
-      <button type="button" class="tabbtn" id="tabEatC">Let's Eat</button>
+      <button type="button" class="tabbtn" id="tabEatC">Tracker</button>
     </span>
     <span class="tabs" id="mlbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabMlbSlate">Slate</button>
+      <button type="button" class="tabbtn" id="tabMlbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabStand">Standings</button>
       <button type="button" class="tabbtn" id="tabLeadM">Leaders</button>
-      <button type="button" class="tabbtn" id="tabEatM">Let's Eat</button>
+      <button type="button" class="tabbtn" id="tabEatM">Tracker</button>
     </span>
     <span class="tabs" id="mlsTabs" hidden>
       <button type="button" class="tabbtn on" id="tabMlsSlate">Slate</button>
@@ -720,7 +721,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
   <div id="eatPanel" hidden>
     <div class="eathead">
       <div>
-        <h2>Let's Eat</h2>
+        <h2>Tracker</h2>
         <p class="hint" id="eatMeta">Live ticket board</p>
       </div>
       <div class="eatpulse" id="eatPulse"></div>
@@ -1089,9 +1090,9 @@ function oddsTape(g, mode){
     <div class="side" data-kind="ml" data-side="home"><button type="button" class="who" data-track="ml" data-side="home" data-gid="${g.eventId||""}" data-fid="${g.fightId||""}">${h}</button></div>
   </div>`;
   if(LEAGUE==="ufc"){
-    return `<div class="gameodds" data-stop="1"><p class="hint">Tap a side to track it in Let's Eat</p>${mlPick}</div>`;
+    return `<div class="gameodds" data-stop="1"><p class="hint">Tap a side to track it in Tracker</p>${mlPick}</div>`;
   }
-  return `<div class="gameodds" data-stop="1"><p class="hint">Tap a side to track it in Let's Eat</p>
+  return `<div class="gameodds" data-stop="1"><p class="hint">Tap a side to track it in Tracker</p>
     <div class="oddstrip"><b>ATS</b>${sideCell(g,"spread","away",a,o.awaySp||"",0.5)}${sideCell(g,"spread","home",h,o.homeSp||"",0.5)}</div>
     ${mlPick}
     <div class="oddstrip"><b>O/U</b>${sideCell(g,"ou","over","Over",o.ou!=null?o.ou:"",0.5)}${sideCell(g,"ou","under","Under",o.ou!=null?o.ou:"",0.5)}</div>
@@ -1177,7 +1178,7 @@ function pulseBoard(g){
   const openThis = String(OPEN||"")===String(g.fightId||"") || String(OPEN||"")===String(g.eventId||"") || String(OPEN||"")===String(g.id||"");
   const watching = tracked.length || favs.length || openThis;
   const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
-  const tag=tracked.length?"LET'S EAT":"FAVORITE";
+  const tag=tracked.length?"TRACKER":"FAVORITE";
   if(watching && (liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
     window.ALERT_TOT[key]=tot;
     const kind=playKind(g.lastPlay,g,prev);
@@ -2381,7 +2382,7 @@ async function openPlayer(pid, name){
       }).join("")}</div></div>`;
     }
     window.FROM_TEAM_PLAYER = !!(window.TEAM_CTX && window.TEAM_CTX.id);
-    if($("toGame")) $("toGame").textContent = window.FROM_TEAM_PLAYER ? "← Team" : fromKit ? "← Kitchen" : window.FROMLEAD ? "← Leaders" : "← Game";
+    if($("toGame")) $("toGame").textContent = window.FROM_TEAM_PLAYER ? "← Team" : fromKit ? "← Trends" : window.FROMLEAD ? "← Leaders" : "← Game";
     window.FROMKIT = fromKit;
     $("playerRoom").innerHTML = `
       <div class="phero">
@@ -2468,6 +2469,12 @@ function labelLine(stat,line){
   if(stat==="anytimeTd") return line+"+ anytime TD";
   if(stat==="passTd") return line+"+ pass TD";
   if(stat==="int") return line+"+ INT";
+  if(stat==="hits") return line+"+ hits";
+  if(stat==="hr") return line+"+ HR";
+  if(stat==="rbi") return line+"+ RBI";
+  if(stat==="runs") return line+"+ runs";
+  if(stat==="k") return line+"+ K";
+  if(stat==="win") return line+"+ win";
   return line+"+";
 }
 function addTeamSlip(g, kind, side, custom){
@@ -2849,7 +2856,7 @@ function paintSlip(){
   syncKitToSlip();
   const pool=Object.values(window.SLIP_GAMES||{}).concat(window.LIVE_GAMES||GAMES||[]);
   if(!SLIP.length){
-    host.innerHTML="<p class='hint'>Board is empty. Add a Kitchen line or tap ATS / ML / O/U on a slate card.</p>";
+    host.innerHTML="<p class='hint'>Board is empty. Add a Trends line or tap ATS / ML / O/U on a slate card.</p>";
     if($("eatMeta")) $("eatMeta").textContent="Live ticket board";
     if($("eatPulse")) $("eatPulse").innerHTML="";
     return;
@@ -2973,7 +2980,7 @@ async function openSlipGame(eid, fid, lg){
       window.LIVE_GAMES = GAMES;
     }catch(e){}
   }
-  if($("toSlate")) $("toSlate").textContent = "← Let's Eat";
+  if($("toSlate")) $("toSlate").textContent = "← Tracker";
   openGame(id, fid);
 }
 setInterval(()=>{ tickSlip(); }, 5000);
@@ -2982,28 +2989,44 @@ const STATS = {
   WR: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"],["anytimeTd","Anytime TD"]],
   TE: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"],["anytimeTd","Anytime TD"]],
   RB: [["rushYds","Rush yards"],["rushTd","Rush TD"],["recYds","Rec yards"],["rec","Receptions"],["anytimeTd","Anytime TD"]],
-  QB: [["passYds","Pass yards"],["passTd","Pass TD"],["int","INT"],["rushYds","Rush yards"],["rushTd","Rush TD"]]
+  QB: [["passYds","Pass yards"],["passTd","Pass TD"],["int","INT"],["rushYds","Rush yards"],["rushTd","Rush TD"]],
+  BAT: [["hits","Hits"],["hr","HR"],["rbi","RBI"],["runs","Runs"]],
+  SP: [["k","Strikeouts"],["win","Pitcher win"]]
 };
 const LINES = {
   recYds:[10,20,30,40,50,60,70,80,90,100],
   rushYds:[10,20,30,40,50,60,70,80,90,100],
   passYds:[125,150,175,200,225,250,275,300],
   rec:[2,3,4,5,6,7,8,10],
-  recTd:[1], rushTd:[1], anytimeTd:[1], passTd:[1,2], int:[1]
+  recTd:[1], rushTd:[1], anytimeTd:[1], passTd:[1,2], int:[1],
+  hits:[1,2], hr:[1], rbi:[1,2], runs:[1], k:[5,6,7,8,9], win:[1]
 };
 function fillKitGameList(){
   const sel=$("kGame");
   if(!sel) return;
-  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg==="nfl"||LEAGUE==="nfl"));
+  const lg=LEAGUE==="mlb"?"mlb":"nfl";
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg===lg||LEAGUE===lg));
   const cur=FILT.game||"";
-  sel.innerHTML="<option value=''>All games</option>"+games.map(g=>{
+  const all=lg==="mlb"?"":"<option value=''>All games</option>";
+  if(lg==="mlb" && !cur && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
+  sel.innerHTML=all+games.map(g=>{
     const id=String(g.eventId||g.id||"");
     const lab=(g.awayAb||g.away||"?")+" @ "+(g.homeAb||g.home||"?");
     return "<option value='"+id+"'"+(id===cur?" selected":"")+">"+lab+"</option>";
   }).join("");
   if(cur && ![...sel.options].some(o=>o.value===cur)) { FILT.game=""; sel.value=""; }
 }
+function fillKitPosList(){
+  const sel=$("kPos");
+  if(!sel) return;
+  const mlb=LEAGUE==="mlb";
+  const opts=mlb?[["BAT","Hitters"],["SP","Starters"]]:[["WR","WR"],["TE","TE"],["RB","RB"],["QB","QB"]];
+  if(mlb && !["BAT","SP"].includes(FILT.pos)) FILT.pos="BAT";
+  if(!mlb && ["BAT","SP"].includes(FILT.pos)) FILT.pos="WR";
+  sel.innerHTML=opts.map(o=>"<option value='"+o[0]+"'"+(o[0]===FILT.pos?" selected":"")+">"+o[1]+"</option>").join("");
+}
 function fillKitControls(){
+  fillKitPosList();
   fillKitGameList();
   const st=$("kStat"), ln=$("kLine");
   if(!st) return;
@@ -3012,7 +3035,7 @@ function fillKitControls(){
   st.innerHTML=opts.map(o=>"<option value='"+o[0]+"'"+(o[0]===FILT.stat?" selected":"")+">"+o[1]+"</option>").join("");
   const lines=LINES[FILT.stat]||[1];
   if(!lines.includes(FILT.line)) FILT.line=lines[0];
-  const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",anytimeTd:"+ anytime TD",passTd:"+ passing TD",int:"+ interceptions"}[FILT.stat]||"+";
+  const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",anytimeTd:"+ anytime TD",passTd:"+ passing TD",int:"+ interceptions",hits:"+ hits",hr:"+ HR",rbi:"+ RBI",runs:"+ runs",k:"+ K",win:"+ win"}[FILT.stat]||"+";
   ln.innerHTML=lines.map(n=>"<option value='"+n+"'"+(n===FILT.line?" selected":"")+">"+n+suffix+"</option>").join("");
 }
 function gameTouched(row){
@@ -3021,7 +3044,7 @@ function gameTouched(row){
     const i=names.indexOf(k);
     return i>=0?Number(String(stats[i]||"0").replace(/,/g,""))||0:0;
   };
-  return (num("rushingYards")+num("rushingAttempts")+num("receptions")+num("receivingYards")+num("passingYards")+num("passingAttempts")+num("rushingTouchdowns")+num("receivingTouchdowns"))>0;
+  return (num("rushingYards")+num("rushingAttempts")+num("receptions")+num("receivingYards")+num("passingYards")+num("passingAttempts")+num("rushingTouchdowns")+num("receivingTouchdowns")+num("atBats")+num("hits")+num("innings")+num("pitches")+num("battersFaced")+num("strikeouts"))>0;
 }
 function valOf(row, stat){
   const names=row.names||[], stats=row.stats||[];
@@ -3038,6 +3061,16 @@ function valOf(row, stat){
   if(stat==="passYds") return pick(["passingYards"]);
   if(stat==="passTd") return pick(["passingTouchdowns"]);
   if(stat==="int") return pick(["interceptions"]);
+  if(stat==="hits") return pick(["hits"]);
+  if(stat==="hr") return pick(["homeRuns"]);
+  if(stat==="rbi") return pick(["RBIs","rbi"]);
+  if(stat==="runs") return pick(["runs"]);
+  if(stat==="k") return pick(["strikeouts"]);
+  if(stat==="win"){
+    const wl=String((function(){ const i=names.indexOf("wins-losses"); return i>=0?stats[i]:""; })()||"");
+    const m=wl.match(/^(\d+)/);
+    return m?Number(m[1])||0:pick(["wins"]);
+  }
   return 0;
 }
 async function loadRosters(){
@@ -3096,13 +3129,16 @@ function parseLog(d){
   return rows;
 }
 async function loadLog(pid){
-  if(LOGS[pid] && LOGS[pid].length>=10 && LOGS[pid][0] && LOGS[pid][0].date) return LOGS[pid];
+  const sport=LEAGUE==="mlb"?"mlb":"nfl";
+  const key=sport+":"+pid;
+  if(LOGS[key] && LOGS[key].length>=8) return LOGS[key];
+  const path=sport==="mlb"?"baseball/mlb":"football/nfl";
   const qs=["","?season=2025"];
   const seen=new Set();
   const rows=[];
   for(const q of qs){
     try{
-      const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+pid+"/gamelog"+q,{cache:"no-store"});
+      const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/gamelog"+q,{cache:"no-store"});
       if(!res.ok) continue;
       parseLog(await res.json()).forEach(r=>{
         if(seen.has(r.id)) return;
@@ -3112,8 +3148,8 @@ async function loadLog(pid){
     }catch(e){}
   }
   rows.sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")) || String(a.id).localeCompare(String(b.id)));
-  LOGS[pid]=rows.slice(-18);
-  return LOGS[pid];
+  LOGS[key]=rows.slice(sport==="mlb"?-15:-18);
+  return LOGS[key];
 }
 function sauceScore(hits, n, l5h, l5n){
   if(!n) return 0;
@@ -3124,11 +3160,12 @@ function sauceScore(hits, n, l5h, l5n){
 }
 function paintKitRows(out, host){
   out.sort((a,b)=> (b.score-a.score) || (b.hits-a.hits) || (b.n-a.n) || (b.rate-a.rate));
-  const need= /Td$/i.test(FILT.stat||"") ? 3 : 6;
-  const rows=out.filter(x=>x.n>=need && x.hits>=need);
+  const mlb=LEAGUE==="mlb";
+  const need= mlb ? (FILT.pos==="SP"?4:8) : (/Td$/i.test(FILT.stat||"") ? 3 : 6);
+  const rows=out.filter(x=> mlb ? x.n>=need : (x.n>=need && x.hits>=need));
   $("kitMeta").textContent=FILT.pos+" · last 18 played · "+need+"+ hits · "+labelLine(FILT.stat,FILT.line);
   host.innerHTML=rows.map(x=>{
-    const games=(LOGS[x.p.id]||[]).filter(gameTouched).slice(-18);
+    const games=(LOGS[(LEAGUE==="mlb"?"mlb:":"nfl:")+x.p.id]||LOGS[x.p.id]||[]).filter(gameTouched).slice(LEAGUE==="mlb"?-15:-18);
     const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
     const spark=games.map(g=>{
       const v=valOf(g, FILT.stat);
@@ -3146,13 +3183,76 @@ function paintKitRows(out, host){
   }).join("") || "<p class='hint'>Still loading logs…</p>";
   host.querySelectorAll("[data-add]").forEach(b=>b.onclick=ev=>{ ev.stopPropagation(); addSlip(b.dataset.add); });
 }
+
+async function loadMlbSide(tid){
+  const out=[];
+  try{
+    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/"+tid+"/roster",{cache:"no-store"});
+    if(!r.ok) return out;
+    const d=await r.json();
+    const team=(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||"";
+    (d.athletes||[]).forEach(grp=>{
+      const items=grp.items||grp.athletes||[];
+      const gab=((grp.position&&grp.position.abbreviation)||grp.position||"");
+      items.forEach(a=>{
+        if(!a||!a.id) return;
+        const pos=((a.position&&a.position.abbreviation)||gab||"").toUpperCase();
+        const bat=/^(C|1B|2B|3B|SS|LF|CF|RF|OF|DH|INF|UT)$/.test(pos);
+        const start=pos==="SP"||(pos==="P" && /starter/i.test(grp.position&&grp.position.displayName||""));
+        const pitcher=/^(P|SP|RP|CL)$/.test(pos);
+        if(bat) out.push({id:String(a.id), name:a.displayName||a.fullName||"", pos:"BAT", team});
+        else if(pitcher) out.push({id:String(a.id), name:a.displayName||a.fullName||"", pos: pos==="SP"||start?"SP":"RP", team});
+      });
+    });
+  }catch(e){}
+  return out;
+}
+async function runMlbKitchen(host){
+  fillKitControls();
+  host.innerHTML="<p class='hint'>Trends · pick a game. Loading those two rosters…</p>";
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g&&g.lg==="mlb");
+  if(!FILT.game && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
+  fillKitGameList();
+  const g=games.find(x=>String(x.eventId||x.id||"")===String(FILT.game));
+  if(!g){
+    host.innerHTML="<p class='hint'>No MLB game selected. Open a slate game first.</p>";
+    return;
+  }
+  const roster=[].concat(await loadMlbSide(g.awayId), await loadMlbSide(g.homeId));
+  const want=FILT.pos==="SP"?"SP":"BAT";
+  const pool=roster.filter(p=>p.pos===want);
+  if(!pool.length){
+    host.innerHTML="<p class='hint'>No "+(want==="SP"?"starters":"hitters")+" on "+(g.awayAb||g.away)+" / "+(g.homeAb||g.home)+".</p>";
+    return;
+  }
+  $("kitMeta").textContent="Trends · "+(g.awayAb||"")+" @ "+(g.homeAb||"")+" · last 15 played";
+  host.innerHTML="<p class='hint'>"+pool.length+" "+(want==="SP"?"starters":"hitters")+" · last 15 logs…</p>";
+  const out=[];
+  for(let i=0;i<pool.length;i+=6){
+    const slice=pool.slice(i,i+6);
+    await Promise.all(slice.map(async p=>{
+      try{
+        const gamesL=(await loadLog(p.id)).filter(gameTouched).slice(-15);
+        const hits=gamesL.filter(row=>valOf(row, FILT.stat)>=FILT.line).length;
+        const n=gamesL.length;
+        const last5=gamesL.slice(-5);
+        const l5h=last5.filter(row=>valOf(row, FILT.stat)>=FILT.line).length;
+        out.push({p,hits,n,l5h,l5n:last5.length,rate:n?hits/n:0,score:sauceScore(hits,n,l5h,last5.length)});
+      }catch(e){}
+    }));
+    $("kitMeta").textContent="Loading "+out.length+" / "+pool.length;
+  }
+  paintKitRows(out, host);
+}
+
 async function runKitchen(){
   const host=$("kitList");
   if(!host) return;
   try{
   fillKitControls();
-  host.innerHTML="<p class='hint'>Opening Kitchen… pulling NFL rosters.</p>";
-  $("kitMeta").textContent="Kitchen · "+FILT.pos;
+  if(LEAGUE==="mlb") return runMlbKitchen(host);
+  host.innerHTML="<p class='hint'>Opening Trends… pulling NFL rosters.</p>";
+  $("kitMeta").textContent="Trends · "+FILT.pos;
   await loadRosters();
   fillKitGameList();
   let pool=ROSTER.filter(p=>p.pos===FILT.pos);
@@ -3164,7 +3264,7 @@ async function runKitchen(){
     }
   }
   if(!pool.length){
-    host.innerHTML="<p class='hint'>No "+FILT.pos+" roster rows yet. Tap Kitchen again.</p>";
+    host.innerHTML="<p class='hint'>No "+FILT.pos+" roster rows yet. Tap Trends again.</p>";
     return;
   }
   host.innerHTML="<p class='hint'>"+pool.length+" "+FILT.pos+"s · last 18 logs coming in…</p>";
@@ -3186,7 +3286,7 @@ async function runKitchen(){
   }
   paintKitRows(out, host); paintKitLog();
   }catch(e){
-    host.innerHTML="<p class='hint'>Kitchen error: "+(e.message||e)+"</p>";
+    host.innerHTML="<p class='hint'>Trends error: "+(e.message||e)+"</p>";
   }
 }
 function nflTab(which){
@@ -3617,13 +3717,16 @@ function cfbTab(which){
 function mlbTab(which){
   if(window.trackUse) window.trackUse("tab","mlb-"+which);
   window.BOARD = which;
-  const slate=which==="slate";
+  const slate=which==="slate", kit=which==="kit";
   if($("eatPanel")) $("eatPanel").hidden=true;
+  if($("kitPanel")) $("kitPanel").hidden=!kit;
   if($("tabEatM")) $("tabEatM").classList.remove("on");
   markEatBack();
   if($("liveList")) $("liveList").hidden=!slate;
-  if($("boardPanel")) $("boardPanel").hidden=slate;
+  if($("boardPanel")) $("boardPanel").hidden=!(which==="stand"||which==="lead");
   if($("tabMlbSlate")) $("tabMlbSlate").classList.toggle("on", slate);
+  if($("tabMlbKit")) $("tabMlbKit").classList.toggle("on", kit);
+  if(kit) runKitchen();
   if($("tabStand")) $("tabStand").classList.toggle("on", which==="stand");
   if($("tabLeadM")) $("tabLeadM").classList.toggle("on", which==="lead");
   if(which==="stand") openMlbStandings();
@@ -4229,6 +4332,7 @@ $("tabEatC") && ($("tabEatC").onclick=()=>showEat());
 $("tabEatM") && ($("tabEatM").onclick=()=>showEat());
 $("tabEatAny") && ($("tabEatAny").onclick=()=>showEat());
 $("tabMlbSlate") && ($("tabMlbSlate").onclick=()=>mlbTab("slate"));
+$("tabMlbKit") && ($("tabMlbKit").onclick=()=>mlbTab("kit"));
 $("tabMlsSlate") && ($("tabMlsSlate").onclick=()=>mlsTab("slate"));
 $("tabMlsStand") && ($("tabMlsStand").onclick=()=>mlsTab("stand"));
 $("tabMlsLead") && ($("tabMlsLead").onclick=()=>mlsTab("lead"));
