@@ -1099,7 +1099,7 @@ function pulseBoard(g){
       body: g.lastPlay||g.detail||""
     });
   } else if(watching && justFinal){
-    const ufc=(g.lg==="ufc"||LEAGUE==="ufc");
+    const ufc=(g.lg==="ufc"||!!g.fightId)&&g.lg!=="cfb"&&g.lg!=="nfl";
     const winner=g.awayWin?(g.away||g.awayAb):(g.homeWin?(g.home||g.homeAb):"");
     const loser=g.awayWin?(g.home||g.homeAb):(g.homeWin?(g.away||g.awayAb):"");
     flashAlert({
