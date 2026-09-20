@@ -82,6 +82,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .meta{display:none}
 .list{display:grid;gap:10px;padding:0 var(--pad) 24px}
 .gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
+.gcard.done{border-color:#1c241c}
+.gcard .nm.win,.gcard .nm.win span{color:#3ee0a0}
+.gcard .sc em.win{color:#3ee0a0;text-shadow:0 0 12px rgba(62,224,160,.25)}
 .gcard.live{border-color:#3ee0a0;background:#0c1612;box-shadow:inset 3px 0 0 #3ee0a0}
 .gcard.heat,.ufight.heat{border-color:#ff3b3b;background:linear-gradient(180deg,#2a0c0c,#101218);box-shadow:inset 3px 0 0 #ff3b3b}
 .gcard.pin{border-color:var(--orange);box-shadow:inset 3px 0 0 var(--orange)}
@@ -1259,6 +1262,9 @@ function paint(games){
   } else {
     const cardHtml = g=>{
       const live=g.state==="in";
+      const done=g.state==="post";
+      const aWin=!!(g.awayWin || (done && Number(g.awayScore)>Number(g.homeScore)));
+      const hWin=!!(g.homeWin || (done && Number(g.homeScore)>Number(g.awayScore)));
       const pinned=isFav(g.awayId)||isFav(g.homeId);
       let sub="";
       if(LEAGUE==="mlb"){
@@ -1271,12 +1277,12 @@ function paint(games){
         sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
       }
       return `
-      <div class="gcard${live?" live":""}${isHeat(g)?" heat":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
+      <div class="gcard${live?" live":""}${done?" done":""}${isHeat(g)?" heat":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
-          <div class="nm">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
-          <div class="sc"><em>${g.awayScore||"–"}</em><span>–</span><em>${g.homeScore||"–"}</em></div>
-          <div class="nm r"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
+          <div class="nm${aWin?" win":""}">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
+          <div class="sc"><em class="${aWin?"win":""}">${g.awayScore||"–"}</em><span>–</span><em class="${hWin?"win":""}">${g.homeScore||"–"}</em></div>
+          <div class="nm r${hWin?" win":""}"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
         </div>
         ${sub?`<div class="sub">${sub}</div>`:""}
         ${oddsTape(g,"peek")}
@@ -2885,8 +2891,9 @@ function paintSlip(){
     const hAb=(g&&(g.homeAb||g.home))||s.home||"";
     const as=g?g.awayScore:(s.awayScore!=null?s.awayScore:"–");
     const hs=g?g.homeScore:(s.homeScore!=null?s.homeScore:"–");
-    const aBall = g && g.possId && String(g.possId)===String(g.awayId) ? " 🏈" : "";
-    const hBall = g && g.possId && String(g.possId)===String(g.homeId) ? "🏈 " : "";
+    const hold=(g&&g.state==="in")?String(g.possId||""):"";
+    const aBall = g && g.state==="in" && hold && (hold===String(g.awayId)||hold===String(g.awayAb||"")) ? " 🏈" : "";
+    const hBall = g && g.state==="in" && hold && (hold===String(g.homeId)||hold===String(g.homeAb||"")) ? "🏈 " : "";
     const board = `<div class="board"><span class="${aBall?"has":""}">${aAb}${aBall}</span><b>${as}</b><span class="clock">${(g&&g.detail)||s.detail||s.status||""}</span><b>${hs}</b><span class="${hBall?"has":""}">${hBall}${hAb}</span></div>`;
     let goal="", need="", pct=8, kind=s.label||labelLine(s.stat,s.line)||"";
     const isP=!!s.pid;
