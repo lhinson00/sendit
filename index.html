@@ -279,7 +279,22 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
 .glog{display:grid;gap:8px;padding:0 var(--pad) 24px}
 .glog h3{margin:0 0 4px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
-.grow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#101218;border:1px solid #2a241c;padding:10px 12px}
+
+.lastg{margin:12px var(--pad) 8px;padding:12px;background:#101218;border:1px solid #3a2a18;border-radius:10px}
+.lastg-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.lastg-h .dec{font-family:"Bebas Neue",sans-serif;font-size:28px;min-width:28px}
+.lastg-h .opp{font-weight:800;font-size:16px}
+.lastg-h .opp span{display:block;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.lastg-stats{display:flex;flex-wrap:wrap;gap:8px}
+.gchip{background:#0c0d12;border:1px solid #2a241c;border-radius:8px;padding:6px 8px;min-width:52px;text-align:center}
+.gchip em{display:block;font-style:normal;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.gchip b{display:block;font-family:"Bebas Neue",sans-serif;font-size:20px;line-height:1;color:#fff}
+.grow{display:grid;grid-template-columns:28px minmax(72px,0.7fr) minmax(0,1.6fr);gap:8px;align-items:center;background:#101218;border:1px solid #2a241c;padding:8px 10px}
+.grow .line.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.grow .line.chips .gchip{padding:4px 6px;min-width:44px}
+.grow .line.chips .gchip b{font-size:16px}
+
+
 .grow .dec{font-family:"Bebas Neue",sans-serif;font-size:22px;width:28px}
 .grow .dec.W{color:#3ee0a0}.grow .dec.L{color:#ff8a8a}
 .grow .opp{font-weight:800}
@@ -2186,14 +2201,21 @@ async function openPlayer(pid, name){
     const career = (st.splits||[]).find(s=>/career/i.test(s.displayName||"")) || null;
     const tiles = labels.map((lab,i)=>"<div class='tile'><em>"+lab+"</em><b>"+(season.stats[i]||"—")+"</b></div>").join("");
     const careerBits = career ? labels.map((lab,i)=>"<span>"+lab+"<b>"+(career.stats[i]||"—")+"</b></span>").join("") : "";
-    const cards = list.map(ev=>{
+    const gameBits = ev => {
       const info = (!Array.isArray(meta) && meta && ev.eventId) ? (meta[ev.eventId]||{}) : {};
-      const opp = (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || info.atVs || "Opp";
-      const dec = (info.gameResult||"").trim();
-      const dt = String(info.gameDate||"").slice(0,10);
-      const bits = (ev.stats||[]).slice(0,6);
-      const line = bits.map((v,i)=>(gLabels[i]||"")+" "+v).filter(Boolean).join("  ");
-      return "<div class='grow'><div class='dec "+dec+"'>"+(dec||"·")+"</div><div class='opp'>"+opp+"<span>"+dt+"</span></div><div class='line'>"+line+"</div></div>";
+      return {
+        opp: (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || info.atVs || "Opp",
+        dec: (info.gameResult||"").trim(),
+        dt: String(info.gameDate||"").slice(0,10),
+        bits: (ev.stats||[]).slice(0,8).map((v,i)=>({lab:gLabels[i]||"", v}))
+      };
+    };
+    const chipRow = bits => bits.filter(x=>x.lab||x.v).map(x=>"<div class='gchip'><em>"+x.lab+"</em><b>"+x.v+"</b></div>").join("");
+    const last = list[0] ? gameBits(list[0]) : null;
+    const lastGame = last ? "<div class='lastg'><div class='lastg-h'><div class='dec "+last.dec+"'>"+(last.dec||"·")+"</div><div class='opp'>"+last.opp+"<span>"+last.dt+" · last game</span></div></div><div class='lastg-stats'>"+chipRow(last.bits)+"</div></div>" : "";
+    const cards = list.slice(1).map(ev=>{
+      const g=gameBits(ev);
+      return "<div class='grow'><div class='dec "+g.dec+"'>"+(g.dec||"·")+"</div><div class='opp'>"+g.opp+"<span>"+g.dt+"</span></div><div class='line chips'>"+chipRow(g.bits)+"</div></div>";
     }).join("");
     function idx(labs, names){
       const L=(labs||[]).map(x=>String(x).toUpperCase());
@@ -2285,7 +2307,7 @@ async function openPlayer(pid, name){
           const bits=labels.map((lab,i)=>({lab,s:season.stats[i]})).filter(x=>keep.test(x.lab));
           const line = bits.length ? `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>` : (fromKit?"":`<div class="tiles">${tiles}</div>`);
           if(fromKit) return line;
-          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No log posted</p>"}</div>`;
+          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}${lastGame}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No earlier games posted</p>"}</div>`;
         })()}
       </div>`;
   }catch(e){
