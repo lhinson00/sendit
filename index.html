@@ -1476,7 +1476,7 @@ function paintTnStand(){
   host.hidden=false;
   $("liveList").hidden=true;
   const tables=((window.TNFB||{}).standings||[]).filter(s=>/Region/i.test(s.title||""));
-  host.innerHTML = `<p class="hint">CoachT region standings · scores they have reported · tap a school</p>`+
+  host.innerHTML = `<p class="hint">Region standings · reported scores · tap a school</p>`+
     tables.map(s=>`<div class="divblock"><h3>${s.title.replace(/^2026 Football /,"")}</h3>
       <div class="srow head"><span>#</span><span></span><span>Team</span><span>Region</span><span>Win%</span></div>
       ${(s.teams||[]).map(t=>`<div class="srow" data-sid="${t.sid||""}" data-tname="${String(t.team).replace(/"/g,"")}"><span>${t.rk||""}</span><span></span><div><b>${t.team}</b></div><span>${t.reg||""}</span><span>${t.ov||""}</span></div>`).join("")}
@@ -1507,7 +1507,7 @@ function openTnTeam(sid, name){
     const dec=played?(Number(us)>Number(them)?"W":Number(us)<Number(them)?"L":"T"):"";
     return `<div class="tgame"><span>${g.date}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${home?"vs":"@"} ${opp}</b><em>${g.region||""}</em></div><b>${played?us+"–"+them:(g.status||"")}</b></div>`;
   }).join("");
-  $("playerRoom").innerHTML=`<div class="tbook"><div class="phero-copy"><p class="kicker">TSSAA · 2026</p><h2>${name}</h2><p>${games.length} games through Sep 19 · CoachT</p></div>${rows||"<p class='hint'>No games on the CoachT board for this school yet.</p>"}</div>`;
+  $("playerRoom").innerHTML=`<div class="tbook"><div class="phero-copy"><p class="kicker">TSSAA · 2026</p><h2>${name}</h2><p>${games.length} games through Sep 19</p></div>${rows||"<p class='hint'>No games on the board for this school yet.</p>"}</div>`;
 }
 function tssaaTab(which){
   window.TN_TAB=which;
