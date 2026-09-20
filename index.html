@@ -2545,17 +2545,13 @@ function showEat(opts){
   tickSlip();
 }
 let KIT_MARK=[];
-try{ KIT_MARK=JSON.parse(localStorage.getItem("sauceKitMark")||"[]"); }catch(e){ KIT_MARK=[]; }
-function saveKitMark(){ try{ localStorage.setItem("sauceKitMark", JSON.stringify(KIT_MARK.slice(0,40))); }catch(e){} }
+try{ localStorage.removeItem("sauceKitMark"); }catch(e){}
+function saveKitMark(){}
 function kitMarkId(pid){ return String(pid)+"-"+(FILT.stat||"")+"-"+(FILT.line||""); }
 function isKitMarked(pid){ return KIT_MARK.some(x=>x.id===kitMarkId(pid)); }
 function paintKitLog(){
   const host=$("kitLog");
-  if(!host) return;
-  if(!KIT_MARK.length){ host.innerHTML=""; return; }
-  host.innerHTML="<p class='hint'>Marked on this Kitchen</p>"+KIT_MARK.slice(0,12).map(x=>
-    "<div class='kitlogrow'><b>"+x.name+"</b> <span>"+labelLine(x.stat,x.line)+" · "+(x.team||"")+"</span></div>"
-  ).join("");
+  if(host) host.innerHTML="";
 }
 function addSlip(pid){
   const p=ROSTER.find(x=>x.id===String(pid));
