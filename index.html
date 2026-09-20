@@ -282,6 +282,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .career{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 14px}
 .career span{font-size:11px;color:#c9c2b8;background:#14110e;border:1px solid #2a241c;padding:6px 8px}
 .career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
+.kitlog{padding:0 var(--pad) 8px}
+.kitlogrow{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #221e18;font-size:13px}
+.kitlogrow span{color:var(--muted)}
+.addline.on{background:#1a2a18;color:#3ee0a0;border-color:#3ee0a0}
 .glog{display:block;width:100%;max-width:100%;padding:0 var(--pad) 24px;box-sizing:border-box}
 .glog .lastg{width:100%;max-width:100%;margin:12px 0;box-sizing:border-box}
 .lastg{width:100%;max-width:100%;box-sizing:border-box}
@@ -459,6 +463,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .krow em{font-style:normal;color:var(--muted);font-size:12px;display:block;margin-top:4px}
 .khit{font-family:"Bebas Neue",sans-serif;font-size:34px;line-height:1;color:var(--orange);text-align:right}
 .kpct{font-size:12px;color:var(--ember);text-align:right}
+.kitlog{padding:0 var(--pad) 8px}
+.kitlogrow{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #221e18;font-size:13px}
+.kitlogrow span{color:var(--muted)}
+.addline.on{background:#1a2a18;color:#3ee0a0;border-color:#3ee0a0}
 .glog{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:10px}
 .glog i{font-style:normal;font-size:10px;padding:6px 4px;background:#0e0f14;border:1px solid #242018;color:#8a8478;text-align:center}
 .glog i.hit{border-color:#5a3410;color:var(--orange);background:#1a1208}
@@ -680,6 +688,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
       <div><label>Line · last 18</label><select id="kLine"></select></div>
     </div>
     <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
+    <div id="kitLog" class="kitlog"></div>
     <div id="kitList" class="list"></div>
   </div>
   <div id="eatPanel" hidden>
@@ -2412,8 +2421,10 @@ function labelLine(stat,line){
   if(stat==="recYds") return line+"+ rec yds";
   if(stat==="rushYds") return line+"+ rush yds";
   if(stat==="passYds") return line+"+ pass yds";
+  if(stat==="anytimeTd") return rushTd+recTd;
   if(stat==="recTd") return line+"+ rec TD";
   if(stat==="rushTd") return line+"+ rush TD";
+  if(stat==="anytimeTd") return line+"+ anytime TD";
   if(stat==="passTd") return line+"+ pass TD";
   if(stat==="int") return line+"+ INT";
   return line+"+";
@@ -2498,15 +2509,29 @@ function showEat(opts){
   paintSlip();
   tickSlip();
 }
+let KIT_MARK=[];
+try{ KIT_MARK=JSON.parse(localStorage.getItem("sauceKitMark")||"[]"); }catch(e){ KIT_MARK=[]; }
+function saveKitMark(){ try{ localStorage.setItem("sauceKitMark", JSON.stringify(KIT_MARK.slice(0,40))); }catch(e){} }
+function kitMarkId(pid){ return String(pid)+"-"+(FILT.stat||"")+"-"+(FILT.line||""); }
+function isKitMarked(pid){ return KIT_MARK.some(x=>x.id===kitMarkId(pid)); }
+function paintKitLog(){
+  const host=$("kitLog");
+  if(!host) return;
+  if(!KIT_MARK.length){ host.innerHTML=""; return; }
+  host.innerHTML="<p class='hint'>Marked on this Kitchen</p>"+KIT_MARK.slice(0,12).map(x=>
+    "<div class='kitlogrow'><b>"+x.name+"</b> <span>"+labelLine(x.stat,x.line)+" · "+(x.team||"")+"</span></div>"
+  ).join("");
+}
 function addSlip(pid){
   const p=ROSTER.find(x=>x.id===String(pid));
   if(!p) return;
-  const id=p.id+"-"+FILT.stat+"-"+FILT.line;
-  if(SLIP.some(s=>s.id===id)) { nflTab("eat"); return; }
-  const g=(window.LIVE_GAMES||GAMES||[]).find(x=>x.awayAb===p.team||x.homeAb===p.team||(x.away||"").includes(p.team)||(x.home||"").includes(p.team));
-  SLIP.push({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, live:0, game:g?(g.away+" @ "+g.home):"", eventId:g&&g.eventId, lg:"nfl"});
-  saveSlip();
-  nflTab("eat");
+  const id=kitMarkId(pid);
+  if(KIT_MARK.some(x=>x.id===id)) return;
+  KIT_MARK.unshift({id, pid:p.id, name:p.name, team:p.team, pos:p.pos, stat:FILT.stat, line:FILT.line, at:Date.now()});
+  saveKitMark();
+  paintKitLog();
+  const btn=document.querySelector('[data-add="'+pid+'"]');
+  if(btn){ btn.textContent="Added"; btn.classList.add("on"); }
 }
 function liveStatFromBox(sum, pid, stat){
   const sides=((sum.boxscore||{}).players)||[];
@@ -2526,6 +2551,7 @@ function liveStatFromBox(sum, pid, stat){
   });
   if(stat==="rec") return rec;
   if(stat==="recYds") return recY;
+  if(stat==="anytimeTd") return rushTd+recTd;
   if(stat==="recTd") return recTd;
   if(stat==="rushYds") return rush;
   if(stat==="rushTd") return rushTd;
@@ -2873,9 +2899,9 @@ async function openSlipGame(eid, fid, lg){
 setInterval(()=>{ tickSlip(); }, 5000);
 try{ tickSlip(); }catch(e){}
 const STATS = {
-  WR: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
-  TE: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"]],
-  RB: [["rushYds","Rush yards"],["rushTd","Rush TD"],["recYds","Rec yards"],["rec","Receptions"]],
+  WR: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"],["anytimeTd","Anytime TD"]],
+  TE: [["recYds","Rec yards"],["rec","Receptions"],["recTd","Rec TD"],["anytimeTd","Anytime TD"]],
+  RB: [["rushYds","Rush yards"],["rushTd","Rush TD"],["recYds","Rec yards"],["rec","Receptions"],["anytimeTd","Anytime TD"]],
   QB: [["passYds","Pass yards"],["passTd","Pass TD"],["int","INT"],["rushYds","Rush yards"],["rushTd","Rush TD"]]
 };
 const LINES = {
@@ -2883,7 +2909,7 @@ const LINES = {
   rushYds:[10,20,30,40,50,60,70,80,90,100],
   passYds:[125,150,175,200,225,250,275,300],
   rec:[2,3,4,5,6,7,8,10],
-  recTd:[1], rushTd:[1], passTd:[1,2], int:[1]
+  recTd:[1], rushTd:[1], anytimeTd:[1], passTd:[1,2], int:[1]
 };
 function fillKitGameList(){
   const sel=$("kGame");
@@ -2906,7 +2932,7 @@ function fillKitControls(){
   st.innerHTML=opts.map(o=>"<option value='"+o[0]+"'"+(o[0]===FILT.stat?" selected":"")+">"+o[1]+"</option>").join("");
   const lines=LINES[FILT.stat]||[1];
   if(!lines.includes(FILT.line)) FILT.line=lines[0];
-  const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",passTd:"+ passing TD",int:"+ interceptions"}[FILT.stat]||"+";
+  const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",anytimeTd:"+ anytime TD",passTd:"+ passing TD",int:"+ interceptions"}[FILT.stat]||"+";
   ln.innerHTML=lines.map(n=>"<option value='"+n+"'"+(n===FILT.line?" selected":"")+">"+n+suffix+"</option>").join("");
 }
 function valOf(row, stat){
@@ -2917,9 +2943,11 @@ function valOf(row, stat){
   };
   if(stat==="recYds") return pick(["receivingYards"]);
   if(stat==="rec") return pick(["receptions"]);
+  if(stat==="anytimeTd") return rushTd+recTd;
   if(stat==="recTd") return pick(["receivingTouchdowns"]);
   if(stat==="rushYds") return pick(["rushingYards"]);
   if(stat==="rushTd") return pick(["rushingTouchdowns"]);
+  if(stat==="anytimeTd") return pick(["rushingTouchdowns"])+pick(["receivingTouchdowns"]);
   if(stat==="passYds") return pick(["passingYards"]);
   if(stat==="passTd") return pick(["passingTouchdowns"]);
   if(stat==="int") return pick(["interceptions"]);
@@ -3023,7 +3051,7 @@ function paintKitRows(out, host){
       <div class="ktop">
         <div class="khit">${x.score}</div>
         <div class="prow" data-pid="${x.p.id}" data-pname="${x.p.name.replace(/"/g,"")}"><b>${x.p.name}</b><em>${x.p.team} ${x.p.pos} · ${x.hits}/${x.n} · L5 ${x.l5h}/${x.l5n} · ${labelLine(FILT.stat,FILT.line)}</em></div>
-        <button type="button" class="addline" data-add="${x.p.id}">Add</button>
+        <button type="button" class="addline${isKitMarked(x.p.id)?" on":""}" data-add="${x.p.id}">${isKitMarked(x.p.id)?"Added":"Add"}</button>
       </div>
       <div class="spark">${spark}</div>
     </div>`;
@@ -3068,7 +3096,7 @@ async function runKitchen(){
     }));
     $("kitMeta").textContent="Loading "+out.length+" / "+pool.length+" "+FILT.pos+"s…";
   }
-  paintKitRows(out, host);
+  paintKitRows(out, host); paintKitLog();
   }catch(e){
     host.innerHTML="<p class='hint'>Kitchen error: "+(e.message||e)+"</p>";
   }
