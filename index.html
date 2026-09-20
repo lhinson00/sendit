@@ -862,6 +862,7 @@ function mapComp(ev, lg){
       start: c.startDate || ev.date || c.date || "",
       broadcast: ((c.broadcasts||[])[0] && ((c.broadcasts||[])[0].names||[])[0]) || c.broadcast || "",
       lastPlay: ((c.situation||{}).lastPlay && (c.situation.lastPlay.text)) || "",
+      lastPlayScore: !!(c.situation && c.situation.lastPlay && (c.situation.lastPlay.scoringPlay || /touchdown|\bTD\b|field goal|home run/i.test(c.situation.lastPlay.text||""))),
       down: (c.situation && (c.situation.downDistanceText || c.situation.shortDownDistanceText)) || "",
       possId: String((c.situation && c.situation.possession) || ""),
       red: !!(c.situation && c.situation.isRedZone),
@@ -904,6 +905,9 @@ function scoreboard(g){
 }
 function scorebug(g){
   return (g.awayAb||g.away||"")+" "+nScore(g.awayScore)+"  —  "+nScore(g.homeScore)+" "+(g.homeAb||g.home||"");
+}
+function isScorePlay(text){
+  return /touchdown|\bTD\b|field goal|extra point|two-point|2-pt|\bsafety\b|home run|\bHR\b|grand slam|\bgoal\b|run scored/i.test(String(text||""));
 }
 function scorerName(g, prev){
   const da=nScore(g.awayScore)-nScore(prev&&prev.as);
@@ -1131,12 +1135,15 @@ function pulseBoard(g){
   if(watching && (liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
     window.ALERT_TOT[key]=tot;
     const kind=playKind(g.lastPlay,g,prev);
+    const who=scorerName(g,prev)||"";
+    const raw=g.lastPlay||"";
+    const playTxt = (isScorePlay(raw) || g.lastPlayScore) ? raw : "";
     flashAlert({
-      kicker: scorerName(g,prev)||"",
+      kicker: who,
       title: kind,
       team: scoreboard(g),
       score: "",
-      body: g.lastPlay||g.detail||""
+      body: playTxt || (who? (who+" — "+kind) : kind)
     });
   } else if(watching && justFinal){
     const ufc=(g.lg==="ufc"||!!g.fightId)&&g.lg!=="cfb"&&g.lg!=="nfl";
@@ -1651,7 +1658,7 @@ function renderFootball(g, sum){
   const live = stType.state==="in";
   const lastDrv = ((drives.previous||[]).slice(-1)[0]) || {};
   const driveBook = (drv, title) => {
-    const plist = (drv.plays||[]).filter(p=>p && p.text);
+    const plist = (drv.plays||[]).filter(p=>p && p.text).slice().reverse();
     if(!plist.length && !drv.description) return "";
     const team = (drv.team && (drv.team.abbreviation || drv.team.shortDisplayName)) || "";
     const res = drv.result || drv.displayResult || "";
@@ -1664,8 +1671,12 @@ function renderFootball(g, sum){
     }).join("");
     return "<div class='drivebook'><p class='hint'>"+head+"</p>"+(rows||"<p class='hint'>No plays yet.</p>")+"</div>";
   };
-  const thisDriveHtml = driveBook(cur, "This drive");
-  const lastDriveHtml = driveBook(lastDrv, "Last drive");
+  const prevDrives = (Array.isArray(drives.previous)?drives.previous:[]).slice();
+  const twoPoss = [];
+  if(cur && ((cur.plays||[]).length || cur.description)) twoPoss.push({drv:cur, title:"This possession"});
+  for(let i=prevDrives.length-1;i>=0 && twoPoss.length<2;i--) twoPoss.push({drv:prevDrives[i], title:twoPoss.length?"Prior possession":"This possession"});
+  const thisDriveHtml = twoPoss[0]?driveBook(twoPoss[0].drv, twoPoss[0].title):"";
+  const lastDriveHtml = twoPoss[1]?driveBook(twoPoss[1].drv, twoPoss[1].title):"";
   const aQ = qtrCells(away), hQ = qtrCells(home);
   const hasOT = aQ[4] || hQ[4];
   const leadMap={};
