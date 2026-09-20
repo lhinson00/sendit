@@ -1571,7 +1571,7 @@ function renderFootball(g, sum){
   const venue = (gi.venue && gi.venue.fullName) || "";
   const scores = (sum.scoringPlays||[]).slice();
   const lastScore = scores.slice(-1)[0];
-  const drives = sum.drives || {};
+  const drives = (sum.drives && !Array.isArray(sum.drives)) ? sum.drives : {current:null, previous:(Array.isArray(sum.drives)?sum.drives:[])};
   const cur = drives.current || {};
   const plays = cur.plays || [];
   const lastPlay = plays.slice(-1)[0] || {};
@@ -1614,7 +1614,7 @@ function renderFootball(g, sum){
   const ballYard = pinFromText(downTxt) ?? pinYard(spotNow) ?? pinYard(spotSnap);
   const toGoRaw = Number(spotNow.distance!=null?spotNow.distance:spotSnap.distance);
   const toGo = (isFinite(toGoRaw) && toGoRaw>=0 && toGoRaw<=99) ? toGoRaw : null;
-  const fieldPct = yardPct(ballYard==null?50:ballYard);
+  const fieldPct = ballYard==null ? null : yardPct(ballYard);
   const fdYard = (ballYard!=null && toGo!=null) ? (goingRight ? ballYard+toGo : ballYard-toGo) : null;
   const fdPct = fdYard==null ? null : yardPct(Math.max(0, Math.min(100, fdYard)));
   const startRaw = (firstPlay.start && firstPlay.start.yardLine>0 ? firstPlay.start : null) || firstPlay.start;
@@ -1733,16 +1733,19 @@ function renderFootball(g, sum){
     </div>
     <div class="fsec" data-sec="live" ${tab==="live"?"":"hidden"}>
       <div class="fieldwrap">
-        ${fieldPct!=null?`<div class="field"><div class="fieldticks"></div><div class="ezL">${aw}</div><div class="ezR">${hm}</div>${driveL!=null?`<div class="dpath" style="left:${driveL}%;width:${driveW}%"></div>`:""}${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:""}<div class="los" style="left:${fieldPct}%"></div><div class="dir ${goingRight?"east":"west"}" style="left:${fieldPct}%"></div>${logoPct!=null?`<img class="ball" alt="" src="${possLogo}" style="left:${logoPct}%"/>`:""}</div>`:""}
-        <div class="drivechip">${poss?("<b>"+poss+"</b> "):""}${downTxt||""}${driveTxt?(" · "+driveTxt):""}</div>
-        ${lastPlay.text?`<div class="lastbig"><span>Last play</span><p>${lastPlay.text}</p></div>`:""}
+        <div class="field"><div class="fieldticks"></div><div class="ezL">${aw}</div><div class="ezR">${hm}</div>${[10,20,30,40,50,40,30,20,10].map((n,i)=>`<span class="yn" style="left:${16.4+i*8.4}%">${n}</span>`).join("")}${fieldPct!=null?( (driveL!=null?`<div class="dpath" style="left:${driveL}%;width:${driveW}%"></div>`:"")+(fdPct!=null?`<div class="fd" style="left:${fdPct}%"></div>`:"")+`<div class="los" style="left:${fieldPct}%"></div><div class="dir ${goingRight?"east":"west"}" style="left:${fieldPct}%"></div>`+(logoPct!=null?`<img class="ball" alt="" src="${possLogo}" style="left:${logoPct}%"/>`:"")):""}</div>
+        <div class="drivechip">${poss?("<b>"+poss+"</b> · "):""}${(downTxt||g.down||st||"Live")}${driveTxt?(" · "+driveTxt):""}</div>
+        <div class="lastbig"><span>Last play</span><p>${lastPlay.text||g.lastPlay||"Waiting on the next ESPN play."}</p></div>
         ${thisDriveHtml||""}
         ${lastDriveHtml||""}
         ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${aw} ${100-homePct}%</em><em>${hm} ${homePct}%</em></div>`:""}
       </div>
       <div class="fieldwrap">
-        <div class="statpair head"><b>${aw}</b><span>tape</span><b>${hm}</b></div>
-        ${[["totalYards","Total Yards",1],["netPassingYards","Passing",1],["rushingYards","Rushing",1],["turnovers","Turnovers",1],["firstDowns","1st Downs",1],["totalPenaltiesYards","Penalties",0],["thirdDownEff","3rd Down",0],["fourthDownEff","4th Down",0],["possessionTime","Possession",2]].map(([k,lab,kind])=>{
+        ${(() => {
+          const rows=[["totalYards","Total Yards",1],["netPassingYards","Passing",1],["rushingYards","Rushing",1],["turnovers","Turnovers",1],["firstDowns","1st Downs",1],["totalPenaltiesYards","Penalties",0],["thirdDownEff","3rd Down",0],["fourthDownEff","4th Down",0],["possessionTime","Possession",2]];
+          const filled=rows.some(([k])=>tstat(sum,aw,k)!=="—"||tstat(sum,hm,k)!=="—");
+          if(!filled) return "<p class='hint'>Team tape posts after ESPN files the first drive.</p>";
+          return "<div class='statpair head'><b>"+aw+"</b><span>tape</span><b>"+hm+"</b></div>"+rows.map(([k,lab,kind])=>{
           const L=tstat(sum,aw,k), R=tstat(sum,hm,k);
           const num=v=>{
             if(kind===2){ const p=String(v).split(":"); return p.length===2?(Number(p[0])*60+Number(p[1]||0)):0; }
@@ -1752,7 +1755,8 @@ function renderFootball(g, sum){
           const ln=num(L), rn=num(R), tot=ln+rn;
           const bar = (kind && tot) ? `<div class="cmpbar"><i class="l" style="width:${Math.round(ln/tot*50)}%"></i><i class="r" style="width:${Math.round(rn/tot*50)}%"></i></div>` : "";
           return `<div class="statpair">${bar}<b>${L}</b><span>${lab}</span><b>${R}</b></div>`;
-        }).join("")}
+        }).join("");
+        })()}
       </div>
       <div class="fieldwrap">
         <p class="hint">Scoring plays</p>
@@ -2000,7 +2004,35 @@ async function loadFightHistory(aid, name, hostId){
     write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history. "+(e.message||"")+"</p></div>");
   }
 }
-async function openGame(id, fid){
+async function fetchFootballPackage(eid){
+  const id=String(eid||"");
+  const sport = LEAGUE==="nfl"?"football/nfl":"football/college-football";
+  const urls=[
+    SUM[LEAGUE]&&SUM[LEAGUE](id),
+    "https://site.api.espn.com/apis/site/v2/sports/"+sport+"/summary?event="+id,
+    "https://site.api.espn.com/apis/site/v2/sports/"+sport+"/playbyplay?event="+id
+  ].filter(Boolean);
+  return (async()=>{
+    let sum={};
+    for(const u of urls){
+      try{
+        const res=await fetch(u,{cache:"no-store"});
+        if(!res.ok) continue;
+        let d=await res.json();
+        if(d.gamepackageJSON) d=d.gamepackageJSON;
+        if(!sum.header && d.header) Object.assign(sum,d);
+        else{
+          if(d.drives && !sum.drives) sum.drives=d.drives;
+          if(d.boxscore && !sum.boxscore) sum.boxscore=d.boxscore;
+          if((d.leaders||[]).length && !sum.leaders) sum.leaders=d.leaders;
+          if((d.scoringPlays||[]).length && !sum.scoringPlays) sum.scoringPlays=d.scoringPlays;
+        }
+      }catch(e){}
+    }
+    return sum;
+  })();
+}
+function openGame(id, fid){
   OPEN = String(fid||id||"");
   if(window.trackUse) window.trackUse("game", (LEAGUE||"")+" "+String(id||fid||""));
   if(poll){ clearInterval(poll); poll=null; }
@@ -2023,14 +2055,7 @@ async function openGame(id, fid){
     const eid=String((g&&g.eventId)||id||"");
     if(String(OPEN)!==String(id) && String(OPEN)!==eid && String(OPEN)!==String(fid||"")) return;
     try{
-      const urls=[SUM[LEAGUE]&&SUM[LEAGUE](eid)].filter(Boolean);
-      if(LEAGUE==="nfl") urls.push("https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+eid);
-      if(LEAGUE==="cfb") urls.push("https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+eid);
-      let res={ok:false};
-      for(const u of urls){
-        try{ res=await fetch(u,{cache:"no-store"}); if(res.ok) break; }catch(e){}
-      }
-      const sum = res.ok ? await res.json() : {};
+      const sum = (LEAGUE==="nfl"||LEAGUE==="cfb") ? await fetchFootballPackage(eid) : (SUM[LEAGUE] ? await (await fetch(SUM[LEAGUE](eid),{cache:"no-store"})).json().catch(()=>({})) : {});
       if(LEAGUE==="mls"){
         window.MLS_PLAYS=window.MLS_PLAYS||{};
         window.MLS_PLAYS[id]=await loadMlsPlays(id);
