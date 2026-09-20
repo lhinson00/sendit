@@ -3008,6 +3008,14 @@ function fillKitControls(){
   const suffix={recYds:"+ receiving yards",rushYds:"+ rushing yards",passYds:"+ passing yards",rec:"+ receptions",recTd:"+ receiving TD",rushTd:"+ rushing TD",anytimeTd:"+ anytime TD",passTd:"+ passing TD",int:"+ interceptions"}[FILT.stat]||"+";
   ln.innerHTML=lines.map(n=>"<option value='"+n+"'"+(n===FILT.line?" selected":"")+">"+n+suffix+"</option>").join("");
 }
+function gameTouched(row){
+  const names=row.names||[], stats=row.stats||[];
+  const num=k=>{
+    const i=names.indexOf(k);
+    return i>=0?Number(String(stats[i]||"0").replace(/,/g,""))||0:0;
+  };
+  return (num("rushingYards")+num("rushingAttempts")+num("receptions")+num("receivingYards")+num("passingYards")+num("passingAttempts")+num("rushingTouchdowns")+num("receivingTouchdowns"))>0;
+}
 function valOf(row, stat){
   const names=row.names||[], stats=row.stats||[];
   const pick = keys => {
@@ -3109,10 +3117,10 @@ function sauceScore(hits, n, l5h, l5n){
 }
 function paintKitRows(out, host){
   out.sort((a,b)=> (b.score-a.score) || (b.hits-a.hits) || (b.n-a.n) || (b.rate-a.rate));
-  const rows=out.filter(x=>x.n>=6);
-  $("kitMeta").textContent=FILT.pos+" · last 18 · min 6 games · "+labelLine(FILT.stat,FILT.line);
+  const rows=out.filter(x=>x.n>=6 && x.hits>=6);
+  $("kitMeta").textContent=FILT.pos+" · last 18 played · 6+ hits · "+labelLine(FILT.stat,FILT.line);
   host.innerHTML=rows.map(x=>{
-    const games=LOGS[x.p.id]||[];
+    const games=(LOGS[x.p.id]||[]).filter(gameTouched).slice(-18);
     const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
     const spark=games.map(g=>{
       const v=valOf(g, FILT.stat);
@@ -3157,7 +3165,7 @@ async function runKitchen(){
     const slice=pool.slice(i,i+8);
     await Promise.all(slice.map(async p=>{
       try{
-        const games=await loadLog(p.id);
+        const games=(await loadLog(p.id)).filter(gameTouched).slice(-18);
         const hits=games.filter(g=>valOf(g, FILT.stat)>=FILT.line).length;
         const n=games.length;
         const last5=games.slice(-5);
