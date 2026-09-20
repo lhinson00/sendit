@@ -2215,7 +2215,7 @@ async function openPlayer(pid, name){
     const lastGame = last ? "<div class='lastg'><div class='lastg-h'><div class='dec "+last.dec+"'>"+(last.dec||"·")+"</div><div class='opp'>"+last.opp+"<span>"+last.dt+" · last game</span></div></div><div class='lastg-stats'>"+chipRow(last.bits)+"</div></div>" : "";
     const cards = list.slice(1).map(ev=>{
       const g=gameBits(ev);
-      return "<div class='grow'><div class='dec "+g.dec+"'>"+(g.dec||"·")+"</div><div class='opp'>"+g.opp+"<span>"+g.dt+"</span></div><div class='line chips'>"+chipRow(g.bits)+"</div></div>";
+      return "<div class='lastg'><div class='lastg-h'><div class='dec "+g.dec+"'>"+(g.dec||"·")+"</div><div class='opp'>"+g.opp+"<span>"+g.dt+"</span></div></div><div class='lastg-stats'>"+chipRow(g.bits)+"</div></div>";
     }).join("");
     function idx(labs, names){
       const L=(labs||[]).map(x=>String(x).toUpperCase());
