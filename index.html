@@ -2646,13 +2646,16 @@ function alertFromSlip(s, g, prev){
   if(!ALERT_SEED) return;
   if(s.pid){
     const before=Number(prev.live)||0, now=Number(s.live)||0;
-    if(now>before){
+    const step = s.stat==="rushYds"||s.stat==="recYds"?10 : s.stat==="passYds"?25 : 0;
+    const crossed = step ? Math.floor(now/step)>Math.floor(before/step) : now>before;
+    if(now>before && crossed){
       const left=Math.max(0, Number(s.line)-now);
       const tag=labelLine(s.stat,s.line);
+      const mark = step ? (Math.floor(now/step)*step)+"+" : String(now);
       flashAlert({
         kicker: tag,
         title: (s.name||"Player")+"  "+now+" / "+s.line,
-        body: (now>=s.line?"Line cleared":left+" to go")+(s.game?(" · "+s.game):"")+(s.team?(" · "+s.team):"")
+        body: (step?(mark+" yds"):"")+(now>=s.line?" · Line cleared":(" · "+left+" to go"))+(s.game?(" · "+s.game):"")+(s.team?(" · "+s.team):"")
       });
     }
     return;
