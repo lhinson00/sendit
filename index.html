@@ -3273,7 +3273,7 @@ async function loadNflSide(tid){
 }
 
 function isSecGame(g){
-  return String(g.awayConf||"")==="8" || String(g.homeConf||")==="8" || /SEC/i.test(g.awayConf||"") || /SEC/i.test(g.homeConf||"");
+  return String(g.awayConf||"")==="8" || String(g.homeConf||"")==="8" || /SEC/i.test(g.awayConf||"") || /SEC/i.test(g.homeConf||"");
 }
 async function loadCfbSide(tid){
   const out=[];
