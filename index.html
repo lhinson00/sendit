@@ -686,6 +686,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
       <button type="button" class="tabbtn on" id="tabSlate">Slate</button>
       <button type="button" class="tabbtn" id="tabPolls">Rankings</button>
       <button type="button" class="tabbtn" id="tabLeadC">Leaders</button>
+      <button type="button" class="tabbtn" id="tabCfbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabEatC">Tracker</button>
     </span>
     <span class="tabs" id="mlbTabs" hidden>
@@ -3007,8 +3008,9 @@ const LINES = {
 function fillKitGameList(){
   const sel=$("kGame");
   if(!sel) return;
-  const lg=LEAGUE==="mlb"?"mlb":"nfl";
-  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg===lg||LEAGUE===lg));
+  const lg=LEAGUE==="mlb"?"mlb":LEAGUE==="cfb"?"cfb":"nfl";
+  let games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g && (g.lg===lg||LEAGUE===lg));
+  if(lg==="cfb") games=games.filter(isSecGame);
   const cur=FILT.game||"";
     const all="";
   if(!cur && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
@@ -3132,10 +3134,10 @@ function parseLog(d){
   return rows;
 }
 async function loadLog(pid){
-  const sport=LEAGUE==="mlb"?"mlb":"nfl";
+  const sport=LEAGUE==="mlb"?"mlb":LEAGUE==="cfb"?"cfb":"nfl";
   const key=sport+":"+pid;
   if(LOGS[key] && LOGS[key].length>=8) return LOGS[key];
-  const path=sport==="mlb"?"baseball/mlb":"football/nfl";
+  const path=sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
   const qs=["","?season=2025"];
   const seen=new Set();
   const rows=[];
@@ -3163,12 +3165,12 @@ function sauceScore(hits, n, l5h, l5n){
 }
 function paintKitRows(out, host){
   out.sort((a,b)=> (b.score-a.score) || (b.hits-a.hits) || (b.n-a.n) || (b.rate-a.rate));
-  const mlb=LEAGUE==="mlb";
-  const need= mlb ? (FILT.pos==="SP"?4:8) : (/Td$/i.test(FILT.stat||"") ? 3 : 6);
-  const rows=out.filter(x=> mlb ? x.n>=need : (x.n>=need && x.hits>=need));
-  $("kitMeta").textContent=FILT.pos+" · last 18 played · "+need+"+ hits · "+labelLine(FILT.stat,FILT.line);
+  const mlb=LEAGUE==="mlb", cfb=LEAGUE==="cfb";
+  const need= mlb ? (FILT.pos==="SP"?4:8) : cfb ? 1 : (/Td$/i.test(FILT.stat||"") ? 3 : 6);
+  const rows=out.filter(x=> cfb ? x.n>=1 : mlb ? x.n>=need : (x.n>=need && x.hits>=need));
+  $("kitMeta").textContent=FILT.pos+" · last "+(mlb?15:18)+" played · "+(cfb?"no floor":need+"+ hits")+" · "+labelLine(FILT.stat,FILT.line);
   host.innerHTML=rows.map(x=>{
-    const games=(LOGS[(LEAGUE==="mlb"?"mlb:":"nfl:")+x.p.id]||LOGS[x.p.id]||[]).filter(gameTouched).slice(LEAGUE==="mlb"?-15:-18);
+    const games=(LOGS[(LEAGUE==="mlb"?"mlb:":LEAGUE==="cfb"?"cfb:":"nfl:")+x.p.id]||LOGS[x.p.id]||[]).filter(gameTouched).slice(LEAGUE==="mlb"?-15:-18);
     const max=Math.max(1,...games.map(g=>valOf(g,FILT.stat)));
     const spark=games.map(g=>{
       const v=valOf(g, FILT.stat);
@@ -3269,12 +3271,71 @@ async function loadNflSide(tid){
   }catch(e){}
   return out;
 }
+
+function isSecGame(g){
+  return String(g.awayConf||"")==="8" || String(g.homeConf||")==="8" || /SEC/i.test(g.awayConf||"") || /SEC/i.test(g.homeConf||"");
+}
+async function loadCfbSide(tid){
+  const out=[];
+  if(!tid) return out;
+  try{
+    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/teams/"+tid+"/roster",{cache:"no-store"});
+    if(!r.ok) return out;
+    const d=await r.json();
+    const team=(d.team&&(d.team.abbreviation||d.team.shortDisplayName))||"";
+    (d.athletes||[]).forEach(grp=>{
+      (grp.items||grp.athletes||[]).forEach(a=>{
+        if(!a||!a.id) return;
+        const pos=((a.position&&a.position.abbreviation)||"").toUpperCase();
+        if(!/^(WR|TE|RB|QB)$/.test(pos)) return;
+        out.push({id:String(a.id), name:a.displayName||a.fullName||"", pos, team});
+      });
+    });
+  }catch(e){}
+  return out;
+}
+async function runCfbKitchen(host){
+  fillKitControls();
+  const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g&&g.lg==="cfb"&&isSecGame(g));
+  if(!FILT.game && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
+  fillKitGameList();
+  const g=games.find(x=>String(x.eventId||x.id||"")===String(FILT.game)) || games[0];
+  if(!g){
+    host.innerHTML="<p class='hint'>No SEC games on the slate right now.</p>";
+    return;
+  }
+  host.innerHTML="<p class='hint'>SEC Trends · "+(g.awayAb||g.away)+" @ "+(g.homeAb||g.home)+"…</p>";
+  $("kitMeta").textContent="SEC · "+(g.awayAb||"")+" @ "+(g.homeAb||"")+" · last 18 played";
+  const roster=[].concat(await loadCfbSide(g.awayId), await loadCfbSide(g.homeId));
+  window.KIT_POOL=roster;
+  const pool=roster.filter(p=>p.pos===FILT.pos);
+  if(!pool.length){
+    host.innerHTML="<p class='hint'>No "+FILT.pos+"s on this SEC game.</p>";
+    return;
+  }
+  const out=[];
+  for(let i=0;i<pool.length;i+=6){
+    const slice=pool.slice(i,i+6);
+    await Promise.all(slice.map(async p=>{
+      try{
+        const gamesL=(await loadLog(p.id)).filter(gameTouched).slice(-18);
+        const hits=gamesL.filter(row=>valOf(row, FILT.stat)>=FILT.line).length;
+        const n=gamesL.length;
+        const last5=gamesL.slice(-5);
+        const l5h=last5.filter(row=>valOf(row, FILT.stat)>=FILT.line).length;
+        out.push({p,hits,n,l5h,l5n:last5.length,rate:n?hits/n:0,score:sauceScore(hits,n,l5h,last5.length)});
+      }catch(e){}
+    }));
+  }
+  paintKitRows(out, host);
+}
 async function runKitchen(){
   const host=$("kitList");
   if(!host) return;
   try{
   fillKitControls();
   if(LEAGUE==="mlb") return runMlbKitchen(host);
+  if(LEAGUE==="cfb") return runCfbKitchen(host);
   fillKitGameList();
   const games=(window.LIVE_GAMES||GAMES||[]).filter(g=>g&&(g.lg==="nfl"||LEAGUE==="nfl"));
   if(!FILT.game && games[0]) FILT.game=String(games[0].eventId||games[0].id||"");
@@ -3726,16 +3787,19 @@ function renderSoccer(g, sum){
 function cfbTab(which){
   if(window.trackUse) window.trackUse("tab","cfb-"+which);
   window.BOARD = which;
-  const slate=which==="slate";
+  const slate=which==="slate", kit=which==="kit";
   if($("eatPanel")) $("eatPanel").hidden=true;
+  if($("kitPanel")) $("kitPanel").hidden=!kit;
   if($("tabEatC")) $("tabEatC").classList.remove("on");
   markEatBack();
   if($("liveList")) $("liveList").hidden=!slate;
-  if($("boardPanel")) $("boardPanel").hidden=slate;
+  if($("boardPanel")) $("boardPanel").hidden=!(which==="polls"||which==="lead");
   if($("cfbPills")) $("cfbPills").hidden=!slate;
   if($("tabSlate")) $("tabSlate").classList.toggle("on", slate);
   if($("tabPolls")) $("tabPolls").classList.toggle("on", which==="polls");
   if($("tabLeadC")) $("tabLeadC").classList.toggle("on", which==="lead");
+  if($("tabCfbKit")) $("tabCfbKit").classList.toggle("on", kit);
+  if(kit) runKitchen();
   if(which==="polls") openPolls();
   if(which==="lead") openLeaders("cfb");
 }
@@ -4255,8 +4319,8 @@ function refId(ref){
 }
 async function fillLeadNames(sport, cats){
   const ids=[...new Set(cats.flatMap(c=>(c.leaders||[]).map(L=>L.athlete&&L.athlete.id).filter(Boolean)))];
-  const league = sport==="mlb"?"mlb":"nfl";
-  const path = sport==="mlb"?"baseball/mlb":"football/nfl";
+  const league = sport==="mlb"?"mlb":sport==="cfb"?"college-football":"nfl";
+  const path = sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
   const book={};
   const chunk=ids.slice();
   await Promise.all(chunk.map(async id=>{
@@ -4270,7 +4334,7 @@ async function fillLeadNames(sport, cats){
       }
     }catch(e){}
     try{
-      const r=await fetch("https://sports.core.api.espn.com/v2/sports/"+(sport==="mlb"?"baseball/leagues/mlb":"football/leagues/nfl")+"/seasons/2026/athletes/"+id,{cache:"no-store"});
+      const r=await fetch("https://sports.core.api.espn.com/v2/sports/"+(sport==="mlb"?"baseball/leagues/mlb":sport==="cfb"?"football/leagues/college-football":"football/leagues/nfl")+"/seasons/2026/athletes/"+id,{cache:"no-store"});
       if(!r.ok) return;
       const ath=await r.json();
       book[id]={name:ath.displayName||((ath.firstName||"")+" "+(ath.lastName||"")).trim(), team:""};
@@ -4282,6 +4346,25 @@ async function fillLeadNames(sport, cats){
     L.athlete.displayName=b.name||L.athlete.displayName;
     if(b.team){ L.team=L.team||{}; L.team.abbreviation=b.team; L.team.displayName=b.team; }
   }));
+}
+
+const CFB_CONFS=[{id:"",n:"All"},{id:"8",n:"SEC"},{id:"5",n:"Big Ten"},{id:"4",n:"Big 12"},{id:"1",n:"ACC"},{id:"151",n:"American"},{id:"17",n:"MW"},{id:"15",n:"MAC"},{id:"12",n:"C-USA"},{id:"37",n:"Sun Belt"},{id:"9",n:"Pac-12"},{id:"18",n:"Ind."}];
+async function loadCfbConfMap(){
+  if(window.CFB_TEAM_CONF && Object.keys(window.CFB_TEAM_CONF).length>20) return window.CFB_TEAM_CONF;
+  const map={};
+  try{
+    const r=await fetch("https://site.web.api.espn.com/apis/v2/sports/football/college-football/standings",{cache:"no-store"});
+    const d=r.ok?await r.json():{};
+    (d.children||[]).forEach(c=>{
+      const cid=String(c.id||"");
+      ((c.standings&&c.standings.entries)||[]).forEach(e=>{
+        const tid=String((e.team&&e.team.id)||"");
+        if(tid) map[tid]=cid;
+      });
+    });
+  }catch(e){}
+  window.CFB_TEAM_CONF=map;
+  return map;
 }
 async function openLeaders(lg){
   const host=$("boardPanel");
@@ -4303,6 +4386,21 @@ async function openLeaders(lg){
       });
       await fillLeadNames("nfl", cats);
       window.LEAD_NOTE="2026 regular season";
+    }else if(lg==="cfb"){
+      const res=await fetch("https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/leaders?limit=50",{cache:"no-store"});
+      if(!res.ok) throw new Error("ESPN "+res.status);
+      const d=await res.json();
+      cats=(d.categories||[]).map(c=>{
+        const leaders=(c.leaders||[]).slice(0,40).map(L=>{
+          const aid=refId((L.athlete&&L.athlete.$ref)||L.athlete);
+          const tid=refId((L.team&&L.team.$ref)||L.team);
+          return {displayValue:L.displayValue||L.value, athlete:{id:aid, displayName:""}, team:{id:tid, abbreviation:""}};
+        });
+        return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
+      });
+      await fillLeadNames("cfb", cats);
+      await loadCfbConfMap();
+      window.LEAD_NOTE="College season";
     }else{
       const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/statistics",{cache:"no-store"});
       const d=await res.json();
@@ -4323,7 +4421,15 @@ function paintLeaders(){
   const mlb = /avg|homeRun|ERA|WHIP|OPS|stolen/i.test((cats[0]&&(cats[0].name||cats[0].displayName))||"") || /MLB/i.test(window.LEAD_NOTE||"");
   const offTest = mlb ? /avg|homeRun|RBI|runs|OPS|onBase|slug|hits|stolen|WAR|gameScore|rating/i : OFF_CAT;
   const defTest = mlb ? /ERA|wins|strikeout|saves|WHIP|quality|opponentAvg|holds/i : DEF_CAT;
-  const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||""));
+  const conf=window.LEAD_CONF||"";
+  const cmap=window.CFB_TEAM_CONF||{};
+  const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||"")).map(c=>{
+    if(!(LEAGUE==="cfb" && conf)) return c;
+    return Object.assign({}, c, {leaders:(c.leaders||[]).filter(L=>{
+      const tid=String((L.team&&L.team.id)||"");
+      return cmap[tid]===String(conf);
+    })});
+  });
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
@@ -4334,7 +4440,8 @@ function paintLeaders(){
       <button type="button" class="${side==="off"?"on":""}" data-side="off">Offense</button>
       <button type="button" class="${side==="def"?"on":""}" data-side="def">Defense</button>
     </div>
-    <p class="hint">${window.LEAD_NOTE||""}</p>
+    ${LEAGUE==="cfb"?`<div class="pills" id="cfbConfPills">`+CFB_CONFS.map(x=>`<button type="button" data-cfbconf="${x.id}" class="${conf===x.id?"on":""}">${x.n}</button>`).join("")+`</div>`:""}
+    <p class="hint">${window.LEAD_NOTE||""}${LEAGUE==="cfb"&&conf?" · "+((CFB_CONFS.find(x=>x.id===conf)||{}).n||""):""}</p>
     <div class="ltable">${shown.map(c=>{
       const rows=(c.leaders||[]).slice(0,15).map((L,i)=>{
         const a=L.athlete||{};
@@ -4344,6 +4451,7 @@ function paintLeaders(){
       return `<h3>${c.displayName||c.name}</h3>${rows}`;
     }).join("")||"<p class='hint'>No categories in this bucket.</p>"}</div>`;
   host.querySelectorAll("[data-side]").forEach(b=>b.onclick=()=>{ window.LEAD_SIDE=b.dataset.side; paintLeaders(); });
+  host.querySelectorAll("[data-cfbconf]").forEach(b=>b.onclick=()=>{ window.LEAD_CONF=b.dataset.cfbconf||""; paintLeaders(); });
 }
 $("tabLive") && ($("tabLive").onclick=()=>nflTab("live"));
 $("tabKit") && ($("tabKit").onclick=()=>nflTab("kit"));
@@ -4353,6 +4461,7 @@ $("tabStandN") && ($("tabStandN").onclick=()=>nflTab("stand"));
 $("tabSlate") && ($("tabSlate").onclick=()=>cfbTab("slate"));
 $("tabPolls") && ($("tabPolls").onclick=()=>cfbTab("polls"));
 $("tabLeadC") && ($("tabLeadC").onclick=()=>cfbTab("lead"));
+$("tabCfbKit") && ($("tabCfbKit").onclick=()=>cfbTab("kit"));
 $("tabEatC") && ($("tabEatC").onclick=()=>showEat());
 $("tabEatM") && ($("tabEatM").onclick=()=>showEat());
 $("tabEatAny") && ($("tabEatAny").onclick=()=>showEat());
