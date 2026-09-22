@@ -4387,7 +4387,11 @@ async function openLeaders(lg){
       await fillLeadNames("nfl", cats);
       window.LEAD_NOTE="2026 regular season";
     }else if(lg==="cfb"){
-      const res=await fetch("https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/leaders?limit=50",{cache:"no-store"});
+      const gid=window.LEAD_CONF||"";
+      const curl=gid
+        ? "https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/groups/"+gid+"/leaders?limit=50"
+        : "https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/leaders?limit=50";
+      const res=await fetch(curl,{cache:"no-store"});
       if(!res.ok) throw new Error("ESPN "+res.status);
       const d=await res.json();
       cats=(d.categories||[]).map(c=>{
@@ -4399,7 +4403,6 @@ async function openLeaders(lg){
         return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
       });
       await fillLeadNames("cfb", cats);
-      await loadCfbConfMap();
       window.LEAD_NOTE="College season";
     }else{
       const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/statistics",{cache:"no-store"});
@@ -4422,14 +4425,7 @@ function paintLeaders(){
   const offTest = mlb ? /avg|homeRun|RBI|runs|OPS|onBase|slug|hits|stolen|WAR|gameScore|rating/i : OFF_CAT;
   const defTest = mlb ? /ERA|wins|strikeout|saves|WHIP|quality|opponentAvg|holds/i : DEF_CAT;
   const conf=window.LEAD_CONF||"";
-  const cmap=window.CFB_TEAM_CONF||{};
-  const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||"")).map(c=>{
-    if(!(LEAGUE==="cfb" && conf)) return c;
-    return Object.assign({}, c, {leaders:(c.leaders||[]).filter(L=>{
-      const tid=String((L.team&&L.team.id)||"");
-      return cmap[tid]===String(conf);
-    })});
-  });
+  const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||""));
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
@@ -4451,7 +4447,7 @@ function paintLeaders(){
       return `<h3>${c.displayName||c.name}</h3>${rows}`;
     }).join("")||"<p class='hint'>No categories in this bucket.</p>"}</div>`;
   host.querySelectorAll("[data-side]").forEach(b=>b.onclick=()=>{ window.LEAD_SIDE=b.dataset.side; paintLeaders(); });
-  host.querySelectorAll("[data-cfbconf]").forEach(b=>b.onclick=()=>{ window.LEAD_CONF=b.dataset.cfbconf||""; paintLeaders(); });
+  host.querySelectorAll("[data-cfbconf]").forEach(b=>b.onclick=()=>{ window.LEAD_CONF=b.dataset.cfbconf||""; openLeaders("cfb"); });
 }
 $("tabLive") && ($("tabLive").onclick=()=>nflTab("live"));
 $("tabKit") && ($("tabKit").onclick=()=>nflTab("kit"));
