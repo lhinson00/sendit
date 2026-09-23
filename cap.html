@@ -30,31 +30,31 @@ button{cursor:pointer}
 .tabs button.on{border-color:var(--orange);background:#1a120c;color:var(--ember)}
 .panel{padding:12px var(--pad) 24px}
 .hint{color:var(--muted);font-size:13px;line-height:1.45;margin:0 0 12px}
-.budget{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.bcell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.bcell span{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
-.bcell b{display:block;font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em;line-height:1;margin-top:4px}
+.budget{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:0 0 16px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.bcell{background:#0c0d12;padding:14px 16px}
+.bcell span{display:block;color:var(--muted);font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.bcell b{display:block;font-variant-numeric:tabular-nums;font-size:28px;letter-spacing:-.03em;line-height:1.1;margin-top:6px;font-weight:800}
 .bcell.over b{color:var(--hot)}
-.bcell.ok b{color:var(--live)}
-.slots{display:grid;gap:8px;margin-bottom:16px}
-.slot{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
-.slot.empty{border-style:dashed}
-.slot .pos{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.06em;color:var(--orange)}
-.slot .who b{display:block;font-size:15px}
-.slot .who span{display:block;color:var(--muted);font-size:12px}
-.slot .sal{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--ember)}
-.slot button.x{border:0;background:transparent;color:var(--muted);font-size:18px;padding:4px}
+.bcell.ok b{color:#f7f2ea}
+.board{background:#0c0d12;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.slots{display:grid}
+.slot,.prow{display:grid;grid-template-columns:40px minmax(0,1fr) 70px 40px;align-items:center;gap:8px;min-height:52px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.slot:last-child,.prow:last-child{border-bottom:0}
+.slot.empty{opacity:.55}
+.posmark{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--ember);background:#1a140e;border:1px solid rgba(255,122,24,.28)}
+.who{min-width:0}
+.who b,.nm{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who span,.meta{display:block;color:var(--muted);font-size:11px;margin-top:2px;letter-spacing:.01em}
+.sal,.price{font-variant-numeric:tabular-nums;font-size:14px;font-weight:800;text-align:right;color:#fff}
+.slot button.x,.addbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--muted);font-size:16px;line-height:1;padding:0}
+.addbtn{color:var(--orange);border-color:rgba(255,122,24,.45);font-weight:800;font-size:18px}
+.prow.on{background:rgba(255,122,24,.08)}
+.prow.on .addbtn{background:var(--orange);color:#140800;border-color:var(--orange)}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .filters.three{grid-template-columns:1fr 1fr 1fr}
 select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.pool{display:grid;gap:0}
-.prow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:9px 4px}
-.prow.on{background:#1a120c}
-.prow .nm{font-weight:800;font-size:15px}
-.prow .meta{color:var(--muted);font-size:11px;margin-top:1px}
-.prow .right{text-align:right;display:flex;align-items:center;gap:10px}
-.prow .price{font-family:"Bebas Neue",sans-serif;font-size:20px;color:var(--ember);line-height:1;min-width:64px}
-.prow .right button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800}
+.pool{display:grid}
+.poolhead{display:grid;grid-template-columns:40px minmax(0,1fr) 70px 40px;gap:8px;padding:8px 12px;color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
 .rowbtns{display:flex;gap:6px}
 .rowbtns button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800}
 .rowbtns button.ghost{border-color:var(--line);background:transparent;color:var(--muted)}
@@ -118,7 +118,7 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </nav>
 
 <section class="panel" id="tab-build">
-  <p class="hint">$50,000 cap. DraftKings-style roster. Sauce prices — not official DK salaries. Research a name before you spend the budget. Lock the card and this phone remembers it.</p>
+  <p class="hint">Classic roster. $50,000. Tap a name for the season trend. Lock saves this phone.</p>
   <div class="namebar">
     <input id="cardName" type="text" maxlength="24" placeholder="Card name — e.g. Sunday stack"/>
     <button type="button" class="rowbtns" id="newCardBtn" style="border:1px solid var(--line);background:#101218;border-radius:10px;padding:0 14px;color:var(--muted);font-weight:800">New</button>
@@ -127,13 +127,16 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
     <div class="bcell"><span>Remaining</span><b id="remain">$50,000</b></div>
     <div class="bcell"><span>Spent</span><b id="spent">$0</b></div>
   </div>
-  <div class="slots" id="slots"></div>
+  <div class="board"><div class="slots" id="slots"></div></div>
   <div class="filters three">
     <select id="posFilt"></select>
     <select id="gameFilt"></select>
-    <input id="qFilt" type="search" placeholder="Search player"/>
+    <input id="qFilt" type="search" placeholder="Search"/>
   </div>
-  <div class="pool" id="pool"><p class="hint">Pulling this week’s rosters…</p></div>
+  <div class="board">
+    <div class="poolhead"><span>Pos</span><span>Player</span><span style="text-align:right">Salary</span><span></span></div>
+    <div class="pool" id="pool"><p class="hint">Pulling this week’s rosters…</p></div>
+  </div>
 </section>
 
 <section class="panel" id="tab-live" hidden>
@@ -232,8 +235,8 @@ function paintBudget(){
 function paintSlots(){
   $("slots").innerHTML = SLOTS.map(k=>{
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
-    if(!p) return `<div class="slot empty"><div class="pos">${slotLabel(k)}</div><div class="who"><b>Empty</b><span>Tap a player below</span></div><div class="sal">—</div></div>`;
-    return `<div class="slot"><div class="pos">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team} · ${p.opp||""}</span></div><div><div class="sal">$${(p.sal/1000).toFixed(1)}k</div>${STATE.locked?"":`<button class="x" data-drop="${k}">✕</button>`}</div></div>`;
+    if(!p) return `<div class="slot empty"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>Open</b><span>Pick from the list</span></div><div class="sal">—</div><span></span></div>`;
+    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
   }).join("");
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     delete STATE.lineup[b.dataset.drop];
@@ -340,10 +343,10 @@ function paintPool(){
   $("pool").innerHTML = rows.slice(0,80).map(p=>{
     const on = taken.has(p.id);
     return `<div class="prow${on?" on":""}" data-info="${p.id}">
-      <div><div class="nm">${p.name}</div><div class="meta">${p.team}${p.opp?(" vs "+p.opp):""}</div></div>
-      <div class="right"><div class="price">$${p.sal.toLocaleString()}</div>
-        <button type="button" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"In":"+"}</button>
-      </div>
+      <div class="posmark">${p.pos}</div>
+      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}</span></div>
+      <div class="price">$${p.sal.toLocaleString()}</div>
+      <button type="button" class="addbtn" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"✓":"+"}</button>
     </div>`;
   }).join("") || `<p class="hint">No players in this filter.</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
