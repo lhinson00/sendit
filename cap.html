@@ -344,6 +344,15 @@ function volume(p){
   if(p.pos==="RB") return sum("rushingYards")+sum("receivingYards")+sum("receptions")*5;
   return sum("receivingYards")+sum("receptions")*4;
 }
+function teamQbs(team){
+  return STATE.pool.filter(x=>x.team===team && x.pos==="QB" && injOf(x)!=="Out" && injOf(x)!=="Injured Reserve")
+    .sort((a,b)=> (a.depth||99)-(b.depth||99) || (b.starter?1:0)-(a.starter?1:0) || a.name.localeCompare(b.name));
+}
+function isQb2(p){
+  if(p.pos!=="QB") return false;
+  const q=teamQbs(p.team);
+  return q[1] && q[1].id===p.id;
+}
 function hasBump(p){
   if(p.pos==="DST") return false;
   return STATE.pool.some(x=>x.team===p.team && x.pos===p.pos && x.id!==p.id && (injOf(x)==="Out"||injOf(x)==="Injured Reserve"||injOf(x)==="Doubtful") && (x.starter || volume(x)>volume(p)));
@@ -356,10 +365,10 @@ function isRelevant(p){
   const game=$("gameFilt") && $("gameFilt").value;
   const seat=p.depth||99;
   if(game){
-    if(p.pos==="QB") return seat<=2 || !!p.starter || hasBump(p);
+    if(p.pos==="QB") return seat===1 || !!p.starter || hasBump(p);
     return true;
   }
-  if(p.pos==="QB") return seat===1 || hasBump(p);
+  if(p.pos==="QB") return seat===1 || !!p.starter || hasBump(p);
   if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length){
     if(p.pos==="RB") return seat<=2 || !!p.starter;
     if(p.pos==="WR") return seat<=3 || !!p.starter;
@@ -671,6 +680,11 @@ function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
   const inj=injOf(p);
   const pts=fptsFrom(PROD[p.id]||{});
+  if(p.pos==="QB" && (isQb2(p)||hasBump(p)) && pts<12) return 5600;
+  if(hasBump(p) && pts<8){
+    const bump=p.pos==="RB"?5200:4600;
+    return bump;
+  }
   if(!pts){
     if(inj==="Out"||inj==="Injured Reserve") return lo;
     return lo;
