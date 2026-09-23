@@ -356,7 +356,7 @@ function paintPool(){
       <div class="price">$${p.sal.toLocaleString()}</div>
       <button type="button" class="addbtn" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"✓":"+"}</button>
     </div>`;
-  }).join("") || `<p class="hint">No players in this filter.</p>`;
+  }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No DK prices loaded. Refresh, or check the week line above."}</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
   $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
 }
@@ -458,21 +458,33 @@ async function loadRoster(tid, ab, game){
 }
 
 function normName(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim(); }
+async function fetchJson(url){
+  try{
+    const r=await fetch(url,{cache:"no-store"});
+    if(r.ok) return await r.json();
+  }catch(e){}
+  const proxies=[
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(url),
+    "https://corsproxy.io/?"+encodeURIComponent(url)
+  ];
+  for(const u of proxies){
+    try{
+      const r=await fetch(u,{cache:"no-store"});
+      if(r.ok) return await r.json();
+    }catch(e){}
+  }
+  return null;
+}
 async function loadDk(){
-  const lobby=await fetch("https://www.draftkings.com/lobby/getcontests?sport=NFL",{cache:"no-store"}).then(r=>r.json());
+  const lobby=await fetchJson("https://www.draftkings.com/lobby/getcontests?sport=NFL");
+  if(!lobby) throw new Error("DraftKings blocked this browser");
   const groups=lobby.DraftGroups||[];
   const classic=groups.filter(g=>g.GameTypeId===1 && g.ContestTypeId===21 && (g.GameCount||0)>=8)
     .sort((a,b)=>(b.GameCount||0)-(a.GameCount||0));
   const dg=classic[0] && classic[0].DraftGroupId;
   if(!dg) throw new Error("No Classic slate");
-  const urls=[
-    "https://api.draftkings.com/sites/US-DK/draftgroups/v1/draftgroups/"+dg+"/draftables?format=json",
-    "https://api.draftkings.com/draftgroups/v1/draftgroups/"+dg+"/draftables"
-  ];
-  let data=null;
-  for(const u of urls){
-    try{ const r=await fetch(u,{cache:"no-store"}); if(r.ok){ data=await r.json(); break; } }catch(e){}
-  }
+  const data=await fetchJson("https://api.draftkings.com/sites/US-DK/draftgroups/v1/draftgroups/"+dg+"/draftables?format=json")
+    || await fetchJson("https://api.draftkings.com/draftgroups/v1/draftgroups/"+dg+"/draftables");
   if(!data || !data.draftables) throw new Error("DK salaries blocked");
   const seen=new Set();
   const list=[];
@@ -487,6 +499,7 @@ async function loadDk(){
     const parts=comp.split("@").map(s=>s.trim());
     const team=d.teamAbbreviation||"";
     const opp=parts.length===2 ? (parts[0]===team?parts[1]:parts[0]) : "";
+    const g=STATE.games.find(x=>x.homeAb===team||x.awayAb===team);
     list.push({
       dk:true,
       name:d.displayName,
@@ -494,11 +507,13 @@ async function loadDk(){
       team,
       opp,
       sal:d.salary,
-      eventId:"",
+      eventId:g?g.eventId:"",
+      when:g&&g.start?new Date(g.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}):"",
       id:"dk-"+d.playerId+"-"+pos,
       dkPid:String(d.playerId||"")
     });
   });
+  if(!list.length) throw new Error("Classic slate returned no players");
   return list;
 }
 function attachEspn(dkList, espn){
