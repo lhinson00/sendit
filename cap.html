@@ -246,7 +246,7 @@ function paintSlots(){
   $("slots").innerHTML = SLOTS.map(k=>{
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
     if(!p) return `<div class="slot empty"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>Open</b><span>Pick from the list</span></div><div class="sal">—</div><span></span></div>`;
-    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
+    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
   }).join("");
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     delete STATE.lineup[b.dataset.drop];
@@ -372,7 +372,7 @@ function paintPool(){
     const on = taken.has(p.id);
     return `<div class="prow${on?" on":""}" data-info="${p.id}">
       <div class="posmark">${p.pos}</div>
-      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div>
+      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${p.inj?(" · "+p.inj):""}</span></div>
       <div class="price">$${p.sal.toLocaleString()}</div>
       <button type="button" class="addbtn" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"✓":"+"}</button>
     </div>`;
@@ -513,12 +513,22 @@ function bandFor(pos){
 function seasonPts(p){
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
-    return Math.max(0,(90-(d.pa||80))*0.35+(d.to||0)*6+(d.st||0)*8+(d.sacks||0)*1.2);
+    return Math.max(0,(90-(d.pa||90))*1+(d.to||0)*8+(d.st||0)*10);
   }
   const s=PROD[p.id]||{};
-  if(p.pos==="QB") return (s.py||0)*0.04+(s.ptd||0)*4+(s.ry||0)*0.1+(s.rtd||0)*6-(s.int||0)*1;
-  if(p.pos==="RB") return (s.ry||0)*0.1+(s.rtd||0)*6+(s.rec||0)*1+(s.recy||0)*0.1+(s.rectd||0)*6;
-  return (s.rec||0)*1+(s.recy||0)*0.1+(s.rectd||0)*6;
+  if(p.pos==="QB") return (s.py||0);
+  if(p.pos==="RB") return (s.ry||0)+(s.recy||0);
+  return (s.recy||0);
+}
+function leaderLine(p){
+  const s=PROD[p.id]||{};
+  if(p.pos==="DST"){
+    const d=TEAMDEF[p.team]||{};
+    return (d.pa!=null?d.pa+" PA":"")+(d.to!=null?" · "+d.to+" TO":"");
+  }
+  if(p.pos==="QB") return (s.py||0)+" pass yds"+(s.ptd?(" · "+s.ptd+" TD"):"");
+  if(p.pos==="RB") return ((s.ry||0)+(s.recy||0))+" rush+rec yds";
+  return (s.recy||0)+" rec yds"+(s.rec?(" · "+s.rec+" rec"):"");
 }
 function fppgOf(p){
   const pts=seasonPts(p);
@@ -531,25 +541,8 @@ function fppgOf(p){
 }
 function injOf(p){ return (STATE.inj&&STATE.inj[p.id])||""; }
 function projOf(p){
-  const own=fppgOf(p);
-  const inj=injOf(p);
-  if(inj==="Out"||inj==="Injured Reserve") return 0;
-  let extra=0;
-  if(p.pos!=="DST"){
-    const mates=STATE.pool.filter(x=>x.team===p.team && x.pos===p.pos && x.id!==p.id);
-    const above=mates.filter(x=>fppgOf(x)+ (x.starter?8:0) > own+(p.starter?8:0));
-    const missing=above.filter(x=>{
-      const s=injOf(x);
-      return s==="Out"||s==="Injured Reserve"||s==="Doubtful";
-    });
-    missing.forEach(x=>{
-      extra += fppgOf(x) * (injOf(x)==="Doubtful"?0.55:0.78);
-    });
-  }
-  let proj=own+extra;
-  if(inj==="Doubtful") proj*=0.35;
-  if(inj==="Questionable") proj*=0.9;
-  return proj;
+  if(injOf(p)==="Out"||injOf(p)==="Injured Reserve") return 0;
+  return seasonPts(p);
 }
 function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
