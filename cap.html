@@ -48,7 +48,8 @@ button{cursor:pointer}
 .filters.three{grid-template-columns:1fr 1fr 1fr}
 select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .pool{display:grid;gap:8px}
-.prow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.prow{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.prow .spark{grid-column:1/-1}
 .prow.on{border-color:var(--orange)}
 .prow .nm{font-weight:800}
 .prow .meta{color:var(--muted);font-size:12px;margin-top:2px}
@@ -241,6 +242,68 @@ function paintSlots(){
   });
 }
 
+function defaultStat(pos){
+  if(pos==="QB") return {k:"passingYards", n:"Pass yards"};
+  if(pos==="RB") return {k:"rushingYards", n:"Rush yards"};
+  if(pos==="TE") return {k:"receivingYards", n:"Rec yards"};
+  if(pos==="WR") return {k:"receivingYards", n:"Rec yards"};
+  return {k:"", n:""};
+}
+const LOGS={};
+function sparkHtml(p){
+  if(p.pos==="DST") return "";
+  const st=defaultStat(p.pos);
+  const games=LOGS[p.id];
+  if(!games) return `<div class="spark" data-wait="${p.id}"><i class="miss" style="height:8px"><b></b><em>…</em></i></div>`;
+  if(!games.length) return `<p class="meta">No log</p>`;
+  const last=games.slice(-18);
+  const vals=last.map(g=>g[st.k]||0);
+  const max=Math.max(1,...vals);
+  return `<div class="spark">`+last.map((g,i)=>{
+    const v=vals[i];
+    const h=Math.max(8, Math.round((v/max)*72));
+    return `<i class="hit" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
+  }).join("")+`</div>`;
+}
+function parseSeasonGames(d){
+  const rows=[];
+  (d.seasonTypes||[]).forEach(st=>{
+    if(/preseason/i.test(st.displayName||st.name||"")) return;
+    (st.categories||[]).forEach(c=>(c.events||[]).forEach(ev=>{
+      const meta=(d.events||{})[ev.eventId]||{};
+      const names=ev.names||d.names||[];
+      const stats=ev.stats||[];
+      const grab=k=>{ const i=names.indexOf(k); return i>=0?num(stats[i]):0; };
+      rows.push({
+        date:meta.gameDate||meta.date||"",
+        opp:(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||"",
+        passingYards:grab("passingYards"),
+        passingTouchdowns:grab("passingTouchdowns"),
+        rushingYards:grab("rushingYards"),
+        rushingTouchdowns:grab("rushingTouchdowns"),
+        receptions:grab("receptions"),
+        receivingYards:grab("receivingYards"),
+        receivingTouchdowns:grab("receivingTouchdowns")
+      });
+    }));
+  });
+  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  return rows;
+}
+let logQueue=Promise.resolve();
+function primeLogs(list){
+  list.filter(p=>p.pos!=="DST" && !LOGS[p.id]).slice(0,30).forEach(p=>{
+    logQueue=logQueue.then(async()=>{
+      if(LOGS[p.id]) return;
+      try{
+        const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog",{cache:"force-cache"});
+        LOGS[p.id]=r.ok?parseSeasonGames(await r.json()):[];
+      }catch(e){ LOGS[p.id]=[]; }
+      const slot=document.querySelector('[data-wait="'+p.id+'"]');
+      if(slot) slot.outerHTML=sparkHtml(p);
+    });
+  });
+}
 function paintPool(){
   const pos = $("posFilt").value;
   const game = $("gameFilt").value;
@@ -255,17 +318,17 @@ function paintPool(){
   $("pool").innerHTML = rows.slice(0,80).map(p=>{
     const on = taken.has(p.id);
     return `<div class="prow${on?" on":""}">
-      <div><div class="nm">${p.name}</div><div class="meta">${p.pos} · ${p.team} ${p.opp?("vs "+p.opp):""} · ${p.when||""}</div></div>
+      <div><div class="nm">${p.name}</div><div class="meta">${p.pos} · ${p.team} ${p.opp?("vs "+p.opp):""} · ${p.when||""} · ${defaultStat(p.pos).n}</div></div>
       <div class="right"><div class="price">$${p.sal.toLocaleString()}</div>
         <div class="rowbtns">
-          <button type="button" class="ghost" data-info="${p.id}">Stats</button>
           <button type="button" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"In":"Add"}</button>
         </div>
       </div>
+      ${sparkHtml(p)}
     </div>`;
   }).join("") || `<p class="hint">No players in this filter.</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addPlayer(b.dataset.add));
-  $("pool").querySelectorAll("[data-info]").forEach(b=>b.onclick=()=>openResearch(b.dataset.info));
+  primeLogs(rows.slice(0,40));
 }
 
 function addPlayer(id){
