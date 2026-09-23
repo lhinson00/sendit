@@ -73,16 +73,25 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .lrow .topr{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .lrow .pts{font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:var(--ember)}
 .lrow .sub{color:var(--muted);font-size:12px;margin-top:4px}
-.livegrid{display:grid;gap:8px}
-.ticker{background:#101218;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;min-height:44px}
-.ticker b{color:var(--orange);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
-.ticker p{margin:4px 0 0;font-size:13px;line-height:1.35}
-.livep{display:grid;grid-template-columns:46px 1fr auto;gap:8px 10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-.livep .pos{font-family:"Bebas Neue",sans-serif;color:var(--orange);font-size:20px}
-.livep .pts{font-family:"Bebas Neue",sans-serif;font-size:30px;color:#fff;line-height:1}
-.livep.live{border-color:#3ee0a0;box-shadow:0 0 0 1px rgba(62,224,160,.25)}
-.livep.done{border-color:#fff}
+.livegrid{display:grid;gap:10px}
+.gstrip{display:flex;gap:8px;overflow:auto;padding-bottom:4px;margin:0 0 8px}
+.gchip{flex:0 0 auto;display:flex;align-items:center;gap:8px;background:#101218;border:1px solid var(--line);border-radius:14px;padding:8px 10px;color:inherit;text-decoration:none}
+.gchip.live{border-color:#3ee0a0}
+.gchip img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:4px}
+.gchip b{font-size:13px}
+.gchip span{display:block;font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.ticker{background:linear-gradient(90deg,#1a120c,#101218);border:1px solid rgba(255,122,24,.35);border-radius:14px;padding:12px 14px}
+.ticker b{color:var(--orange);font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.ticker p{margin:6px 0 0;font-size:14px;line-height:1.4;color:#f7f2ea}
+.livep{display:grid;grid-template-columns:52px 1fr auto;gap:6px 10px;align-items:center;background:linear-gradient(180deg,#14161c,#0c0d12);border:1px solid var(--line);border-radius:16px;padding:12px;color:inherit}
+.livep .face{position:relative;width:52px;height:52px}
+.livep .face img.head{width:52px;height:52px;object-fit:cover;border-radius:12px;background:#1a1c22;display:block}
+.livep .face img.lg{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px}
+.livep .pts{font-family:"Bebas Neue",sans-serif;font-size:34px;color:#fff;line-height:.9;text-align:right}
+.livep.live{border-color:#3ee0a0;box-shadow:0 0 24px rgba(62,224,160,.08)}
+.livep.done{border-color:rgba(255,255,255,.35)}
 .livep.bump{animation:pop .7s ease}
+.livep .cast{grid-column:1/-1;margin:0;border:0;background:transparent;color:var(--orange);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:4px 0 0;cursor:pointer}
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.02);background:#1a1810}100%{transform:scale(1)}}
 .livep .line{grid-column:2 / -1;color:var(--muted);font-size:12px}
 .chip{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:999px;margin-left:6px}
@@ -407,7 +416,7 @@ function paintPool(){
       <div class="price">$${p.sal.toLocaleString()}</div>
       <button type="button" class="addbtn" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"✓":"+"}</button>
     </div>`;
-  }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No DK prices loaded. Refresh, or check the week line above."}</p>`;
+  }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No players loaded. Refresh and try again."}</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
   $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
 }
@@ -473,7 +482,7 @@ async function loadSlate(){
   const year = (d.season && d.season.year) || new Date().getFullYear();
   STATE.week = year+"-W"+week;
   STATE.label = "Week "+week+" · "+year;
-  $("weekLine").textContent = STATE.label+" · DK Classic $50,000";
+  $("weekLine").textContent = STATE.label+" · $50,000 cap";
   const evs = d.events||[];
   STATE.games = evs.map(ev=>{
     const c=(ev.competitions||[])[0]||{};
@@ -795,8 +804,35 @@ function boxLine(p){
   if(p.pos==="RB") return rushY+" rush · "+rec+" rec · "+recY+" yds";
   return rec+" rec · "+recY+" yds · "+recTd+" TD";
 }
+function logoUrl(ab){ return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png"; }
+function headUrl(p){
+  if(!p) return "";
+  if(p.pos==="DST") return logoUrl(p.team);
+  return "https://a.espncdn.com/i/headshots/nfl/players/full/"+p.id+".png";
+}
+function gameHref(eid){ return eid ? "https://www.sportssauceapp.com/?league=nfl&game="+eid : "#"; }
+function openSauceCast(eid){
+  if(!eid) return;
+  if(typeof window.openGame==="function"){ window.openGame(eid); return; }
+  try{ if(window.parent && window.parent!==window && typeof window.parent.openGame==="function"){ window.parent.openGame(eid); return; } }catch(e){}
+  location.href=gameHref(eid);
+}
 function paintLive(){
   const pulses=[];
+  const seen=new Set();
+  const strips=[];
+  SLOTS.forEach(k=>{
+    const p=STATE.pool.find(x=>x.id===STATE.lineup[k]);
+    if(!p||!p.eventId||seen.has(p.eventId)) return;
+    seen.add(p.eventId);
+    const gp=gamePulse(p.eventId);
+    const live=gp.st==="in";
+    strips.push(`<a class="gchip${live?" live":""}" href="${gameHref(p.eventId)}" >
+      <img src="${logoUrl(gp.aab||p.opp)}" alt=""/>
+      <img src="${logoUrl(gp.hab||p.team)}" alt=""/>
+      <div><b>${gp.aab||p.opp||""} ${gp.as} · ${gp.hab||p.team||""} ${gp.hs}</b><span>${live?gp.sit:"Open gamecast"}</span></div>
+    </a>`);
+  });
   const rows=SLOTS.map(k=>{
     const p=STATE.pool.find(x=>x.id===STATE.lineup[k]);
     const sc=scorePlayer(p);
@@ -804,21 +840,25 @@ function paintLive(){
     const cls=sc.status==="LIVE"?" live":sc.status==="Final"?" done":"";
     const prev=(window._livePts||{})[k];
     const bump=p && prev!=null && sc.pts>prev+0.05 ? " bump" : "";
-    if(p) { window._livePts=window._livePts||{}; window._livePts[k]=sc.pts; }
+    if(p){ window._livePts=window._livePts||{}; window._livePts[k]=sc.pts; }
     if(gp&&gp.last) pulses.push((p?p.name.split(" ").pop()+": ":"")+gp.last);
-    const chip=sc.status==="LIVE"?"<span class='chip live'>Live "+(gp&&gp.sit?gp.sit:"")+"</span>":sc.status==="Final"?"<span class='chip fin'>Final</span>":"<span class='chip pre'>Upcoming</span>";
+    const chip=sc.status==="LIVE"?"<span class='chip live'>"+(gp&&gp.sit?gp.sit:"Live")+"</span>":sc.status==="Final"?"<span class='chip fin'>Final</span>":"<span class='chip pre'>Upcoming</span>";
+    const face=p?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
     return `<div class="livep${cls}${bump}">
-      <div class="pos">${slotLabel(k)}</div>
-      <div><b>${p?p.name:"Empty"}</b><div class="meta">${p?(p.team+(p.opp?(" vs "+p.opp):"")): "Open slot"} ${chip}</div></div>
+      ${face}
+      <div class="who"><b>${p?p.name:"Empty"}</b><div class="meta">${p?(p.team+(p.opp?(" vs "+p.opp):"")): "Open slot"} ${chip}</div></div>
       <div class="pts">${p?sc.pts.toFixed(1):"—"}</div>
-      <div class="line">${p?(boxLine(p)+(gp?" · "+gp.score+" · "+gp.sit:"")):""}</div>
+      <div class="line">${p?(boxLine(p)+(gp?" · "+gp.score:"")):""}</div>
+      ${p&&p.eventId?`<button type="button" class="cast" data-cast="${p.eventId}">Open gamecast →</button>`:""}
     </div>`;
   }).join("");
-  const tick=pulses[0] || (STATE.locked?"Waiting on the next box update. Thursday night scores here first.":"Lock a 9-man card to watch it live.");
-  $("liveGrid").innerHTML=`<div class="ticker"><b>Latest</b><p>${tick}</p></div>`+rows;
+  const tick=pulses[0] || (STATE.locked?"Waiting on the next box. Thursday night moves first.":"Lock a 9-man card to watch it live.");
+  $("liveGrid").innerHTML=(strips.length?`<div class="gstrip">${strips.join("")}</div>`:"")+`<div class="ticker"><b>Latest</b><p>${tick}</p></div>`+rows;
+  $("liveGrid").querySelectorAll("[data-cast]").forEach(b=>b.onclick=e=>{ e.preventDefault(); openSauceCast(b.dataset.cast); });
+  $("liveGrid").querySelectorAll("a.gchip").forEach(a=>a.onclick=e=>{ e.preventDefault(); const u=new URL(a.href, location.href); openSauceCast(u.searchParams.get("game")); });
   const tot=cardTotal(STATE.lineup);
   $("liveTotal").textContent=tot.toFixed(1);
-  $("liveSub").textContent=(STATE.name||"Your card")+(STATE.locked?" · locked":" · lock to track")+" · updates ~45s";
+  $("liveSub").textContent=(STATE.name||"Your card")+(STATE.locked?" · locked":" · lock to track")+" · tap gamecast";
 }
 
 
