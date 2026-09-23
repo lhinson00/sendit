@@ -170,6 +170,8 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 
 <script>
 const BUDGET = 50000;
+const SLOTS = ["QB","RB","RB2","WR","WR2","WR3","TE","FLEX","DST"];
+const SLOT_POS = {QB:"QB",RB:"RB",RB2:"RB",WR:"WR",WR2:"WR",WR3:"WR",TE:"TE",FLEX:"FLEX",DST:"DST"};
 const STORE = "sauceCap.v1";
 const $ = id => document.getElementById(id);
 const toast = msg => { const t=$("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",2200); };
