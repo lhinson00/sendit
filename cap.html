@@ -262,24 +262,36 @@ function defaultStat(pos){
 }
 const LOGS={};
 function yearGames(games){
-  const y=String((STATE.week||"").split("-")[0]||"");
-  return (games||[]).filter(g=>!y || String(g.date||"").slice(0,4)===y);
+  return (games||[]).slice(-18);
 }
 function workScore(p){
   const g=yearGames(LOGS[p.id]||[]);
   const st=defaultStat(p.pos);
   return g.reduce((s,x)=>s+(x[st.k]||0),0);
 }
+function volume(p){
+  const g=yearGames(LOGS[p.id]||[]);
+  const sum=(k)=>g.reduce((s,x)=>s+(x[k]||0),0);
+  if(p.pos==="QB") return sum("passingYards");
+  if(p.pos==="RB") return sum("rushingYards")+sum("receivingYards")+sum("receptions")*5;
+  return sum("receivingYards")+sum("receptions")*4;
+}
+function hasBump(p){
+  if(p.pos==="DST") return false;
+  return STATE.pool.some(x=>x.team===p.team && x.pos===p.pos && x.id!==p.id && (injOf(x)==="Out"||injOf(x)==="Injured Reserve"||injOf(x)==="Doubtful") && (x.starter || volume(x)>volume(p)));
+}
 function isRelevant(p){
   const inj=injOf(p);
   if(inj==="Out"||inj==="Injured Reserve") return false;
   if(p.pos==="DST") return true;
-  const logs=LOGS[p.id];
-  if(!logs) return true;
-  const g=yearGames(logs);
-  if(!g.length) return p.starter || p.pos!=="QB";
-  if(p.pos==="QB") return g.some(x=>(x.passingYards||0)>=40);
-  return true;
+  const depth={QB:1,RB:2,WR:3,TE:2}[p.pos]||1;
+  const idx=STATE.pool.filter(x=>x.team===p.team&&x.pos===p.pos).findIndex(x=>x.id===p.id);
+  if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length) return !!p.starter || idx<depth;
+  if(hasBump(p)) return true;
+  if(p.pos==="QB") return volume(p)>=900 || (p.starter && volume(p)>=200);
+  if(p.pos==="RB") return volume(p)>=220;
+  if(p.pos==="TE") return volume(p)>=160;
+  return volume(p)>=200;
 }
 
 function sparkHtml(p){
@@ -499,7 +511,19 @@ function priceLikeDk(p){
   return Math.round((lo+t*(hi-lo))/100)*100;
 }
 function repriceAll(){
-  STATE.pool.forEach(p=>{ p.sal=priceLikeDk(p); p.inj=injOf(p); });
+  STATE.pool.forEach(p=>{ p.inj=injOf(p); });
+  ["QB","RB","WR","TE","DST"].forEach(pos=>{
+    const rows=STATE.pool.filter(p=>p.pos===pos);
+    rows.sort((a,b)=>projOf(b)-projOf(a));
+    const [lo,hi]=bandFor(pos);
+    const live=rows.filter(isRelevant);
+    live.forEach((p,i)=>{
+      const n=Math.max(1,live.length-1);
+      const w=Math.pow(1-i/n,1.4);
+      p.sal=Math.round((lo+w*(hi-lo))/100)*100;
+    });
+    rows.filter(p=>!isRelevant(p)).forEach(p=>{ p.sal=lo; });
+  });
 }
 async function loadInjuries(){
   STATE.inj={};
