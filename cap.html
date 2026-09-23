@@ -143,6 +143,10 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:#1a120c;border:1px solid var(--orange);color:var(--ember);padding:10px 14px;border-radius:10px;z-index:50;display:none;font-size:13px;font-weight:700}
 
 .steps{opacity:.85;margin-bottom:18px}
+.event{margin:0 0 16px;padding:14px 16px;border-radius:18px;border:1px solid rgba(255,122,24,.4);background:linear-gradient(180deg,#1a140e,#0c0d12)}
+.event h2{margin:4px 0 6px;font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.03em}
+.event p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+.cover{opacity:.7}
 .rosterbox,.labbox{background:#0e1016;border:1px solid var(--line);border-radius:18px;padding:14px 14px 8px;margin:0 0 16px}
 .rosterbox{border-color:rgba(255,122,24,.35);box-shadow:0 0 0 1px rgba(255,122,24,.08)}
 .rhead{display:flex;align-items:flex-end;justify-content:space-between;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
@@ -155,7 +159,7 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </head>
 <body>
 <header class="top">
-  <div class="brand"><b>SAUCE <em>CAP</em></b><span class="pill">Preview</span></div>
+  <div class="brand"><b>SAUCE <em>CAP</em></b><span class="pill">Week 3 test</span></div>
   <p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
 </header>
 <nav class="tabs">
@@ -165,6 +169,11 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </nav>
 
 <section class="panel" id="tab-build">
+  <div class="event">
+    <p class="kicker">Sauce Cap · Week 3</p>
+    <h2>Thursday test live</h2>
+    <p>One card per phone. Locks share to Standings. Other lineups stay covered until that player’s game kicks off.</p>
+  </div>
   <ol class="steps">
     <li><i>1</i><span><b>Name your lineup card.</b> One name per phone this week.</span></li>
     <li><i>2</i><span><b>Field your roster</b> with the $50,000 budget. Tap a name for 2026 stats.</span></li>
@@ -212,7 +221,7 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </section>
 
 <section class="panel" id="tab-stand" hidden>
-  <p class="hint">Cards saved on this device. Live totals update while games are on. Past weeks stay in the log.</p>
+  <p class="hint">Shared board for this test. Totals move live. Picks stay hidden until that player’s game starts. <button type="button" id="adminBtnTop" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">Manage</button></p>
   <div class="stand" id="standNow"></div>
   <p class="hint" style="margin-top:18px">Results log</p>
   <div class="stand" id="standLog"></div>
@@ -842,7 +851,11 @@ function playerPtsFromBox(sum, pid){
       (grp.athletes||[]).forEach(a=>{
         if(!a.athlete || String(a.athlete.id)!==String(pid)) return;
         const st=a.stats||[];
-        const g=(k)=> ix(k)>=0 ? num(st[ix(k)]) : 0;
+        const g=(k)=>{
+          let i=ix(k);
+          if(i<0) i=keys.findIndex(x=>String(x).replace(/\s/g,"").toLowerCase()===k.toLowerCase());
+          return i>=0?num(st[i]):0;
+        };
         passY+=g("passingYards"); passTd+=g("passingTouchdowns"); ints+=g("interceptions");
         rushY+=g("rushingYards"); rushTd+=g("rushingTouchdowns");
         rec+=g("receptions"); recY+=g("receivingYards"); recTd+=g("receivingTouchdowns");
@@ -877,26 +890,40 @@ function dstPtsFromSum(sum, teamId){
 
 async function refreshLive(){
   const ids = SLOTS.map(k=>STATE.lineup[k]).filter(Boolean);
-  if(!ids.length){ $("liveTotal").textContent="0.0"; $("liveSub").textContent="No locked card yet"; $("liveGrid").innerHTML=""; return; }
-  const events=[...new Set(ids.map(id=>{
+  const allIds=[...ids];
+  (STATE.cards||[]).forEach(c=>SLOTS.forEach(k=>{ if(c.lineup&&c.lineup[k]) allIds.push(c.lineup[k]); }));
+  const events=[...new Set(allIds.map(id=>{
     const p=STATE.pool.find(x=>x.id===id); return p&&p.eventId;
-  }).filter(Boolean))];
+  }).filter(Boolean).concat((STATE.games||[]).filter(g=>g.state==="in"||g.state==="pre").map(g=>g.eventId)))];
+  if(!ids.length && !events.length){ $("liveTotal").textContent="0.0"; $("liveSub").textContent="No locked card yet"; $("liveGrid").innerHTML=""; return; }
   await Promise.all(events.map(async eid=>{
     try{
       const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+eid,{cache:"no-store"});
-      if(r.ok) STATE.live[eid]=await r.json();
+      const sum=r.ok?await r.json():null;
+      if(sum){
+        STATE.live[eid]=sum;
+        STATE.live[String(eid)]=sum;
+        const st=(((((sum.header||{}).competitions)||[])[0]||{}).status||{}).type||{};
+        const g=STATE.games.find(x=>String(x.eventId)===String(eid));
+        if(g && st.state) g.state=st.state;
+      }
     }catch(e){}
   }));
   paintLive();
+  paintStand();
   if(STATE.locked) pushCard(false);
   pullBoard().then(paintStand);
 }
 
 function scorePlayer(p){
   if(!p) return {pts:0, status:"—"};
-  const sum=STATE.live[p.eventId];
-  const g=STATE.games.find(x=>x.eventId===p.eventId);
-  const st=g?g.state:"pre";
+  const sum=STATE.live[p.eventId]||STATE.live[String(p.eventId)];
+  const g=STATE.games.find(x=>String(x.eventId)===String(p.eventId));
+  let st=g?g.state:"pre";
+  if(sum){
+    const hs=((((sum.header||{}).competitions)||[])[0]||{}).status||{};
+    if(hs.type&&hs.type.state) st=hs.type.state;
+  }
   if(!sum) return {pts:0, status:st==="pre"?"Yet to play":"…"};
   const pts = p.pos==="DST" ? dstPtsFromSum(sum, p.teamId||p.id.replace("DST-","")) : playerPtsFromBox(sum, p.id);
   const status = st==="in"?"LIVE":st==="post"?"Final":"Yet to play";
@@ -1090,6 +1117,20 @@ async function deleteCard(name){
     paintStand();
   }catch(e){ toast("Delete failed"); }
 }
+function slotLiveName(pid, mine){
+  const p=STATE.pool.find(x=>x.id===pid);
+  if(!p) return mine?"—":"Covered";
+  if(mine || gameStarted(p)) return p.name;
+  return "Covered";
+}
+function lineupLine(c){
+  const mine=!!c.mine || c.name===STATE.name;
+  return SLOTS.map(k=>{
+    const pid=c.lineup&&c.lineup[k];
+    if(!pid) return slotLabel(k)+": —";
+    return slotLabel(k)+": "+slotLiveName(pid, mine);
+  }).join(" · ");
+}
 function paintStand(){
   const weekCards=STATE.cards.filter(c=>c.week===STATE.week);
   const ranked=weekCards.map(c=>({...c, pts:cardTotal(c.lineup)})).sort((a,b)=>b.pts-a.pts);
@@ -1098,7 +1139,8 @@ function paintStand(){
   $("standNow").innerHTML = note+(ranked.length ? ranked.map((c,i)=>`
     <div class="lrow">
       <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${c.pts.toFixed(1)}</div></div>
-      <div class="sub">${c.locked?"Locked":"Open"} · ${STATE.label} · ${SLOTS.filter(k=>c.lineup[k]).length}/9 filled${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
+      <div class="sub">${c.locked?"Locked":"Open"} · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
+      <p class="hint cover">${lineupLine(c)}</p>
     </div>`).join("") : `<p class="hint">No shared cards this week yet.</p>`);
   const ab=$("adminBtn");
   if(ab) ab.onclick=()=>{
@@ -1317,8 +1359,9 @@ loadStore();
     startInjuryClock();
     setInterval(()=>{
       const live=STATE.games.some(g=>g.state==="in");
-      if(live || document.querySelector('.tabs button.on').dataset.tab!=="build") refreshLive();
-    }, 45000);
+      const onStandOrLive=["live","stand"].includes((document.querySelector(".tabs button.on")||{}).dataset.tab);
+      if(live || onStandOrLive) refreshLive();
+    }, 20000);
   }catch(e){
     $("weekLine").textContent="Could not load the slate";
     $("pool").innerHTML="<p class='hint'>"+(e.message||e)+"</p>";
