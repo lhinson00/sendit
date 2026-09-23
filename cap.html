@@ -47,14 +47,14 @@ button{cursor:pointer}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .filters.three{grid-template-columns:1fr 1fr 1fr}
 select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.pool{display:grid;gap:6px}
-.prow{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
-.prow .spark{grid-column:1/-1;height:52px;padding-top:2px}
-.prow.on{border-color:var(--orange)}
-.prow .nm{font-weight:800;font-size:14px}
+.pool{display:grid;gap:0}
+.prow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:9px 4px}
+.prow.on{background:#1a120c}
+.prow .nm{font-weight:800;font-size:15px}
 .prow .meta{color:var(--muted);font-size:11px;margin-top:1px}
-.prow .right{text-align:right;display:flex;align-items:center;gap:8px}
-.prow .price{font-family:"Bebas Neue",sans-serif;font-size:18px;color:var(--ember);line-height:1}
+.prow .right{text-align:right;display:flex;align-items:center;gap:10px}
+.prow .price{font-family:"Bebas Neue",sans-serif;font-size:20px;color:var(--ember);line-height:1;min-width:64px}
+.prow .right button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800}
 .rowbtns{display:flex;gap:6px}
 .rowbtns button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800}
 .rowbtns button.ghost{border-color:var(--line);background:transparent;color:var(--muted)}
@@ -336,21 +336,18 @@ function paintPool(){
   if(game) rows = rows.filter(p=>p.eventId===game);
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
   rows = rows.filter(isRelevant);
-  rows.sort((a,b)=> (b.starter-a.starter) || (workScore(b)-workScore(a)) || (b.sal-a.sal) || a.name.localeCompare(b.name));
-  $("pool").innerHTML = rows.slice(0,50).map(p=>{
+  rows.sort((a,b)=> (b.sal-a.sal) || a.name.localeCompare(b.name));
+  $("pool").innerHTML = rows.slice(0,80).map(p=>{
     const on = taken.has(p.id);
-    return `<div class="prow${on?" on":""}">
-      <div><div class="nm">${p.name}</div><div class="meta">${p.pos} · ${p.team} ${p.opp?("vs "+p.opp):""} · ${p.when||""} · ${defaultStat(p.pos).n}</div></div>
+    return `<div class="prow${on?" on":""}" data-info="${p.id}">
+      <div><div class="nm">${p.name}</div><div class="meta">${p.team}${p.opp?(" vs "+p.opp):""}</div></div>
       <div class="right"><div class="price">$${p.sal.toLocaleString()}</div>
-        <div class="rowbtns">
-          <button type="button" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"In":"Add"}</button>
-        </div>
+        <button type="button" data-add="${p.id}" ${STATE.locked?"disabled":""}>${on?"In":"+"}</button>
       </div>
-      ${sparkHtml(p)}
     </div>`;
   }).join("") || `<p class="hint">No players in this filter.</p>`;
-  $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addPlayer(b.dataset.add));
-  primeLogs(rows.slice(0,40));
+  $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
+  $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
 }
 
 function addPlayer(id){
