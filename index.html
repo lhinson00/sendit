@@ -1357,8 +1357,40 @@ function dayCut(k){
     return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"});
   }catch(e){ return k; }
 }
+function centralDow(){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",weekday:"short"}).format(new Date());
+  return {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[parts]??new Date().getDay();
+}
+async function pullNflEvents(){
+  const base=URLS.nfl;
+  const res=await fetch(base,{cache:"no-store"});
+  if(!res.ok) throw new Error("ESPN "+res.status);
+  const d=await res.json();
+  let evs=d.events||[];
+  const dow=centralDow();
+  const wantNext=dow===2||dow===3;
+  const stillThisWeek=evs.some(ev=>{
+    const st=((ev.status||{}).type||{}).state;
+    return st==="pre"||st==="in";
+  });
+  const week=Number((d.week&&d.week.number)||(d.season&&d.season.week)||0);
+  const year=Number((d.season&&d.season.year)||2026);
+  const st=Number((d.season&&d.season.type)||2);
+  if(wantNext && week && !stillThisWeek){
+    try{
+      const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+(week+1),{cache:"no-store"});
+      if(r2.ok){
+        const d2=await r2.json();
+        const n=d2.events||[];
+        if(n.length) evs=n;
+      }
+    }catch(e){}
+  }
+  return evs;
+}
 async function pullScoreboard(lg){
   const base=URLS[lg];
+  if(lg==="nfl") return pullNflEvents();
   if(lg!=="mlb" && lg!=="mls"){
     const res=await fetch(base,{cache:"no-store"});
     if(!res.ok) throw new Error("ESPN "+res.status);
@@ -2098,8 +2130,8 @@ async function openGame(id, fid){
   $("gameRoom").innerHTML = "<p class='hint'>Opening…</p>";
   const pool = window.LIVE_GAMES||GAMES||[];
   const g = LEAGUE==="ufc"
-    ? (pool.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(id) || String(x.eventId)===String(id)) || {})
-    : (pool.find(x => x.eventId===id) || {});
+    ? (pool.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(id) || String(x.eventId)===String(id)) || {eventId:String(id), fightId:String(fid||id)})
+    : (pool.find(x => String(x.eventId)===String(id)) || {eventId:String(id), lg:LEAGUE});
   if(LEAGUE==="ufc"){
     if(!g.away && !g.home){
       $("gameRoom").innerHTML = "<p class='hint'>Could not match that bout. Back out and tap it again.</p>";
@@ -4549,6 +4581,17 @@ $("toSlate").onclick = ()=>{
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
 restorePlace();
+(async function openFromQuery(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const h=(location.hash||"").replace(/^#/,"");
+    const gid=q.get("game") || (h.startsWith("game=")?h.slice(5):"");
+    const lg=q.get("league") || "nfl";
+    if(!gid) return;
+    if(typeof loadLeague==="function") await loadLeague(lg);
+    if(typeof openGame==="function") openGame(gid, gid);
+  }catch(e){}
+})();
 (function usageEngine(){
   const NS="lhinson00";
   const A="https://abacus.jasoncameron.dev";
