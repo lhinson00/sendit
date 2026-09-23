@@ -561,18 +561,34 @@ function normName(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g,"
 function bandFor(pos){
   return {QB:[4900,7800],RB:[4000,8800],WR:[3000,8600],TE:[2500,6400],DST:[2000,4200]}[pos]||[3000,6000];
 }
+function fptsFrom(s){
+  s=s||{};
+  return (s.py||0)*0.04+(s.ptd||0)*4+(s.ry||0)*0.1+(s.rtd||0)*6+(s.rec||0)*1+(s.recy||0)*0.1+(s.rectd||0)*6;
+}
+function seasonGamesSoFar(){ return 2; }
+function gamesOf(p){
+  const n=(yearGames(LOGS[p.id]||[])||[]).length;
+  if(n) return n;
+  return fptsFrom(PROD[p.id]) ? 1 : 0;
+}
 function seasonPts(p){
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
     return Math.max(0,(90-(d.pa||90))*1+(d.to||0)*8+(d.st||0)*10);
   }
-  const s=PROD[p.id]||{};
-  if(p.pos==="QB") return (s.py||0);
-  if(p.pos==="RB") return (s.ry||0)+(s.recy||0);
-  return (s.recy||0);
+  const raw=fptsFrom(PROD[p.id]);
+  const gp=gamesOf(p);
+  const pace = gp ? (raw/gp)*seasonGamesSoFar() : 0;
+  if(pace) return pace;
+  if(p.depth===1 || p.starter) return {QB:28,RB:24,WR:22,TE:16}[p.pos]||18;
+  return 0;
 }
 function leaderLine(p){
   const s=PROD[p.id]||{};
+  if(p.pos!=="DST"){
+    const fp=fptsFrom(s);
+    if(fp) return fp.toFixed(1)+" FPTS";
+  }
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
     const bits=[];
@@ -605,7 +621,12 @@ function posCeil(pos){
   let m=1;
   Object.keys(PROD).forEach(id=>{
     const s=PROD[id]||{};
-    const v=pos==="QB"?(s.py||0):pos==="RB"?((s.ry||0)+(s.recy||0)):(s.recy||0);
+    const isQ= (s.py||0) >= (s.recy||0) && (s.py||0) >= (s.ry||0);
+    const isR= (s.ry||0) > (s.recy||0) && (s.py||0) < 200;
+    if(pos==="QB" && !isQ) return;
+    if(pos==="RB" && !isR) return;
+    if((pos==="WR"||pos==="TE") && isQ) return;
+    const v=fptsFrom(s);
     if(v>m) m=v;
   });
   return m;
