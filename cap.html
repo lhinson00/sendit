@@ -577,10 +577,8 @@ function seasonPts(p){
     return Math.max(0,(90-(d.pa||90))*1+(d.to||0)*8+(d.st||0)*10);
   }
   const raw=fptsFrom(PROD[p.id]);
-  const gp=gamesOf(p);
-  const pace = gp ? (raw/gp)*seasonGamesSoFar() : 0;
-  if(pace) return pace;
-  if(p.depth===1 || p.starter) return {QB:28,RB:24,WR:22,TE:16}[p.pos]||18;
+  if(raw) return raw;
+  if(p.depth===1 || p.starter) return 18;
   return 0;
 }
 function leaderLine(p){
