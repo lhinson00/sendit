@@ -30,6 +30,10 @@ button{cursor:pointer}
 .tabs button.on{border-color:var(--orange);background:#1a120c;color:var(--ember)}
 .panel{padding:12px var(--pad) 24px}
 .hint{color:var(--muted);font-size:13px;line-height:1.45;margin:0 0 12px}
+.steps{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;color:var(--muted);font-size:13px;line-height:1.4}
+.steps i{width:28px;height:28px;border-radius:8px;background:#1a140e;border:1px solid rgba(255,122,24,.4);color:var(--orange);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}
+.steps b{color:var(--text)}
 .budget{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:0 0 16px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .bcell{background:#0c0d12;padding:14px 16px}
 .bcell span{display:block;color:var(--muted);font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
@@ -136,7 +140,11 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </nav>
 
 <section class="panel" id="tab-build">
-  <p class="hint">Classic roster. $50,000. Tap a name for the season trend. Lock saves this phone.</p>
+  <ol class="steps">
+    <li><i>1</i><span><b>Name your lineup card.</b> One name per phone this week.</span></li>
+    <li><i>2</i><span><b>Field your roster</b> with the $50,000 budget. Tap a name for 2026 stats.</span></li>
+    <li><i>3</i><span><b>Lock your card.</b> You can unlock and change it. If a player’s game has started, they stay on the card.</span></li>
+  </ol>
   <div class="namebar">
     <input id="cardName" type="text" maxlength="24" placeholder="Card name — e.g. Sunday stack"/>
     <button type="button" class="rowbtns" id="newCardBtn" style="border:1px solid var(--line);background:#101218;border-radius:10px;padding:0 14px;color:var(--muted);font-weight:800">New</button>
