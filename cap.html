@@ -47,16 +47,16 @@ button{cursor:pointer}
 .filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
 .filters.three{grid-template-columns:1fr 1fr 1fr}
 select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-.pool{display:grid;gap:8px}
-.prow{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
-.prow .spark{grid-column:1/-1}
+.pool{display:grid;gap:6px}
+.prow{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.prow .spark{grid-column:1/-1;height:52px;padding-top:2px}
 .prow.on{border-color:var(--orange)}
-.prow .nm{font-weight:800}
-.prow .meta{color:var(--muted);font-size:12px;margin-top:2px}
-.prow .right{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.prow .price{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--ember);line-height:1}
+.prow .nm{font-weight:800;font-size:14px}
+.prow .meta{color:var(--muted);font-size:11px;margin-top:1px}
+.prow .right{text-align:right;display:flex;align-items:center;gap:8px}
+.prow .price{font-family:"Bebas Neue",sans-serif;font-size:18px;color:var(--ember);line-height:1}
 .rowbtns{display:flex;gap:6px}
-.rowbtns button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800}
+.rowbtns button{border:1px solid var(--orange);background:#1a120c;color:var(--orange);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800}
 .rowbtns button.ghost{border-color:var(--line);background:transparent;color:var(--muted)}
 .lockbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(760px,100%);padding:10px var(--pad) calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,transparent,#05060a 28%);z-index:30}
 .lockbar .inner{display:flex;gap:8px}
@@ -94,10 +94,10 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .kitbar select{width:100%;background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:10px}
 .khit{font-family:"Bebas Neue",sans-serif;font-size:42px;line-height:.85;color:var(--ember)}
 .kmeta{color:var(--muted);font-size:12px;margin:4px 0 10px}
-.spark{display:flex;align-items:flex-end;gap:3px;height:96px;padding-top:8px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:52px;padding-top:2px}
 .spark i{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;background:#2a241c;font-style:normal}
 .spark i.hit{background:#3a2208}
-.spark i b{font-size:9px;line-height:1;margin-bottom:2px;color:#efe6d8}
+.spark i b{font-size:8px;line-height:1;margin-bottom:1px;color:#efe6d8}
 .spark i.hit b{color:var(--orange)}
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
 .seasonnote{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin:0 0 8px}
@@ -250,18 +250,37 @@ function defaultStat(pos){
   return {k:"", n:""};
 }
 const LOGS={};
+function yearGames(games){
+  const y=String((STATE.week||"").split("-")[0]||"");
+  return (games||[]).filter(g=>!y || String(g.date||"").slice(0,4)===y);
+}
+function workScore(p){
+  const g=yearGames(LOGS[p.id]||[]);
+  const st=defaultStat(p.pos);
+  return g.reduce((s,x)=>s+(x[st.k]||0),0);
+}
+function isRelevant(p){
+  if(p.pos==="DST") return true;
+  const logs=LOGS[p.id];
+  if(!logs) return p.starter || p.pos!=="QB";
+  const g=yearGames(logs);
+  if(p.pos==="QB") return g.some(x=>(x.passingYards||0)>=1);
+  if(p.pos==="RB") return g.some(x=>(x.rushingYards||0)+(x.receptions||0)>=1);
+  return g.some(x=>(x.receptions||0)+(x.receivingYards||0)>=1);
+}
+
 function sparkHtml(p){
   if(p.pos==="DST") return "";
   const st=defaultStat(p.pos);
   const games=LOGS[p.id];
-  if(!games) return `<div class="spark" data-wait="${p.id}"><i class="miss" style="height:8px"><b></b><em>…</em></i></div>`;
+  if(!games) return `<div class="spark" data-wait="${p.id}"></div>`;
   if(!games.length) return `<p class="meta">No log</p>`;
-  const last=games.slice(-18);
+  const last=yearGames(games).slice(-18);
   const vals=last.map(g=>g[st.k]||0);
   const max=Math.max(1,...vals);
   return `<div class="spark">`+last.map((g,i)=>{
     const v=vals[i];
-    const h=Math.max(8, Math.round((v/max)*72));
+    const h=Math.max(6, Math.round((v/max)*40));
     return `<i class="hit" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
   }).join("")+`</div>`;
 }
@@ -301,6 +320,7 @@ function primeLogs(list){
       }catch(e){ LOGS[p.id]=[]; }
       const slot=document.querySelector('[data-wait="'+p.id+'"]');
       if(slot) slot.outerHTML=sparkHtml(p);
+      if(!window._capRepaint){ window._capRepaint=setTimeout(()=>{ window._capRepaint=null; paintPool(); }, 400); }
     });
   });
 }
@@ -314,8 +334,9 @@ function paintPool(){
   else if(pos) rows = rows.filter(p=>p.pos===pos);
   if(game) rows = rows.filter(p=>p.eventId===game);
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
-  rows.sort((a,b)=>b.sal-a.sal || a.name.localeCompare(b.name));
-  $("pool").innerHTML = rows.slice(0,80).map(p=>{
+  rows = rows.filter(isRelevant);
+  rows.sort((a,b)=> (b.starter-a.starter) || (workScore(b)-workScore(a)) || (b.sal-a.sal) || a.name.localeCompare(b.name));
+  $("pool").innerHTML = rows.slice(0,50).map(p=>{
     const on = taken.has(p.id);
     return `<div class="prow${on?" on":""}">
       <div><div class="nm">${p.name}</div><div class="meta">${p.pos} · ${p.team} ${p.opp?("vs "+p.opp):""} · ${p.when||""} · ${defaultStat(p.pos).n}</div></div>
@@ -381,7 +402,7 @@ async function loadSlate(){
   const year = (d.season && d.season.year) || new Date().getFullYear();
   STATE.week = year+"-W"+week;
   STATE.label = "Week "+week+" · "+year;
-  $("weekLine").textContent = STATE.label+" · $50,000 cap";
+  $("weekLine").textContent = STATE.label+" · DK Classic $50,000";
   const evs = d.events||[];
   STATE.games = evs.map(ev=>{
     const c=(ev.competitions||[])[0]||{};
@@ -414,7 +435,7 @@ async function loadRoster(tid, ab, game){
         if(!/^(QB|RB|WR|TE)$/.test(pos)) return;
         const opp = String(tid)===String(game.homeId)?game.awayAb:game.homeAb;
         const when = game.start ? new Date(game.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}) : "";
-        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start};
+        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter};
         p.sal=salary(p);
         out.push(p);
       });
@@ -427,20 +448,57 @@ async function loadRoster(tid, ab, game){
   return out;
 }
 
+function normName(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g,"").replace(/\s+/g," ").trim(); }
+async function loadDk(){
+  const lobby=await fetch("https://www.draftkings.com/lobby/getcontests?sport=NFL",{cache:"no-store"}).then(r=>r.json());
+  const groups=lobby.DraftGroups||[];
+  const classic=groups.filter(g=>g.GameTypeId===1 && g.ContestTypeId===21 && (g.GameCount||0)>=8)
+    .sort((a,b)=>(b.GameCount||0)-(a.GameCount||0));
+  const dg=(classic[0]&&classic[0].DraftGroupId);
+  if(!dg) return {};
+  const urls=[
+    "https://api.draftkings.com/sites/US-DK/draftgroups/v1/draftgroups/"+dg+"/draftables?format=json",
+    "https://api.draftkings.com/draftgroups/v1/draftgroups/"+dg+"/draftables"
+  ];
+  let data=null;
+  for(const u of urls){
+    try{ const r=await fetch(u,{cache:"no-store"}); if(r.ok){ data=await r.json(); break; } }catch(e){}
+  }
+  const map={};
+  (data&&data.draftables||[]).forEach(d=>{
+    if(d.isDisabled) return;
+    const pos=d.position;
+    const key=normName(d.displayName)+"|"+pos;
+    if(map[key]) return;
+    map[key]={sal:d.salary, team:d.teamAbbreviation||"", pos, name:d.displayName, status:d.status||""};
+    if(pos==="DST" && d.teamAbbreviation) map["tm|"+d.teamAbbreviation+"|DST"]=map[key];
+  });
+  STATE.dkN=Object.keys(map).length;
+  return map;
+}
 async function loadPool(){
-  $("pool").innerHTML="<p class='hint'>Loading rosters for "+STATE.games.length+" games…</p>";
+  $("pool").innerHTML="<p class='hint'>Loading DK salaries and slates…</p>";
+  let dk={};
+  try{ dk=await loadDk(); }catch(e){ dk={}; }
   const all=[];
   for(const g of STATE.games){
     const [a,b] = await Promise.all([loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]);
     all.push(...a,...b);
-    $("weekLine").textContent = STATE.label+" · "+all.filter(x=>x.pos!=="DST").length+" players loaded";
   }
   const seen=new Set();
-  STATE.pool=all.filter(p=>{
-    const k=p.id;
-    if(seen.has(k)) return false;
-    seen.add(k); return true;
+  let pool=all.filter(p=>{
+    if(seen.has(p.id)) return false; seen.add(p.id); return true;
   });
+  if(Object.keys(dk).length){
+    pool=pool.map(p=>{
+      const hit=dk[normName(p.name)+"|"+p.pos] || (p.pos==="DST"?dk["tm|"+p.team+"|DST"]:null);
+      if(hit) p.sal=hit.sal;
+      p.dk=!!hit;
+      return p;
+    }).filter(p=>p.dk);
+  }
+  STATE.pool=pool;
+  $("weekLine").textContent = STATE.label+" · DK Classic $50,000 · "+pool.length+" priced";
   paintAll();
 }
 
@@ -644,7 +702,7 @@ function paintResearchSheet(p, games){
   const max=Math.max(1,...vals);
   const spark=games.map((g,i)=>{
     const v=vals[i];
-    const h=Math.max(8, Math.round((v/max)*72));
+    const h=Math.max(6, Math.round((v/max)*40));
     return `<i class="${v>=line?"hit":"miss"}" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
   }).join("");
   const sheet=$("sheet");
