@@ -260,10 +260,11 @@ function workScore(p){
   return g.reduce((s,x)=>s+(x[st.k]||0),0);
 }
 function isRelevant(p){
-  if(p.pos==="DST") return true;
+  if(p.pos==="DST" || p.dk) return true;
   const logs=LOGS[p.id];
-  if(!logs) return p.starter || p.pos!=="QB";
+  if(!logs) return true;
   const g=yearGames(logs);
+  if(!g.length) return p.pos!=="QB";
   if(p.pos==="QB") return g.some(x=>(x.passingYards||0)>=1);
   if(p.pos==="RB") return g.some(x=>(x.rushingYards||0)+(x.receptions||0)>=1);
   return g.some(x=>(x.receptions||0)+(x.receivingYards||0)>=1);
@@ -491,11 +492,17 @@ async function loadPool(){
   });
   if(Object.keys(dk).length){
     pool=pool.map(p=>{
-      const hit=dk[normName(p.name)+"|"+p.pos] || (p.pos==="DST"?dk["tm|"+p.team+"|DST"]:null);
-      if(hit) p.sal=hit.sal;
-      p.dk=!!hit;
+      let hit=dk[normName(p.name)+"|"+p.pos];
+      if(!hit && p.pos==="DST") hit=dk["tm|"+p.team+"|DST"];
+      if(!hit){
+        const last=normName(p.name).split(" ").pop();
+        hit=Object.values(dk).find(d=>d && d.pos===p.pos && d.team===p.team && normName(d.name).split(" ").pop()===last);
+      }
+      if(hit){ p.sal=hit.sal; p.dk=true; }
       return p;
-    }).filter(p=>p.dk);
+    });
+    const priced=pool.filter(p=>p.dk);
+    if(priced.length>=15) pool=priced;
   }
   STATE.pool=pool;
   $("weekLine").textContent = STATE.label+" · DK Classic $50,000 · "+pool.length+" priced";
