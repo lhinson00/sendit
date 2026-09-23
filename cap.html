@@ -461,7 +461,7 @@ function paintPool(){
   if(game) rows = rows.filter(p=>String(p.eventId)===String(game));
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
   rows = rows.filter(isRelevant);
-  rows.sort((a,b)=> (b.sal-a.sal) || a.name.localeCompare(b.name));
+  rows.sort((a,b)=> (b.sal-a.sal) || (fptsOf(b)-fptsOf(a)) || a.name.localeCompare(b.name));
   $("pool").innerHTML = rows.slice(0,80).map(p=>{
     const on = taken.has(p.id);
     const hurt=p.inj==="Out"||p.inj==="Injured Reserve";
@@ -618,6 +618,25 @@ function normName(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g,"
 function bandFor(pos){
   return {QB:[4900,7800],RB:[4000,8800],WR:[3000,8600],TE:[2500,6400],DST:[2000,4200]}[pos]||[3000,6000];
 }
+function dstFpts(d){
+  d=d||{};
+  const gp=2;
+  const paG=(d.pa||0)/gp;
+  let pa=0;
+  if(paG<=0) pa=10;
+  else if(paG<=6) pa=7;
+  else if(paG<=13) pa=4;
+  else if(paG<=20) pa=1;
+  else if(paG<=27) pa=0;
+  else if(paG<=34) pa=-1;
+  else pa=-4;
+  return (d.sacks||0)*1 + (d.to||0)*2 + (d.st||0)*6 + pa*gp;
+}
+function fptsOf(p){
+  if(!p) return 0;
+  if(p.pos==="DST") return dstFpts(TEAMDEF[p.team]||{});
+  return fptsFrom(PROD[p.id]||{});
+}
 function fptsFrom(s){
   s=s||{};
   return (s.py||0)*0.04+(s.ptd||0)*4+(s.ry||0)*0.1+(s.rtd||0)*6+(s.rec||0)*1+(s.recy||0)*0.1+(s.rectd||0)*6;
@@ -629,10 +648,7 @@ function gamesOf(p){
   return fptsFrom(PROD[p.id]) ? 1 : 0;
 }
 function seasonPts(p){
-  if(p.pos==="DST"){
-    const d=TEAMDEF[p.team]||{};
-    return Math.max(0,(90-(d.pa||90))*1+(d.to||0)*8+(d.st||0)*10);
-  }
+  if(p.pos==="DST") return dstFpts(TEAMDEF[p.team]||{});
   const raw=fptsFrom(PROD[p.id]);
   if(raw) return raw;
   if(p.depth===1 || p.starter) return 18;
@@ -651,8 +667,7 @@ function leaderLine(p){
     if(d.to!=null) bits.push(d.to+" TO");
     if(d.sacks!=null) bits.push(d.sacks+" SK");
     if(d.st) bits.push(d.st+" ST TD");
-    const fp=seasonPts(p);
-    if(fp) bits.push(fp.toFixed(1)+" FPTS");
+    bits.push(dstFpts(d).toFixed(1)+" FPTS");
     return bits.join(" · ")||"D/ST";
   }
   if(p.pos==="QB") return (s.py||0)+" pass yds"+(s.ptd?(" · "+s.ptd+" TD"):"");
@@ -688,11 +703,11 @@ function posCeil(pos){
   });
   return m;
 }
-const CEIL={QB:posCeil("QB"),RB:posCeil("RB"),WR:posCeil("WR"),TE:posCeil("TE"),DST:80};
+const CEIL={QB:posCeil("QB"),RB:posCeil("RB"),WR:posCeil("WR"),TE:posCeil("TE"),DST:Math.max(8,...Object.values(TEAMDEF).map(dstFpts))};
 function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
   const inj=injOf(p);
-  const pts=fptsFrom(PROD[p.id]||{});
+  const pts=fptsOf(p);
   if(p.pos==="QB" && (isQb2(p)||hasBump(p)) && pts<12) return 5600;
   if(hasBump(p) && pts<8){
     const bump=p.pos==="RB"?5200:4600;
@@ -712,6 +727,46 @@ function priceLikeDk(p){
 }
 function repriceAll(){
   STATE.pool.forEach(p=>{ p.inj=injOf(p); p.sal=priceLikeDk(p); });
+}
+
+function chicagoNow(){
+  const p=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit",hour12:true,weekday:"short"}).formatToParts(new Date());
+  const o={};
+  p.forEach(x=>o[x.type]=x.value);
+  return o;
+}
+function nextInjuryPass(){
+  const slots=[[11,0],[14,0],[18,30]];
+  const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"numeric",hour12:false,weekday:"short"});
+  // compute ms until next slot
+  const now=new Date();
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(now);
+  const g=k=>Number(parts.find(x=>x.type===k).value);
+  const h=g("hour"), m=g("minute");
+  for(const [H,M] of slots){
+    if(h<H || (h===H && m<M)){
+      const wait=((H-h)*60+(M-m))*60*1000 - g("second")*1000;
+      return Math.max(15000, wait);
+    }
+  }
+  return ((24-h+11)*60-m)*60*1000;
+}
+async function refreshInjuries(why){
+  const before=JSON.stringify(STATE.inj||{});
+  await loadInjuries();
+  repriceAll();
+  paintAll();
+  const stamp=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).format(new Date());
+  const line=$("weekLine");
+  if(line && !line.textContent.includes("Could not")) line.textContent=(STATE.label||"Week")+" · $50,000 · injuries "+stamp+" CT";
+  if(before!==JSON.stringify(STATE.inj||{})) toast("Injury report updated · "+stamp+" CT");
+}
+function startInjuryClock(){
+  const tick=async()=>{
+    await refreshInjuries("clock");
+    setTimeout(tick, nextInjuryPass());
+  };
+  setTimeout(tick, nextInjuryPass());
 }
 async function loadInjuries(){
   STATE.inj={}; STATE.injNews={};
@@ -1259,6 +1314,7 @@ loadStore();
     if(prevWeek && prevWeek!==STATE.week){ STATE.locked=false; STATE.lineup={}; STATE.name=""; STATE.sealName=""; saveStore(); }
     await loadPool();
     if(STATE.locked) refreshLive();
+    startInjuryClock();
     setInterval(()=>{
       const live=STATE.games.some(g=>g.state==="in");
       if(live || document.querySelector('.tabs button.on').dataset.tab!=="build") refreshLive();
