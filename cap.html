@@ -918,6 +918,7 @@ async function deleteCard(name){
     }
     STATE.cards=STATE.cards.filter(c=>!(c.week===STATE.week && c.name===name));
     if(STATE.name===name){ STATE.locked=false; STATE.sealName=""; STATE.lineup={}; $("cardName").value=""; saveStore(); }
+    await pullBoard();
     toast("Removed "+name);
     paintStand();
   }catch(e){ toast("Delete failed"); }
@@ -939,9 +940,12 @@ function paintStand(){
     if(pin===ADMIN_PIN){ sessionStorage.setItem("sauceCap.admin","1"); paintStand(); }
     else if(pin) toast("Wrong code");
   };
-  $("standNow").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
-    if(confirm("Remove "+b.dataset.del+" from this week?")) deleteCard(b.dataset.del);
-  });
+  $("standNow").onclick=e=>{
+    const b=e.target.closest("[data-del]");
+    if(!b) return;
+    e.preventDefault();
+    deleteCard(b.getAttribute("data-del"));
+  };
   $("standLog").innerHTML = (STATE.log||[]).length ? STATE.log.slice(0,16).map(r=>`
     <div class="lrow"><div class="topr"><b>${r.name}</b><div class="pts">${Number(r.pts||0).toFixed(1)}</div></div>
     <div class="sub">${r.week} · final</div></div>`).join("") : `<p class="hint">Finals land here after a week is put to bed.</p>`;
