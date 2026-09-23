@@ -600,31 +600,26 @@ function projOf(p){
   if(injOf(p)==="Out"||injOf(p)==="Injured Reserve") return 0;
   return seasonPts(p);
 }
+function posCeil(pos){
+  if(pos==="DST") return 80;
+  let m=1;
+  Object.keys(PROD).forEach(id=>{
+    const s=PROD[id]||{};
+    const v=pos==="QB"?(s.py||0):pos==="RB"?((s.ry||0)+(s.recy||0)):(s.recy||0);
+    if(v>m) m=v;
+  });
+  return m;
+}
+const CEIL={QB:posCeil("QB"),RB:posCeil("RB"),WR:posCeil("WR"),TE:posCeil("TE"),DST:80};
 function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
-  const inj=injOf(p);
-  if(inj==="Out"||inj==="Injured Reserve") return lo;
-  const cap={QB:24,RB:22,WR:20,TE:15,DST:8}[p.pos]||20;
-  const t=Math.max(0,Math.min(1,projOf(p)/cap));
-  return Math.round((lo+t*(hi-lo))/100)*100;
+  if(injOf(p)==="Out"||injOf(p)==="Injured Reserve") return lo;
+  const ceil=CEIL[p.pos]||1;
+  const t=Math.max(0,Math.min(1,projOf(p)/ceil));
+  return Math.round((lo+Math.pow(t,0.9)*(hi-lo))/100)*100;
 }
 function repriceAll(){
-  STATE.pool.forEach(p=>{ p.inj=injOf(p); });
-  ["QB","RB","WR","TE","DST"].forEach(pos=>{
-    const rows=STATE.pool.filter(p=>p.pos===pos);
-    const live=rows.filter(isRelevant);
-    live.sort((a,b)=> (projOf(b)-projOf(a)) || volume(b)-volume(a) || (a.depth||9)-(b.depth||9));
-    const [lo,hi]=bandFor(pos);
-    const scored=live.filter(p=>(LOGS[p.id]||[]).length>0);
-    const use=live;
-    use.forEach((p,i)=>{
-      const n=Math.max(1,use.length-1);
-      const w=Math.pow(1-i/n,1.45);
-      p.sal=Math.round((lo+w*(hi-lo))/100)*100;
-    });
-
-    rows.filter(p=>!isRelevant(p)).forEach(p=>{ p.sal=lo; });
-  });
+  STATE.pool.forEach(p=>{ p.inj=injOf(p); p.sal=priceLikeDk(p); });
 }
 async function loadInjuries(){
   STATE.inj={};
