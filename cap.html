@@ -298,7 +298,12 @@ function isRelevant(p){
   const inj=injOf(p);
   if(inj==="Out"||inj==="Injured Reserve") return false;
   if(p.pos==="DST") return true;
+  const game=$("gameFilt") && $("gameFilt").value;
   const seat=p.depth||99;
+  if(game){
+    if(p.pos==="QB") return seat<=2 || !!p.starter || hasBump(p);
+    return true;
+  }
   if(p.pos==="QB") return seat===1 || hasBump(p);
   if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length){
     if(p.pos==="RB") return seat<=2 || !!p.starter;
@@ -376,7 +381,7 @@ function paintPool(){
   let rows = STATE.pool.slice();
   if(pos==="FLEX") rows = rows.filter(p=>p.pos==="RB"||p.pos==="WR"||p.pos==="TE");
   else if(pos) rows = rows.filter(p=>p.pos===pos);
-  if(game) rows = rows.filter(p=>p.eventId===game);
+  if(game) rows = rows.filter(p=>String(p.eventId)===String(game));
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
   rows = rows.filter(isRelevant);
   rows.sort((a,b)=> (b.sal-a.sal) || a.name.localeCompare(b.name));
@@ -493,8 +498,8 @@ async function loadDepth(tid){
 async function loadRoster(tid, ab, game){
   const out=[];
   try{
-    const depth=await loadDepth(tid);
     const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/roster",{cache:"no-store"});
+    const depth=DEPTH[tid]||{};
     if(!r.ok) return out;
     const d=await r.json();
     const team=(d.team&&(d.team.abbreviation||ab))||ab;
@@ -607,22 +612,35 @@ async function loadInjuries(){
   }catch(e){}
 }
 async function loadPool(){
-  $("pool").innerHTML="<p class='hint'>Loading slates and injury report…</p>";
-  await loadInjuries();
-  const all=[];
-  for(const g of STATE.games){
-    const [a,b]=await Promise.all([loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]);
-    all.push(...a,...b);
-  }
+  $("pool").innerHTML="<p class='hint'>Loading slates…</p>";
+  const jobs=STATE.games.flatMap(g=>[
+    loadRoster(g.awayId,g.awayAb,g),
+    loadRoster(g.homeId,g.homeAb,g)
+  ]);
+  const chunks=await Promise.all(jobs);
   const seen=new Set();
-  STATE.pool=all.filter(p=>{
-    if(seen.has(p.id)) return false; seen.add(p.id); return true;
-  }).map(p=>{ p.inj=injOf(p); p.sal=priceLikeDk(p); return p; });
+  STATE.pool=chunks.flat().filter(p=>{
+    if(!p||seen.has(p.id)) return false; seen.add(p.id); return true;
+  }).map(p=>{
+    if(p.starter && !p.depth) p.depth=1;
+    p.inj=injOf(p); p.sal=priceLikeDk(p); return p;
+  });
   repriceAll();
-  $("weekLine").textContent=STATE.label+" · $50,000 · 2026 stats + injuries";
-  await pullBoard();
+  $("weekLine").textContent=STATE.label+" · $50,000 · 2026 stats";
   paintAll();
-  primeLogs(STATE.pool.filter(x=>x.pos!=="DST").slice(0,80));
+  Promise.all([
+    loadInjuries().then(()=>{ repriceAll(); paintAll(); }),
+    pullBoard().then(()=>paintStand()),
+    Promise.all(STATE.games.flatMap(g=>[loadDepth(g.awayId),loadDepth(g.homeId)])).then(()=>{
+      STATE.pool.forEach(p=>{
+        const d=Object.values(DEPTH).find(m=>m[p.id]!=null);
+        if(d) p.depth=d[p.id];
+        else if(p.starter) p.depth=1;
+      });
+      repriceAll(); paintPool();
+    })
+  ]).catch(()=>{});
+  primeLogs(STATE.pool.filter(x=>x.pos!=="DST" && (x.depth===1||x.starter)).slice(0,40));
 }
 
 function num(v){ return Number(String(v||"0").replace(/,/g,""))||0; }
