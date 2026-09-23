@@ -91,6 +91,9 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .livep.live{border-color:#3ee0a0;box-shadow:0 0 24px rgba(62,224,160,.08)}
 .livep.done{border-color:rgba(255,255,255,.35)}
 .livep.bump{animation:pop .7s ease}
+.injbox{margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,107,107,.35);background:#1a1010}
+.injbox b{display:block;color:#ff8a8a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.injbox p{margin:6px 0 0;color:#f3e8e8;font-size:13px;line-height:1.45}
 .tag-out,.tag-ir{color:#ff6b6b;font-weight:800}
 .tag-q,.tag-d{color:#ffb020;font-weight:800}
 .prow.hurt{border-left:3px solid #ff6b6b}
@@ -711,7 +714,7 @@ function repriceAll(){
   STATE.pool.forEach(p=>{ p.inj=injOf(p); p.sal=priceLikeDk(p); });
 }
 async function loadInjuries(){
-  STATE.inj={};
+  STATE.inj={}; STATE.injNews={};
   try{
     const d=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries",{cache:"no-store"}).then(r=>r.json());
     (d.injuries||[]).forEach(team=>{
@@ -724,7 +727,18 @@ async function loadInjuries(){
           if(m) id=m[1];
         }
         const st=row.status|| (a.status&&a.status.name) ||"";
-        if(id && st && st!=="Active") STATE.inj[id]=st;
+        const det=row.details||{};
+        if(id && st && st!=="Active"){
+          STATE.inj[id]=st;
+          STATE.injNews=STATE.injNews||{};
+          STATE.injNews[id]={
+            status:st,
+            short:row.shortComment||"",
+            long:row.longComment||"",
+            part:[det.side,det.detail,det.type].filter(Boolean).join(" "),
+            ret:det.returnDate||""
+          };
+        }
       });
     });
   }catch(e){}
@@ -1152,6 +1166,7 @@ function paintResearchSheet(p, games){
       <div class="pay">$${p.sal.toLocaleString()}</div>
       <button class="close" id="shX" type="button">×</button>
     </div>
+    ${injBox(p)}
     <div class="statgrid">${keys.map(x=>`<button type="button" data-stat="${x.k}" class="${x.k===keyObj.k?"on":""}"><b>${last.length?avg(x.k):"—"}</b><span>${x.n}</span></button>`).join("")}</div>
     <p class="kmeta">${keyObj.n} by game</p>
     ${last.length?`<div class="spark">${spark}</div>`:"<p class='hint'>No games in the log yet.</p>"}
@@ -1163,6 +1178,16 @@ function paintResearchSheet(p, games){
   });
 }
 
+function injBox(p){
+  const n=(STATE.injNews||{})[p.id];
+  const st=injOf(p);
+  if(!st && !n) return "";
+  const status=(n&&n.status)||st;
+  const part=n&&n.part?n.part:"";
+  const news=(n&&(n.short||n.long))||"";
+  const ret=n&&n.ret?(" · return "+n.ret):"";
+  return `<div class="injbox"><b>${status}${part?(" · "+part):""}${ret}</b>${news?`<p>${news}</p>`:""}</div>`;
+}
 async function openResearch(id){
   const p=STATE.pool.find(x=>x.id===id);
   if(!p) return;
