@@ -172,6 +172,7 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 <div class="lockbar">
   <div class="inner">
     <button type="button" class="sec" id="btnClear">Clear</button>
+    <button type="button" class="sec" id="btnUnlock">Unlock</button>
     <button type="button" class="go" id="btnLock">Lock card</button>
   </div>
 </div>
@@ -250,19 +251,23 @@ function paintBudget(){
   $("remain").textContent = "$"+r.toLocaleString();
   $("spent").textContent = "$"+s.toLocaleString();
   $("remain").parentElement.className = "bcell "+(r<0?"over":"ok");
-  $("btnLock").disabled = !filled() || r<0;
-  $("btnLock").textContent = STATE.locked ? "Card locked" : "Lock card";
+    $("btnLock").textContent = STATE.locked ? "Locked" : "Lock card";
+  $("btnLock").disabled = STATE.locked || !filled() || r<0;
+  $("cardName").disabled = !!STATE.locked;
+  $("newCardBtn").disabled = true;
+  const un=$("btnUnlock");
+  if(un){ un.disabled = !STATE.locked; }
 }
 
 function paintSlots(){
   $("slots").innerHTML = SLOTS.map(k=>{
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
     if(!p) return `<div class="slot empty"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>Open</b><span>Pick from the list</span></div><div class="sal">—</div><span></span></div>`;
-    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
+    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
   }).join("");
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
+    if(slotFrozen(b.dataset.drop)) return toast("That game started — they stay on the card");
     delete STATE.lineup[b.dataset.drop];
-    STATE.locked=false;
     saveStore(); paintAll();
   });
 }
@@ -398,8 +403,18 @@ function paintPool(){
   $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
 }
 
+function gameStarted(p){
+  if(!p) return false;
+  const g=STATE.games.find(x=>String(x.eventId)===String(p.eventId));
+  const st=(g&&g.state)||"";
+  return st==="in"||st==="post";
+}
+function slotFrozen(k){
+  const p=STATE.pool.find(x=>x.id===STATE.lineup[k]);
+  return gameStarted(p);
+}
 function addPlayer(id){
-  if(STATE.locked) return toast("Card is locked on this device");
+  if(STATE.locked) return toast("Unlock the card to make changes");
   const p = STATE.pool.find(x=>x.id===id);
   if(!p) return;
   const taken = usedIds();
@@ -414,6 +429,7 @@ function addPlayer(id){
                        });
   const hole = order.find(k=>!STATE.lineup[k]);
   if(!hole) return toast("No open slot for "+p.pos);
+  if(gameStarted(p)) return toast("That game already started");
   STATE.lineup[hole]=p.id;
   saveStore(); paintAll();
 }
@@ -860,6 +876,7 @@ function paintStand(){
 }
 
 function lockCard(){
+  if(STATE.locked && STATE.week) return toast("This phone already locked a card this week");
   if(!filled() || remain()<0) return toast("Fill 9 and stay under $50,000");
   STATE.name = ($("cardName").value||"").trim() || "Sunday card";
   STATE.locked = true;
@@ -1016,17 +1033,29 @@ $("qFilt").oninput=paintPool;
 $("cardName").oninput=e=>{ STATE.name=e.target.value; saveStore(); };
 $("btnLock").onclick=lockCard;
 $("btnClear").onclick=()=>{
-  if(STATE.locked && !confirm("Clear the locked card on this phone?")) return;
-  STATE.lineup={}; STATE.locked=false; saveStore(); paintAll();
+  const keep={};
+  SLOTS.forEach(k=>{ if(slotFrozen(k)) keep[k]=STATE.lineup[k]; });
+  if(STATE.locked) return toast("Unlock first");
+  STATE.lineup=keep;
+  saveStore(); paintAll();
+};
+$("btnUnlock").onclick=()=>{
+  if(!STATE.locked) return;
+  STATE.locked=false;
+  saveStore(); paintAll();
+  toast("Unlocked. Started games stay on the card.");
 };
 $("newCardBtn").onclick=()=>{
-  STATE.lineup={}; STATE.locked=false; STATE.name=""; $("cardName").value=""; saveStore(); paintAll(); toast("Fresh card");
+  if(STATE.locked) return toast("One card per phone this week");
+  STATE.lineup={}; STATE.name=""; $("cardName").value=""; saveStore(); paintAll();
 };
 
 loadStore();
 (async function boot(){
   try{
+    const prevWeek=STATE.week;
     await loadSlate();
+    if(prevWeek && prevWeek!==STATE.week){ STATE.locked=false; STATE.lineup={}; STATE.name=""; saveStore(); }
     await loadPool();
     if(STATE.locked) refreshLive();
     setInterval(()=>{
