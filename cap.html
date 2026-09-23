@@ -284,9 +284,13 @@ function isRelevant(p){
   const inj=injOf(p);
   if(inj==="Out"||inj==="Injured Reserve") return false;
   if(p.pos==="DST") return true;
-  const depth={QB:1,RB:2,WR:3,TE:2}[p.pos]||1;
-  const idx=STATE.pool.filter(x=>x.team===p.team&&x.pos===p.pos).findIndex(x=>x.id===p.id);
-  if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length) return !!p.starter || idx<depth;
+  const seat=p.depth||99;
+  if(p.pos==="QB") return seat===1 || hasBump(p);
+  if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length){
+    if(p.pos==="RB") return seat<=2 || !!p.starter;
+    if(p.pos==="WR") return seat<=3 || !!p.starter;
+    if(p.pos==="TE") return seat<=1 || !!p.starter;
+  }
   if(hasBump(p)) return true;
   if(p.pos==="QB") return volume(p)>=900 || (p.starter && volume(p)>=200);
   if(p.pos==="RB") return volume(p)>=220;
@@ -444,9 +448,38 @@ async function loadSlate(){
   });
 }
 
+const DEPTH={};
+async function loadDepth(tid){
+  if(DEPTH[tid]) return DEPTH[tid];
+  const map={};
+  try{
+    const d=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/depthcharts",{cache:"no-store"}).then(r=>r.json());
+    (d.depthchart||[]).forEach(chart=>{
+      const pos=chart.positions||{};
+      Object.keys(pos).forEach(k=>{
+        const slot=pos[k]||{};
+        const abbr=String((slot.position&&slot.position.abbreviation)||k).toUpperCase();
+        let ppos="";
+        if(abbr==="QB") ppos="QB";
+        else if(abbr==="RB"||abbr==="FB") ppos="RB";
+        else if(abbr.indexOf("WR")===0) ppos="WR";
+        else if(abbr==="TE") ppos="TE";
+        else return;
+        (slot.athletes||[]).forEach((a,i)=>{
+          const id=String(a.id||"");
+          if(!id) return;
+          if(map[id]==null || map[id]>i+1) map[id]=i+1;
+        });
+      });
+    });
+  }catch(e){}
+  DEPTH[tid]=map;
+  return map;
+}
 async function loadRoster(tid, ab, game){
   const out=[];
   try{
+    const depth=await loadDepth(tid);
     const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/roster",{cache:"no-store"});
     if(!r.ok) return out;
     const d=await r.json();
@@ -458,7 +491,7 @@ async function loadRoster(tid, ab, game){
         if(!/^(QB|RB|WR|TE)$/.test(pos)) return;
         const opp = String(tid)===String(game.homeId)?game.awayAb:game.homeAb;
         const when = game.start ? new Date(game.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}) : "";
-        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter};
+        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter, depth:depth[String(a.id)]||99};
         p.sal=salary(p);
         out.push(p);
       });
@@ -514,14 +547,19 @@ function repriceAll(){
   STATE.pool.forEach(p=>{ p.inj=injOf(p); });
   ["QB","RB","WR","TE","DST"].forEach(pos=>{
     const rows=STATE.pool.filter(p=>p.pos===pos);
-    rows.sort((a,b)=>projOf(b)-projOf(a));
-    const [lo,hi]=bandFor(pos);
     const live=rows.filter(isRelevant);
-    live.forEach((p,i)=>{
-      const n=Math.max(1,live.length-1);
-      const w=Math.pow(1-i/n,1.4);
+    live.sort((a,b)=> (projOf(b)-projOf(a)) || volume(b)-volume(a) || (a.depth||9)-(b.depth||9));
+    const [lo,hi]=bandFor(pos);
+    const scored=live.filter(p=>(LOGS[p.id]||[]).length>0);
+    const use=scored.length>=4?scored:live;
+    use.forEach((p,i)=>{
+      const n=Math.max(1,use.length-1);
+      const w=Math.pow(1-i/n,1.45);
       p.sal=Math.round((lo+w*(hi-lo))/100)*100;
     });
+    if(scored.length<4){
+      live.forEach(p=>{ if(!(LOGS[p.id]||[]).length) p.sal=p.pos==="QB"?6200:(p.depth===1?5400:bandFor(p.pos)[0]); });
+    }
     rows.filter(p=>!isRelevant(p)).forEach(p=>{ p.sal=lo; });
   });
 }
