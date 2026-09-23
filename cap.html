@@ -909,9 +909,13 @@ function upsertCard(){
 async function deleteCard(name){
   try{
     const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&name=eq."+encodeURIComponent(name),{
-      method:"DELETE", headers:supaHeaders()
+      method:"DELETE",
+      headers:supaHeaders({"Prefer":"return=minimal"})
     });
-    if(!r.ok) return toast("Delete failed — add the delete policy in SQL");
+    if(!r.ok){
+      const msg=await r.text();
+      return toast(/policy|42501|permission/i.test(msg)?"Run DELETE policy in Supabase SQL":("Delete failed "+r.status));
+    }
     STATE.cards=STATE.cards.filter(c=>!(c.week===STATE.week && c.name===name));
     if(STATE.name===name){ STATE.locked=false; STATE.sealName=""; STATE.lineup={}; $("cardName").value=""; saveStore(); }
     toast("Removed "+name);
