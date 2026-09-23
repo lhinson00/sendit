@@ -355,7 +355,17 @@ function isQb2(p){
 }
 function hasBump(p){
   if(p.pos==="DST") return false;
-  return STATE.pool.some(x=>x.team===p.team && x.pos===p.pos && x.id!==p.id && (injOf(x)==="Out"||injOf(x)==="Injured Reserve"||injOf(x)==="Doubtful") && (x.starter || volume(x)>volume(p)));
+  const bad=s=>s==="Out"||s==="Injured Reserve"||s==="Doubtful";
+  const mates=STATE.pool.filter(x=>x.team===p.team && x.pos===p.pos);
+  const down=mates.filter(x=>x.id!==p.id && bad(injOf(x)));
+  if(!down.length) return false;
+  const downIsLead=down.some(x=>x.starter || (x.depth||99)<=1 || fptsFrom(PROD[x.id]||{}) >= fptsFrom(PROD[p.id]||{}));
+  if(!downIsLead) return false;
+  if(bad(injOf(p))) return false;
+  const avail=mates.filter(x=>!bad(injOf(x)) || injOf(x)==="Doubtful" && x.id===p.id)
+    .filter(x=>injOf(x)!=="Out" && injOf(x)!=="Injured Reserve")
+    .sort((a,b)=>(a.depth||99)-(b.depth||99) || fptsFrom(PROD[b.id]||{})-fptsFrom(PROD[a.id]||{}) || a.name.localeCompare(b.name));
+  return avail[0] && avail[0].id===p.id;
 }
 function isRelevant(p){
   const inj=injOf(p);
