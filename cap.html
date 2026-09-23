@@ -524,7 +524,12 @@ function leaderLine(p){
   const s=PROD[p.id]||{};
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
-    return (d.pa!=null?d.pa+" PA":"")+(d.to!=null?" · "+d.to+" TO":"");
+    const bits=[];
+    if(d.pa!=null) bits.push(d.pa+" PA");
+    if(d.to!=null) bits.push(d.to+" TO");
+    if(d.sacks!=null) bits.push(d.sacks+" SK");
+    if(d.st) bits.push(d.st+" ST TD");
+    return bits.join(" · ")||"D/ST";
   }
   if(p.pos==="QB") return (s.py||0)+" pass yds"+(s.ptd?(" · "+s.ptd+" TD"):"");
   if(p.pos==="RB") return ((s.ry||0)+(s.recy||0))+" rush+rec yds";
@@ -839,7 +844,23 @@ async function openResearch(id){
   sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Loading this season…</p>`;
   $("shX").onclick=()=>$("drawer").classList.remove("on");
   if(p.pos==="DST"){
-    sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="seasonnote">This season</p><p class="hint">Team defense. No player trend log.</p>`;
+    const d=TEAMDEF[p.team]||{};
+    sheet.innerHTML=`<div class="grab"></div>
+      <div class="sheethead">
+        <div>
+          <h3>${p.name}</h3>
+          <p class="sub">2026 · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        </div>
+        <div class="pay">$${p.sal.toLocaleString()}</div>
+        <button class="close" id="shX" type="button">×</button>
+      </div>
+      <div class="statgrid">
+        <button type="button"><b>${d.pa??"—"}</b><span>Pts allowed</span></button>
+        <button type="button"><b>${d.to??"—"}</b><span>Takeaways</span></button>
+        <button type="button"><b>${d.sacks??"—"}</b><span>Sacks</span></button>
+        <button type="button"><b>${d.st??0}</b><span>ST TDs</span></button>
+      </div>
+      <p class="kmeta">Season team totals. Lower points allowed ranks higher.</p>`;
     $("shX").onclick=()=>$("drawer").classList.remove("on");
     return;
   }
