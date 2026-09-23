@@ -463,8 +463,8 @@ async function loadDk(){
   const groups=lobby.DraftGroups||[];
   const classic=groups.filter(g=>g.GameTypeId===1 && g.ContestTypeId===21 && (g.GameCount||0)>=8)
     .sort((a,b)=>(b.GameCount||0)-(a.GameCount||0));
-  const dg=(classic[0]&&classic[0].DraftGroupId);
-  if(!dg) return {};
+  const dg=classic[0] && classic[0].DraftGroupId;
+  if(!dg) throw new Error("No Classic slate");
   const urls=[
     "https://api.draftkings.com/sites/US-DK/draftgroups/v1/draftgroups/"+dg+"/draftables?format=json",
     "https://api.draftkings.com/draftgroups/v1/draftgroups/"+dg+"/draftables"
@@ -473,47 +473,72 @@ async function loadDk(){
   for(const u of urls){
     try{ const r=await fetch(u,{cache:"no-store"}); if(r.ok){ data=await r.json(); break; } }catch(e){}
   }
-  const map={};
-  (data&&data.draftables||[]).forEach(d=>{
-    if(d.isDisabled) return;
+  if(!data || !data.draftables) throw new Error("DK salaries blocked");
+  const seen=new Set();
+  const list=[];
+  data.draftables.forEach(d=>{
+    if(d.isDisabled || !d.salary) return;
     const pos=d.position;
-    const key=normName(d.displayName)+"|"+pos;
-    if(map[key]) return;
-    map[key]={sal:d.salary, team:d.teamAbbreviation||"", pos, name:d.displayName, status:d.status||""};
-    if(pos==="DST" && d.teamAbbreviation) map["tm|"+d.teamAbbreviation+"|DST"]=map[key];
+    if(!/^(QB|RB|WR|TE|DST)$/.test(pos)) return;
+    const key=normName(d.displayName)+"|"+pos+"|"+(d.teamAbbreviation||"");
+    if(seen.has(key)) return;
+    seen.add(key);
+    const comp=(d.competition&&d.competition.name)||"";
+    const parts=comp.split("@").map(s=>s.trim());
+    const team=d.teamAbbreviation||"";
+    const opp=parts.length===2 ? (parts[0]===team?parts[1]:parts[0]) : "";
+    list.push({
+      dk:true,
+      name:d.displayName,
+      pos,
+      team,
+      opp,
+      sal:d.salary,
+      eventId:"",
+      id:"dk-"+d.playerId+"-"+pos,
+      dkPid:String(d.playerId||"")
+    });
   });
-  STATE.dkN=Object.keys(map).length;
-  return map;
+  return list;
+}
+function attachEspn(dkList, espn){
+  const byKey={};
+  espn.forEach(p=>{
+    byKey[normName(p.name)+"|"+p.pos+"|"+p.team]=p;
+    byKey[normName(p.name).split(" ").pop()+"|"+p.pos+"|"+p.team]=p;
+  });
+  return dkList.map(d=>{
+    const hit=byKey[normName(d.name)+"|"+d.pos+"|"+d.team]
+      || byKey[normName(d.name).split(" ").pop()+"|"+d.pos+"|"+d.team]
+      || (d.pos==="DST" ? espn.find(p=>p.pos==="DST" && p.team===d.team) : null);
+    if(hit){
+      d.id=hit.id;
+      d.eventId=hit.eventId;
+      d.when=hit.when;
+      d.start=hit.start;
+      d.teamId=hit.teamId;
+    }
+    return d;
+  });
 }
 async function loadPool(){
-  $("pool").innerHTML="<p class='hint'>Loading DK salaries and slates…</p>";
-  let dk={};
-  try{ dk=await loadDk(); }catch(e){ dk={}; }
-  const all=[];
+  $("pool").innerHTML="<p class='hint'>Loading DraftKings Classic salaries…</p>";
+  let dkList=[];
+  try{ dkList=await loadDk(); }
+  catch(e){
+    $("pool").innerHTML="<p class='hint'>Could not load DK prices. "+(e.message||e)+"</p>";
+    $("weekLine").textContent=STATE.label+" · DK salaries unavailable";
+    STATE.pool=[];
+    paintAll();
+    return;
+  }
+  const espn=[];
   for(const g of STATE.games){
-    const [a,b] = await Promise.all([loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]);
-    all.push(...a,...b);
+    const [a,b]=await Promise.all([loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]);
+    espn.push(...a,...b);
   }
-  const seen=new Set();
-  let pool=all.filter(p=>{
-    if(seen.has(p.id)) return false; seen.add(p.id); return true;
-  });
-  if(Object.keys(dk).length){
-    pool=pool.map(p=>{
-      let hit=dk[normName(p.name)+"|"+p.pos];
-      if(!hit && p.pos==="DST") hit=dk["tm|"+p.team+"|DST"];
-      if(!hit){
-        const last=normName(p.name).split(" ").pop();
-        hit=Object.values(dk).find(d=>d && d.pos===p.pos && d.team===p.team && normName(d.name).split(" ").pop()===last);
-      }
-      if(hit){ p.sal=hit.sal; p.dk=true; }
-      return p;
-    });
-    const priced=pool.filter(p=>p.dk);
-    if(priced.length>=15) pool=priced;
-  }
-  STATE.pool=pool;
-  $("weekLine").textContent = STATE.label+" · DK Classic $50,000 · "+pool.length+" priced";
+  STATE.pool=attachEspn(dkList, espn).sort((a,b)=>b.sal-a.sal);
+  $("weekLine").textContent=STATE.label+" · DK Classic $50,000 · "+STATE.pool.length+" priced";
   paintAll();
 }
 
