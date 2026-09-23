@@ -730,7 +730,7 @@ async function refreshLive(){
     }catch(e){}
   }));
   paintLive();
-  if(STATE.locked) pushCard();
+  if(STATE.locked) pushCard(false);
   pullBoard().then(paintStand);
 }
 
@@ -867,30 +867,39 @@ async function pullBoard(){
     if(!r.ok){ STATE.boardErr=await r.text(); return; }
     const rows=await r.json();
     STATE.boardErr="";
+    STATE.cards=STATE.cards.filter(c=>c.week!==STATE.week);
     rows.forEach(row=>{
       const id=(row.name||"Card")+"|"+row.week;
       const lineup=typeof row.lineup==="string"?JSON.parse(row.lineup): (row.lineup||{});
-      const rec={id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true};
-      const i=STATE.cards.findIndex(c=>c.id===id);
-      if(i>=0) STATE.cards[i]=Object.assign(STATE.cards[i],rec);
-      else STATE.cards.push(rec);
+      STATE.cards.push({id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true});
     });
   }catch(e){ STATE.boardErr=String(e.message||e); }
 }
-async function pushCard(){
+async function pushCard(create){
   if(!STATE.locked || !STATE.week) return;
+  const name=(STATE.name||"Untitled").slice(0,24);
   const body={
     week:STATE.week,
-    name:(STATE.name||"Untitled").slice(0,24),
+    name,
     lineup:STATE.lineup,
     pts:cardTotal(STATE.lineup),
     locked_at:new Date().toISOString()
   };
   try{
-    const r=await fetch(SUPA_URL+"/rest/v1/cards?on_conflict=week,name",{
-      method:"POST",
-      headers:supaHeaders({"Prefer":"resolution=merge-duplicates,return=minimal"}),
-      body:JSON.stringify(body)
+    if(create){
+      const r=await fetch(SUPA_URL+"/rest/v1/cards?on_conflict=week,name",{
+        method:"POST",
+        headers:supaHeaders({"Prefer":"resolution=merge-duplicates,return=minimal"}),
+        body:JSON.stringify(body)
+      });
+      if(!r.ok) STATE.boardErr=await r.text();
+      else STATE.boardErr="";
+      return;
+    }
+    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&name=eq."+encodeURIComponent(name),{
+      method:"PATCH",
+      headers:supaHeaders({"Prefer":"return=minimal"}),
+      body:JSON.stringify({pts:body.pts,lineup:body.lineup,locked_at:body.locked_at})
     });
     if(!r.ok) STATE.boardErr=await r.text();
     else STATE.boardErr="";
@@ -962,7 +971,7 @@ function lockCard(){
   snapshotIfFinal();
   saveStore();
   paintAll();
-  pushCard().then(()=>{ toast("Locked · on the shared board"); tabTo("stand"); paintStand(); });
+  pushCard(true).then(()=>{ toast("Locked · on the shared board"); tabTo("stand"); paintStand(); });
 }
 
 function snapshotIfFinal(){
