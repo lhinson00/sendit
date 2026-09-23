@@ -90,10 +90,11 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .rate{display:flex;align-items:baseline;gap:10px;margin:14px 0 6px}
 .rate b{font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.8;color:var(--orange)}
 .rate span{color:var(--muted);font-size:13px}
-.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
-.statgrid div{background:#101218;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
-.statgrid b{display:block;font-family:"Bebas Neue",sans-serif;font-size:22px}
-.statgrid span{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0 16px}
+.statgrid button{background:#14151c;border:1px solid #22232c;border-radius:12px;padding:10px 6px;text-align:center;color:inherit}
+.statgrid button.on{border-color:rgba(255,122,24,.55);background:#1a140e}
+.statgrid b{display:block;font-variant-numeric:tabular-nums;font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.statgrid span{display:block;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:5px;font-weight:700}
 .glog{display:grid;gap:6px;margin-top:8px}
 .glog div{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
 .kitbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}
@@ -705,42 +706,41 @@ function pickStat(row,key){
 }
 function paintResearchSheet(p, games){
   const keys=seasonKeys(p.pos);
+  const last=games.slice(-18);
+  const n=last.length||1;
+  const avg=k=>{
+    const s=last.reduce((a,g)=>a+pickStat(g,k),0);
+    return /Yard/.test(k) ? Math.round(s/n) : (s/n).toFixed(1);
+  };
   const stat=($("rStat")&&$("rStat").value)||keys[0].k;
   const keyObj=keys.find(x=>x.k===stat)||keys[0];
-  const lines=keyObj.lines||lineOpts(keyObj.k);
-  const line=Number(($("rLine")&&$("rLine").value)||lines[0]);
-  const vals=games.map(g=>pickStat(g,keyObj.k));
-  const hits=vals.filter(v=>v>=line).length;
+  const vals=last.map(g=>pickStat(g,keyObj.k));
   const max=Math.max(1,...vals);
-  const last=games.slice(-18);
-  const lvals=last.map(g=>pickStat(g,keyObj.k));
-  const lhits=lvals.filter(v=>v>=line).length;
-  const max=Math.max(1,...lvals);
   const spark=last.map((g,i)=>{
-    const v=lvals[i];
-    const h=Math.max(10, Math.round((v/max)*86));
-    return `<i class="${v>=line?"hit":"miss"}" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
+    const v=vals[i];
+    const h=Math.max(12, Math.round((v/max)*86));
+    return `<i class="hit" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
   }).join("");
-  const sheet=$("sheet");
-  sheet.innerHTML=`<div class="grab"></div>
+  $("sheet").innerHTML=`<div class="grab"></div>
     <div class="sheethead">
       <div>
         <h3>${p.name}</h3>
-        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""} · last ${last.length} games</p>
       </div>
       <div class="pay">$${p.sal.toLocaleString()}</div>
       <button class="close" id="shX" type="button">×</button>
     </div>
-    <div class="kitbar">
-      <div><label>Stat</label><select id="rStat">${keys.map(x=>`<option value="${x.k}"${x.k===keyObj.k?" selected":""}>${x.n}</option>`).join("")}</select></div>
-      <div><label>Line · last 18</label><select id="rLine">${lines.map(n=>`<option value="${n}"${Number(n)===line?" selected":""}>${n}+</option>`).join("")}</select></div>
-    </div>
-    <div class="rate"><b>${lhits}/${last.length||0}</b><span>${keyObj.n} · ${line}+</span></div>
-    ${last.length?`<div class="spark">${spark}</div>`:"<p class='hint'>No games in the log yet.</p>"}`;
+    <div class="statgrid">${keys.map(x=>`<button type="button" data-stat="${x.k}" class="${x.k===keyObj.k?"on":""}"><b>${last.length?avg(x.k):"—"}</b><span>${x.n}</span></button>`).join("")}</div>
+    <p class="kmeta">${keyObj.n} by game</p>
+    ${last.length?`<div class="spark">${spark}</div>`:"<p class='hint'>No games in the log yet.</p>"}
+    <input type="hidden" id="rStat" value="${keyObj.k}"/>`;
   $("shX").onclick=()=>$("drawer").classList.remove("on");
-  $("rStat").onchange=()=>{ $("rLine").selectedIndex=0; paintResearchSheet(p,games); };
-  $("rLine").onchange=()=>paintResearchSheet(p,games);
+  $("sheet").querySelectorAll("[data-stat]").forEach(b=>b.onclick=()=>{
+    $("rStat").value=b.dataset.stat;
+    paintResearchSheet(p,games);
+  });
 }
+
 async function openResearch(id){
   const p=STATE.pool.find(x=>x.id===id);
   if(!p) return;
