@@ -91,9 +91,15 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .livep.live{border-color:#3ee0a0;box-shadow:0 0 24px rgba(62,224,160,.08)}
 .livep.done{border-color:rgba(255,255,255,.35)}
 .livep.bump{animation:pop .7s ease}
-.breakhero{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;margin:0 0 14px}
-.breakhero img.head{width:64px;height:64px;border-radius:14px;object-fit:cover;background:#1a1c22}
-.breakhero .tot{font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.9;color:#3ee0a0}
+.breakhero{display:grid;grid-template-columns:68px 1fr auto;gap:12px;align-items:center;padding:4px 0 14px;border-bottom:1px solid var(--line);margin:0 0 12px}
+.breakhero img.head{width:68px;height:68px;border-radius:16px;object-fit:cover;background:#1a1c22;border:1px solid var(--line)}
+.breakhero h3{margin:0;font-size:20px;letter-spacing:-.03em}
+.breakhero .tot{font-family:"Bebas Neue",sans-serif;font-size:52px;line-height:.85;color:#3ee0a0;text-align:right}
+.breakhero .tot small{display:block;font-family:inherit;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:400}
+.livestrip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;background:#12141a;border:1px solid var(--line);margin:0 0 14px;font-size:13px}
+.livestrip b{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em}
+.seclab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px}
+
 .breakrow{display:grid;grid-template-columns:minmax(0,1fr) 72px 56px;gap:10px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line)}
 .breakrow b{display:block;font-size:13px;font-weight:700;letter-spacing:.01em}
 .breakrow em{display:block;font-style:normal;color:var(--muted);font-size:11px;margin-top:2px}
@@ -122,7 +128,11 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .bigscore span{display:block;color:var(--muted);margin-top:6px}
 .drawer{position:fixed;inset:0;z-index:40;background:rgba(5,6,10,.72);display:none;align-items:flex-end}
 .drawer.on{display:flex}
-.sheet{width:100%;max-height:88dvh;overflow:auto;background:#0b0c11;border-top:1px solid rgba(255,122,24,.45);border-radius:20px 20px 0 0;padding:10px var(--pad) 36px}
+.sheet{width:100%;max-height:88dvh;overflow:auto;background:#0b0c11;border-top:1px solid rgba(255,122,24,.45);border-radius:20px 20px 0 0;padding:10px var(--pad) 28px}
+.sheetfoot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 8px}
+.sheetfoot button{border:0;border-radius:12px;padding:14px 10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+.sheetfoot .gc{background:#16120e;color:var(--orange);border:1px solid rgba(255,122,24,.45)}
+.sheetfoot .done{background:#1a1c22;color:#e8e0d6}
 .sheet .grab{width:36px;height:4px;border-radius:99px;background:#3a3a44;margin:4px auto 14px}
 .sheethead{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start;margin-bottom:4px}
 .sheethead h3{margin:0;font-size:22px;letter-spacing:-.02em}
@@ -1094,21 +1104,37 @@ function openLiveBreak(id){
   const sc=scorePlayer(p);
   const gp=p.eventId?gamePulse(p.eventId):{};
   const rows=scoreRows(p);
-  const max=Math.max(0.1,...rows.map(r=>Math.abs(r.pts)));
+  const live=rows.filter(r=>r.on || r.pts);
+  const rest=rows.filter(r=>!r.on && !r.pts);
+  const sum=rows.reduce((s,r)=>s+r.pts,0);
   const sheet=$("sheet");
   $("drawer").classList.add("on");
   sheet.innerHTML=`<div class="grab"></div>
     <div class="breakhero">
       <img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.25"/>
-      <div><h3>${p.name}</h3><p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""} · ${sc.status}${gp.sit?(" · "+gp.sit):""}${gp.score?(" · "+gp.score):""}</p></div>
-      <div class="tot">${sc.pts.toFixed(1)}</div>
+      <div>
+        <h3>${p.name}</h3>
+        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        <span class="chip ${sc.status==="LIVE"?"live":sc.status==="Final"?"fin":"pre"}">${sc.status==="LIVE"?(gp.sit||"Live"):sc.status}</span>
+      </div>
+      <div class="tot">${sc.pts.toFixed(1)}<small>FPTS</small></div>
     </div>
-    ${rows.map(r=>`<div class="breakrow${r.pts<0?" neg":r.on?"":" zero"}"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||""}</div><div class="pv">${r.pts>0?"+":""}${r.pts.toFixed(1)}</div></div>`).join("")}
-    <button type="button" class="cast" data-cast="${p.eventId||""}" style="margin-top:14px">Open gamecast →</button>
-    <button class="close" id="shX" type="button">×</button>`;
+    <div class="livestrip">
+      <span>${gp.score|| (p.team+" vs "+(p.opp||""))}</span>
+      <b>${gp.sit||sc.status}</b>
+    </div>
+    ${gp.last?`<p class="hint" style="margin:0 0 12px">${gp.last}</p>`:""}
+    <p class="seclab">How this score is built</p>
+    ${live.map(r=>`<div class="breakrow${r.pts<0?" neg":""}"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||""}</div><div class="pv">${r.pts>0?"+":""}${Number(r.pts).toFixed(1)}</div></div>`).join("")||`<p class="hint">Waiting on the first stat.</p>`}
+    ${rest.length?`<p class="seclab">Still at zero</p>`+rest.map(r=>`<div class="breakrow zero"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||"—"}</div><div class="pv">0.0</div></div>`).join(""):""}
+    <div class="breakrow" style="border-bottom:0;margin-top:6px"><div><b>Total</b></div><div class="cnt"></div><div class="pv">${sum>=0?"+":""}${sum.toFixed(1)}</div></div>
+    <div class="sheetfoot">
+      ${p.eventId?`<button type="button" class="gc" data-cast="${p.eventId}">Gamecast</button>`:`<span></span>`}
+      <button type="button" class="done" id="shX">Close</button>
+    </div>`;
   $("shX").onclick=()=>$("drawer").classList.remove("on");
   const c=sheet.querySelector("[data-cast]");
-  if(c) c.onclick=e=>{ e.preventDefault(); if(p.eventId) openSauceCast(p.eventId); };
+  if(c) c.onclick=e=>{ e.preventDefault(); openSauceCast(p.eventId); };
 }
 function paintLive(){
   const lu=activeLineup();
