@@ -91,6 +91,17 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .livep.live{border-color:#3ee0a0;box-shadow:0 0 24px rgba(62,224,160,.08)}
 .livep.done{border-color:rgba(255,255,255,.35)}
 .livep.bump{animation:pop .7s ease}
+.breakhero{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;margin:0 0 14px}
+.breakhero img.head{width:64px;height:64px;border-radius:14px;object-fit:cover;background:#1a1c22}
+.breakhero .tot{font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.9;color:#3ee0a0}
+.breakrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.breakrow b{font-size:14px}
+.breakrow em{font-style:normal;color:var(--muted);font-size:12px}
+.breakrow .pv{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#3ee0a0}
+.breakrow.zero .pv{color:var(--muted)}
+.breakbar{height:6px;border-radius:99px;background:#1a1c22;overflow:hidden;grid-column:1/-1;margin-top:-4px}
+.breakbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a18,#3ee0a0)}
+.livep{cursor:pointer}
 .injbox{margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,107,107,.35);background:#1a1010}
 .injbox b{display:block;color:#ff8a8a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
 .injbox p{margin:6px 0 0;color:#f3e8e8;font-size:13px;line-height:1.45}
@@ -1008,6 +1019,100 @@ function openCardLive(name){
   tabTo("live");
   paintLive();
 }
+
+function pullBox(p){
+  const o={passY:0,passTd:0,ints:0,rushY:0,rushTd:0,rec:0,recY:0,recTd:0,fum:0};
+  const sum=p&&(STATE.live[p.eventId]||STATE.live[String(p.eventId)]);
+  if(!p||!sum||p.pos==="DST") return o;
+  const sides=((sum.boxscore||{}).players)||[];
+  sides.forEach(side=>{(side.statistics||[]).forEach(grp=>{
+    const keys=grp.keys||grp.names||[];
+    const ix=k=>keys.indexOf(k);
+    (grp.athletes||[]).forEach(a=>{
+      if(!a.athlete||String(a.athlete.id)!==String(p.id)) return;
+      const st=a.stats||[];
+      const g=k=>{ let i=ix(k); if(i<0) i=keys.findIndex(x=>String(x).replace(/\s/g,"").toLowerCase()===k.toLowerCase()); return i>=0?num(st[i]):0; };
+      o.passY+=g("passingYards"); o.passTd+=g("passingTouchdowns"); o.ints+=g("interceptions");
+      o.rushY+=g("rushingYards"); o.rushTd+=g("rushingTouchdowns");
+      o.rec+=g("receptions"); o.recY+=g("receivingYards"); o.recTd+=g("receivingTouchdowns");
+      o.fum+=g("fumblesLost");
+    });
+  });});
+  return o;
+}
+function scoreRows(p){
+  if(!p) return [];
+  if(p.pos==="DST"){
+    const sum=STATE.live[p.eventId]||STATE.live[String(p.eventId)]||{};
+    const tid=p.teamId||String(p.id).replace("DST-","");
+    const comps=((((sum.header||{}).competitions)||[])[0]||{}).competitors||[];
+    const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(tid));
+    const them=comps.find(x=>x!==me);
+    const pa=them?num(them.score):0;
+    const paPts=pa===0?10:pa<=6?7:pa<=13?4:pa<=20?1:pa<=27?0:pa<=34?-1:-4;
+    const boxTeams=((sum.boxscore||{}).teams)||[];
+    const row=boxTeams.find(x=>String((x.team&&x.team.id)||"")===String(tid));
+    const stats=row&&row.statistics||[];
+    const grab=n=>{
+      const s=stats.find(x=>[x.name,x.abbreviation,x.displayName].filter(Boolean).some(v=>String(v).toLowerCase()===n.toLowerCase()));
+      return s?num(s.displayValue||s.value):0;
+    };
+    const sk=grab("sacks"), ints=grab("interceptions"), fr=grab("fumblesRecovered"), dtd=grab("defensiveTouchdowns"), sf=grab("safeties");
+    const std=grab("kickReturnTouchdowns")+grab("puntReturnTouchdowns")+grab("returnTouchdowns");
+    return [
+      {lab:"Points allowed", raw:pa+" PA", rate:pa===0?"10":pa<=6?"7":pa<=13?"4":pa<=20?"1":pa<=27?"0":pa<=34?"−1":"−4", pts:paPts, on:true},
+      {lab:"Sacks", raw:sk+"", rate:"1.0 each", pts:sk*1, on:sk>0},
+      {lab:"Interceptions", raw:ints+"", rate:"2.0 each", pts:ints*2, on:ints>0},
+      {lab:"Fumble recoveries", raw:fr+"", rate:"2.0 each", pts:fr*2, on:fr>0},
+      {lab:"Defensive TDs", raw:dtd+"", rate:"6.0 each", pts:dtd*6, on:dtd>0},
+      {lab:"Return / ST TDs", raw:std+"", rate:"6.0 each", pts:std*6, on:std>0},
+      {lab:"Safeties", raw:sf+"", rate:"2.0 each", pts:sf*2, on:sf>0}
+    ];
+  }
+  const b=pullBox(p);
+  const rows=[
+    {lab:"Passing yards", raw:b.passY+" yds", rate:"0.04 / yd", pts:b.passY*0.04, on:b.passY>0},
+    {lab:"Passing TDs", raw:b.passTd+" TD", rate:"4.0 each", pts:b.passTd*4, on:b.passTd>0},
+    {lab:"Interceptions", raw:b.ints+" INT", rate:"−1.0 each", pts:b.ints*-1, on:b.ints>0},
+    {lab:"Rushing yards", raw:b.rushY+" yds", rate:"0.10 / yd", pts:b.rushY*0.1, on:b.rushY>0},
+    {lab:"Rushing TDs", raw:b.rushTd+" TD", rate:"6.0 each", pts:b.rushTd*6, on:b.rushTd>0},
+    {lab:"Receptions", raw:b.rec+" rec", rate:"1.0 PPR", pts:b.rec*1, on:b.rec>0},
+    {lab:"Receiving yards", raw:b.recY+" yds", rate:"0.10 / yd", pts:b.recY*0.1, on:b.recY>0},
+    {lab:"Receiving TDs", raw:b.recTd+" TD", rate:"6.0 each", pts:b.recTd*6, on:b.recTd>0},
+    {lab:"Fumbles lost", raw:b.fum+"", rate:"−1.0 each", pts:b.fum*-1, on:b.fum>0},
+    {lab:"300-yd pass bonus", raw:b.passY>=300?"Hit":"—", rate:"+3.0", pts:b.passY>=300?3:0, on:b.passY>=300},
+    {lab:"100-yd rush bonus", raw:b.rushY>=100?"Hit":"—", rate:"+3.0", pts:b.rushY>=100?3:0, on:b.rushY>=100},
+    {lab:"100-yd rec bonus", raw:b.recY>=100?"Hit":"—", rate:"+3.0", pts:b.recY>=100?3:0, on:b.recY>=100}
+  ];
+  if(p.pos==="QB") return rows.filter(r=>/Pass|Int|Rush|Fumb|300|100-yd rush/.test(r.lab));
+  if(p.pos==="RB") return rows.filter(r=>/Rush|Rec|Fumb|100/.test(r.lab)&&!/Pass|300/.test(r.lab));
+  return rows.filter(r=>/Rec|Rush|Fumb|100-yd rec/.test(r.lab)&&!/Pass|300|100-yd rush/.test(r.lab));
+}
+function openLiveBreak(id){
+  const p=STATE.pool.find(x=>x.id===id);
+  if(!p) return;
+  const sc=scorePlayer(p);
+  const gp=p.eventId?gamePulse(p.eventId):{};
+  const rows=scoreRows(p);
+  const max=Math.max(0.1,...rows.map(r=>Math.abs(r.pts)));
+  const sheet=$("sheet");
+  $("drawer").classList.add("on");
+  sheet.innerHTML=`<div class="grab"></div>
+    <div class="breakhero">
+      <img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.25"/>
+      <div><h3>${p.name}</h3><p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""} · ${sc.status}${gp.sit?(" · "+gp.sit):""}${gp.score?(" · "+gp.score):""}</p></div>
+      <div class="tot">${sc.pts.toFixed(1)}</div>
+    </div>
+    ${rows.map(r=>{
+      const w=Math.min(100, Math.round(Math.abs(r.pts)/max*100));
+      return `<div class="breakrow${r.on?"":" zero"}"><div><b>${r.lab}</b><em>${r.raw}${r.rate?(" · "+r.rate):""}</em></div><div class="pv">${r.pts>=0?"+":""}${r.pts.toFixed(1)}</div><div class="breakbar"><i style="width:${r.on?w:0}%"></i></div></div>`;
+    }).join("")}
+    <button type="button" class="cast" data-cast="${p.eventId||""}" style="margin-top:14px">Open gamecast →</button>
+    <button class="close" id="shX" type="button">×</button>`;
+  $("shX").onclick=()=>$("drawer").classList.remove("on");
+  const c=sheet.querySelector("[data-cast]");
+  if(c) c.onclick=e=>{ e.preventDefault(); if(p.eventId) openSauceCast(p.eventId); };
+}
 function paintLive(){
   const lu=activeLineup();
   const pulses=[];
@@ -1038,7 +1143,7 @@ function paintLive(){
     const show=mine || !p || gameStarted(p);
     const chip=sc.status==="LIVE"?"<span class='chip live'>"+(gp&&gp.sit?gp.sit:"Live")+"</span>":sc.status==="Final"?"<span class='chip fin'>Final</span>":"<span class='chip pre'>Upcoming</span>";
     const face=(p&&show)?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
-    return `<div class="livep${cls}${bump}">
+    return `<div class="livep${cls}${bump}" data-break="${p&&show?p.id:""}">
       ${face}
       <div class="who"><b>${p?(show?p.name:"Covered"):"Empty"}</b><div class="meta">${p&&show?(p.team+(p.opp?(" vs "+p.opp):"")):(p?"Slot locked until kickoff":"Open slot")} ${chip}</div></div>
       <div class="pts">${show&&p?sc.pts.toFixed(1):"—"}</div>
@@ -1048,7 +1153,8 @@ function paintLive(){
   }).join("");
   const tick=pulses[0] || (STATE.locked?"Waiting on the next box. Thursday night moves first.":"Lock a 9-man card to watch it live.");
   $("liveGrid").innerHTML=(strips.length?`<div class="gstrip">${strips.join("")}</div>`:"")+`<div class="ticker"><b>Latest</b><p>${tick}</p></div>`+rows;
-  $("liveGrid").querySelectorAll("[data-cast]").forEach(b=>b.onclick=e=>{ e.preventDefault(); openSauceCast(b.dataset.cast); });
+  $("liveGrid").querySelectorAll("[data-cast]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); openSauceCast(b.dataset.cast); });
+  $("liveGrid").querySelectorAll("[data-break]").forEach(row=>row.onclick=()=>{ if(row.dataset.break) openLiveBreak(row.dataset.break); });
   $("liveGrid").querySelectorAll("a.gchip").forEach(a=>a.onclick=e=>{ e.preventDefault(); const u=new URL(a.href, location.href); openSauceCast(u.searchParams.get("game")); });
   const tot=cardTotal(lu);
   $("liveTotal").textContent=tot.toFixed(1);
