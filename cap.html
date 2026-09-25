@@ -562,6 +562,8 @@ function tabTo(name){
   $("tab-build").hidden = name!=="build";
   $("tab-live").hidden = name!=="live";
   $("tab-stand").hidden = name!=="stand";
+  const bar=document.querySelector(".lockbar");
+  if(bar) bar.style.display = name==="build" ? "" : "none";
   if(name==="live"||name==="stand") refreshLive();
 }
 
