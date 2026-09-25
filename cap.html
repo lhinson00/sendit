@@ -96,9 +96,12 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .breakhero h3{margin:0;font-size:20px;letter-spacing:-.03em}
 .breakhero .tot{font-family:"Bebas Neue",sans-serif;font-size:52px;line-height:.85;color:#3ee0a0;text-align:right}
 .breakhero .tot small{display:block;font-family:inherit;font-size:12px;letter-spacing:.14em;color:var(--muted);font-weight:400}
-.livestrip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:12px;background:#12141a;border:1px solid var(--line);margin:0 0 14px;font-size:13px}
+.livestrip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;border-radius:14px;background:#12141a;border:1px solid var(--line);margin:0 0 12px;font-size:13px}
 .livestrip b{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em}
-.seclab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px}
+.seclab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.boxcard{background:#12141a;border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin:0 0 12px}
+.boxcard .breakrow:last-child{border-bottom:0;padding-bottom:0}
+.breakrow{display:grid;grid-template-columns:minmax(0,1fr) 70px 52px;gap:8px;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 
 .breakrow{display:grid;grid-template-columns:minmax(0,1fr) 72px 56px;gap:10px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line)}
 .breakrow b{display:block;font-size:13px;font-weight:700;letter-spacing:.01em}
@@ -947,6 +950,7 @@ async function refreshLive(){
   }));
   paintLive();
   paintStand();
+  if(STATE.breakId && $("drawer").classList.contains("on")) openLiveBreak(STATE.breakId);
   if(STATE.locked) pushCard(false);
   pullBoard().then(paintStand);
 }
@@ -1099,6 +1103,7 @@ function scoreRows(p){
   return rows.filter(r=>/Rec|Rush|Fumb|100-yd rec/.test(r.lab)&&!/Pass|300|100-yd rush/.test(r.lab));
 }
 function openLiveBreak(id){
+  STATE.breakId=id;
   const p=STATE.pool.find(x=>x.id===id);
   if(!p) return;
   const sc=scorePlayer(p);
@@ -1124,15 +1129,17 @@ function openLiveBreak(id){
       <b>${gp.sit||sc.status}</b>
     </div>
     ${gp.last?`<p class="hint" style="margin:0 0 12px">${gp.last}</p>`:""}
-    <p class="seclab">How this score is built</p>
-    ${live.map(r=>`<div class="breakrow${r.pts<0?" neg":""}"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||""}</div><div class="pv">${r.pts>0?"+":""}${Number(r.pts).toFixed(1)}</div></div>`).join("")||`<p class="hint">Waiting on the first stat.</p>`}
-    ${rest.length?`<p class="seclab">Still at zero</p>`+rest.map(r=>`<div class="breakrow zero"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||"—"}</div><div class="pv">0.0</div></div>`).join(""):""}
-    <div class="breakrow" style="border-bottom:0;margin-top:6px"><div><b>Total</b></div><div class="cnt"></div><div class="pv">${sum>=0?"+":""}${sum.toFixed(1)}</div></div>
+    <div class="boxcard">
+      <p class="seclab">How this score is built</p>
+      ${live.map(r=>`<div class="breakrow${r.pts<0?" neg":""}"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||""}</div><div class="pv">${r.pts>0?"+":""}${Number(r.pts).toFixed(1)}</div></div>`).join("")||`<p class="hint">Waiting on the first stat.</p>`}
+      <div class="breakrow"><div><b>Total</b></div><div class="cnt"></div><div class="pv">${sum>=0?"+":""}${sum.toFixed(1)}</div></div>
+    </div>
+    ${rest.length?`<div class="boxcard"><p class="seclab">Still at zero</p>`+rest.map(r=>`<div class="breakrow zero"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||"—"}</div><div class="pv">0.0</div></div>`).join("")+`</div>`:""}
     <div class="sheetfoot">
       ${p.eventId?`<button type="button" class="gc" data-cast="${p.eventId}">Gamecast</button>`:`<span></span>`}
       <button type="button" class="done" id="shX">Close</button>
     </div>`;
-  $("shX").onclick=()=>$("drawer").classList.remove("on");
+  $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
   const c=sheet.querySelector("[data-cast]");
   if(c) c.onclick=e=>{ e.preventDefault(); openSauceCast(p.eventId); };
 }
@@ -1421,7 +1428,7 @@ function paintResearchSheet(p, games){
     <p class="kmeta">${keyObj.n} by game</p>
     ${last.length?`<div class="spark">${spark}</div>`:"<p class='hint'>No games in the log yet.</p>"}
     <input type="hidden" id="rStat" value="${keyObj.k}"/>`;
-  $("shX").onclick=()=>$("drawer").classList.remove("on");
+  $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
   $("sheet").querySelectorAll("[data-stat]").forEach(b=>b.onclick=()=>{
     $("rStat").value=b.dataset.stat;
     paintResearchSheet(p,games);
@@ -1444,7 +1451,7 @@ async function openResearch(id){
   const sheet=$("sheet");
   $("drawer").classList.add("on");
   sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Loading this season…</p>`;
-  $("shX").onclick=()=>$("drawer").classList.remove("on");
+  $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
     sheet.innerHTML=`<div class="grab"></div>
@@ -1463,7 +1470,7 @@ async function openResearch(id){
         <button type="button"><b>${d.st??0}</b><span>ST TDs</span></button>
       </div>
       <p class="kmeta">Season team totals. Lower points allowed ranks higher.</p>`;
-    $("shX").onclick=()=>$("drawer").classList.remove("on");
+    $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
     return;
   }
   try{
@@ -1472,11 +1479,11 @@ async function openResearch(id){
     paintResearchSheet(p, thisSeasonGames(d));
   }catch(e){
     sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Could not load this season.</p>`;
-    $("shX").onclick=()=>$("drawer").classList.remove("on");
+    $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
   }
 }
 
-$("drawer").onclick=e=>{ if(e.target.id==="drawer") e.currentTarget.classList.remove("on"); };
+$("drawer").onclick=e=>{ if(e.target.id==="drawer"){ STATE.breakId=null; e.currentTarget.classList.remove("on"); } };
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.dataset.tab));
 $("posFilt").onchange=paintPool;
 $("gameFilt").onchange=paintPool;
