@@ -94,13 +94,14 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .breakhero{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;margin:0 0 14px}
 .breakhero img.head{width:64px;height:64px;border-radius:14px;object-fit:cover;background:#1a1c22}
 .breakhero .tot{font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.9;color:#3ee0a0}
-.breakrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
-.breakrow b{font-size:14px}
-.breakrow em{font-style:normal;color:var(--muted);font-size:12px}
-.breakrow .pv{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#3ee0a0}
+.breakrow{display:grid;grid-template-columns:minmax(0,1fr) 72px 56px;gap:10px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line)}
+.breakrow b{display:block;font-size:13px;font-weight:700;letter-spacing:.01em}
+.breakrow em{display:block;font-style:normal;color:var(--muted);font-size:11px;margin-top:2px}
+.breakrow .cnt{color:var(--muted);font-size:12px;text-align:right}
+.breakrow .pv{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#3ee0a0;text-align:right}
+.breakrow.neg .pv{color:#ff6b6b}
+.breakrow.zero{opacity:.42}
 .breakrow.zero .pv{color:var(--muted)}
-.breakbar{height:6px;border-radius:99px;background:#1a1c22;overflow:hidden;grid-column:1/-1;margin-top:-4px}
-.breakbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a18,#3ee0a0)}
 .livep{cursor:pointer}
 .injbox{margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,107,107,.35);background:#1a1010}
 .injbox b{display:block;color:#ff8a8a;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
@@ -881,22 +882,36 @@ function playerPtsFromBox(sum, pid){
   return Math.round(pts*10)/10;
 }
 
-function dstPtsFromSum(sum, teamId){
+function teamBoxRow(sum, teamId){
+  const box=((sum.boxscore||{}).teams)||[];
+  return box.find(t=>String((t.team&&t.team.id)||"")===String(teamId))||null;
+}
+function boxStat(row, name){
+  if(!row) return 0;
+  const s=(row.statistics||[]).find(x=>String(x.name||"").toLowerCase()===name.toLowerCase());
+  return s?num(s.displayValue||s.value):0;
+}
+function sackCount(row){
+  const raw=((row&&row.statistics||[]).find(x=>x.name==="sacksYardsLost")||{}).displayValue||"0-0";
+  return num(String(raw).split("-")[0]);
+}
+function dstBits(sum, teamId){
   const comps=((((sum.header||{}).competitions)||[])[0]||{}).competitors||[];
   const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(teamId));
   const them=comps.find(x=>x!==me);
-  if(!me||!them) return 0;
-  const pa=num(them.score);
-  let pts = pa===0?10:pa<=6?7:pa<=13?4:pa<=20?1:pa<=27?0:pa<=34?-1:-4;
-  const boxTeams=((sum.boxscore||{}).teams)||[];
-  const row=boxTeams.find(t=>String((t.team&&t.team.id)||"")===String(teamId));
-  const stats=row&&row.statistics||[];
-  const grab=n=>{
-    const s=stats.find(x=>(x.name||x.abbreviation||"").toLowerCase()===n.toLowerCase() || (x.displayName||"").toLowerCase()===n.toLowerCase());
-    return s?num(s.displayValue||s.value):0;
-  };
-  pts += grab("sacks")*1 + grab("interceptions")*2 + grab("fumblesRecovered")*2 + grab("defensiveTouchdowns")*6 + grab("safeties")*2;
-  return Math.round(pts*10)/10;
+  const pa=them?num(them.score):0;
+  const paPts=pa===0?10:pa<=6?7:pa<=13?4:pa<=20?1:pa<=27?0:pa<=34?-1:-4;
+  const mine=teamBoxRow(sum, teamId);
+  const opp=them?teamBoxRow(sum, (them.team&&them.team.id)||them.id):null;
+  const sk=sackCount(opp);
+  const ints=boxStat(opp,"interceptions");
+  const fr=boxStat(opp,"fumblesLost");
+  const dtd=boxStat(mine,"defensiveTouchdowns");
+  const sf=boxStat(mine,"safeties");
+  return {pa, paPts, sk, ints, fr, dtd, sf, pts: Math.round((paPts+sk*1+ints*2+fr*2+dtd*6+sf*2)*10)/10};
+}
+function dstPtsFromSum(sum, teamId){
+  return dstBits(sum, teamId).pts;
 }
 
 async function refreshLive(){
@@ -1044,29 +1059,14 @@ function scoreRows(p){
   if(!p) return [];
   if(p.pos==="DST"){
     const sum=STATE.live[p.eventId]||STATE.live[String(p.eventId)]||{};
-    const tid=p.teamId||String(p.id).replace("DST-","");
-    const comps=((((sum.header||{}).competitions)||[])[0]||{}).competitors||[];
-    const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(tid));
-    const them=comps.find(x=>x!==me);
-    const pa=them?num(them.score):0;
-    const paPts=pa===0?10:pa<=6?7:pa<=13?4:pa<=20?1:pa<=27?0:pa<=34?-1:-4;
-    const boxTeams=((sum.boxscore||{}).teams)||[];
-    const row=boxTeams.find(x=>String((x.team&&x.team.id)||"")===String(tid));
-    const stats=row&&row.statistics||[];
-    const grab=n=>{
-      const s=stats.find(x=>[x.name,x.abbreviation,x.displayName].filter(Boolean).some(v=>String(v).toLowerCase()===n.toLowerCase()));
-      return s?num(s.displayValue||s.value):0;
-    };
-    const sk=grab("sacks"), ints=grab("interceptions"), fr=grab("fumblesRecovered"), dtd=grab("defensiveTouchdowns"), sf=grab("safeties");
-    const std=grab("kickReturnTouchdowns")+grab("puntReturnTouchdowns")+grab("returnTouchdowns");
+    const b=dstBits(sum, p.teamId||String(p.id).replace("DST-",""));
     return [
-      {lab:"Points allowed", raw:pa+" PA", rate:pa===0?"10":pa<=6?"7":pa<=13?"4":pa<=20?"1":pa<=27?"0":pa<=34?"−1":"−4", pts:paPts, on:true},
-      {lab:"Sacks", raw:sk+"", rate:"1.0 each", pts:sk*1, on:sk>0},
-      {lab:"Interceptions", raw:ints+"", rate:"2.0 each", pts:ints*2, on:ints>0},
-      {lab:"Fumble recoveries", raw:fr+"", rate:"2.0 each", pts:fr*2, on:fr>0},
-      {lab:"Defensive TDs", raw:dtd+"", rate:"6.0 each", pts:dtd*6, on:dtd>0},
-      {lab:"Return / ST TDs", raw:std+"", rate:"6.0 each", pts:std*6, on:std>0},
-      {lab:"Safeties", raw:sf+"", rate:"2.0 each", pts:sf*2, on:sf>0}
+      {lab:"Points allowed", raw:b.pa+" allowed", rate:b.paPts+" pts", pts:b.paPts, on:true},
+      {lab:"Sacks", raw:String(b.sk), rate:"1 pt each", pts:b.sk, on:b.sk>0},
+      {lab:"Interceptions", raw:String(b.ints), rate:"2 pts each", pts:b.ints*2, on:b.ints>0},
+      {lab:"Fumbles recovered", raw:String(b.fr), rate:"2 pts each", pts:b.fr*2, on:b.fr>0},
+      {lab:"Defensive TDs", raw:String(b.dtd), rate:"6 pts each", pts:b.dtd*6, on:b.dtd>0},
+      {lab:"Safeties", raw:String(b.sf), rate:"2 pts each", pts:b.sf*2, on:b.sf>0}
     ];
   }
   const b=pullBox(p);
@@ -1103,10 +1103,7 @@ function openLiveBreak(id){
       <div><h3>${p.name}</h3><p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""} · ${sc.status}${gp.sit?(" · "+gp.sit):""}${gp.score?(" · "+gp.score):""}</p></div>
       <div class="tot">${sc.pts.toFixed(1)}</div>
     </div>
-    ${rows.map(r=>{
-      const w=Math.min(100, Math.round(Math.abs(r.pts)/max*100));
-      return `<div class="breakrow${r.on?"":" zero"}"><div><b>${r.lab}</b><em>${r.raw}${r.rate?(" · "+r.rate):""}</em></div><div class="pv">${r.pts>=0?"+":""}${r.pts.toFixed(1)}</div><div class="breakbar"><i style="width:${r.on?w:0}%"></i></div></div>`;
-    }).join("")}
+    ${rows.map(r=>`<div class="breakrow${r.pts<0?" neg":r.on?"":" zero"}"><div><b>${r.lab}</b><em>${r.rate||""}</em></div><div class="cnt">${r.raw||""}</div><div class="pv">${r.pts>0?"+":""}${r.pts.toFixed(1)}</div></div>`).join("")}
     <button type="button" class="cast" data-cast="${p.eventId||""}" style="margin-top:14px">Open gamecast →</button>
     <button class="close" id="shX" type="button">×</button>`;
   $("shX").onclick=()=>$("drawer").classList.remove("on");
