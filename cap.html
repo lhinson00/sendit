@@ -997,12 +997,24 @@ function openSauceCast(eid){
   try{ if(window.parent && window.parent!==window && typeof window.parent.openGame==="function"){ window.parent.openGame(eid); return; } }catch(e){}
   location.href=gameHref(eid);
 }
+function activeLineup(){
+  if(STATE.viewCard && STATE.viewCard.lineup) return STATE.viewCard.lineup;
+  return STATE.lineup;
+}
+function openCardLive(name){
+  const c=(STATE.cards||[]).find(x=>x.week===STATE.week && x.name===name);
+  if(!c) return toast("Card not on the board");
+  STATE.viewCard=c;
+  tabTo("live");
+  paintLive();
+}
 function paintLive(){
+  const lu=activeLineup();
   const pulses=[];
   const seen=new Set();
   const strips=[];
   SLOTS.forEach(k=>{
-    const p=STATE.pool.find(x=>x.id===STATE.lineup[k]);
+    const p=STATE.pool.find(x=>x.id===lu[k]);
     if(!p||!p.eventId||seen.has(p.eventId)) return;
     seen.add(p.eventId);
     const gp=gamePulse(p.eventId);
@@ -1014,7 +1026,7 @@ function paintLive(){
     </a>`);
   });
   const rows=SLOTS.map(k=>{
-    const p=STATE.pool.find(x=>x.id===STATE.lineup[k]);
+    const p=STATE.pool.find(x=>x.id===lu[k]);
     const sc=scorePlayer(p);
     const gp=p&&p.eventId?gamePulse(p.eventId):null;
     const cls=sc.status==="LIVE"?" live":sc.status==="Final"?" done":"";
@@ -1022,23 +1034,35 @@ function paintLive(){
     const bump=p && prev!=null && sc.pts>prev+0.05 ? " bump" : "";
     if(p){ window._livePts=window._livePts||{}; window._livePts[k]=sc.pts; }
     if(gp&&gp.last) pulses.push((p?p.name.split(" ").pop()+": ":"")+gp.last);
+    const mine=!STATE.viewCard || STATE.viewCard.name===STATE.name;
+    const show=mine || !p || gameStarted(p);
     const chip=sc.status==="LIVE"?"<span class='chip live'>"+(gp&&gp.sit?gp.sit:"Live")+"</span>":sc.status==="Final"?"<span class='chip fin'>Final</span>":"<span class='chip pre'>Upcoming</span>";
-    const face=p?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
+    const face=(p&&show)?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
     return `<div class="livep${cls}${bump}">
       ${face}
-      <div class="who"><b>${p?p.name:"Empty"}</b><div class="meta">${p?(p.team+(p.opp?(" vs "+p.opp):"")): "Open slot"} ${chip}</div></div>
-      <div class="pts">${p?sc.pts.toFixed(1):"—"}</div>
-      <div class="line">${p?(boxLine(p)+(gp?" · "+gp.score:"")):""}</div>
-      ${p&&p.eventId?`<button type="button" class="cast" data-cast="${p.eventId}">Open gamecast →</button>`:""}
+      <div class="who"><b>${p?(show?p.name:"Covered"):"Empty"}</b><div class="meta">${p&&show?(p.team+(p.opp?(" vs "+p.opp):"")):(p?"Slot locked until kickoff":"Open slot")} ${chip}</div></div>
+      <div class="pts">${show&&p?sc.pts.toFixed(1):"—"}</div>
+      <div class="line">${show&&p?(boxLine(p)+(gp?" · "+gp.score:"")):""}</div>
+      ${show&&p&&p.eventId?`<button type="button" class="cast" data-cast="${p.eventId}">Open gamecast →</button>`:""}
     </div>`;
   }).join("");
   const tick=pulses[0] || (STATE.locked?"Waiting on the next box. Thursday night moves first.":"Lock a 9-man card to watch it live.");
   $("liveGrid").innerHTML=(strips.length?`<div class="gstrip">${strips.join("")}</div>`:"")+`<div class="ticker"><b>Latest</b><p>${tick}</p></div>`+rows;
   $("liveGrid").querySelectorAll("[data-cast]").forEach(b=>b.onclick=e=>{ e.preventDefault(); openSauceCast(b.dataset.cast); });
   $("liveGrid").querySelectorAll("a.gchip").forEach(a=>a.onclick=e=>{ e.preventDefault(); const u=new URL(a.href, location.href); openSauceCast(u.searchParams.get("game")); });
-  const tot=cardTotal(STATE.lineup);
+  const tot=cardTotal(lu);
   $("liveTotal").textContent=tot.toFixed(1);
-  $("liveSub").textContent=(STATE.name||"Your card")+(STATE.locked?" · locked":" · lock to track")+" · tap gamecast";
+  const watching=STATE.viewCard;
+  $("liveSub").textContent= watching
+    ? ("Viewing "+watching.name+" · tap a name for gamecast")
+    : ((STATE.name||"Your card")+(STATE.locked?" · locked":" · lock to track")+" · tap gamecast");
+  if(watching){
+    const bar=document.createElement("p");
+    bar.className="hint";
+    bar.innerHTML='<button type="button" id="backMine" class="ghost" style="border:0;background:none;color:var(--orange);font-weight:800">← Your card</button>';
+    $("liveGrid").prepend(bar);
+    $("backMine").onclick=()=>{ STATE.viewCard=null; paintLive(); };
+  }
 }
 
 
@@ -1137,7 +1161,7 @@ function paintStand(){
   const admin=sessionStorage.getItem("sauceCap.admin")==="1";
   const note=STATE.boardErr?`<p class="hint">Board: ${STATE.boardErr.slice(0,120)}</p>`:`<p class="hint">Shared week board. <button type="button" id="adminBtn" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">${admin?"Admin on":"Manage board"}</button></p>`;
   $("standNow").innerHTML = note+(ranked.length ? ranked.map((c,i)=>`
-    <div class="lrow">
+    <div class="lrow" data-open="${c.name}" style="cursor:pointer">
       <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${c.pts.toFixed(1)}</div></div>
       <div class="sub">${c.locked?"Locked":"Open"} · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
       <p class="hint cover">${lineupLine(c)}</p>
@@ -1150,10 +1174,10 @@ function paintStand(){
     else if(pin) toast("Wrong code");
   };
   $("standNow").onclick=e=>{
-    const b=e.target.closest("[data-del]");
-    if(!b) return;
-    e.preventDefault();
-    deleteCard(b.getAttribute("data-del"));
+    const del=e.target.closest("[data-del]");
+    if(del){ e.preventDefault(); deleteCard(del.getAttribute("data-del")); return; }
+    const row=e.target.closest("[data-open]");
+    if(row) openCardLive(row.getAttribute("data-open"));
   };
   $("standLog").innerHTML = (STATE.log||[]).length ? STATE.log.slice(0,16).map(r=>`
     <div class="lrow"><div class="topr"><b>${r.name}</b><div class="pts">${Number(r.pts||0).toFixed(1)}</div></div>
