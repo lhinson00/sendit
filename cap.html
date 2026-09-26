@@ -1,2 +1,12 @@
 <!DOCTYPE html>
-<!-- restored from local artifacts; see follow-up if truncated -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sauce Cap</title>
+<body style="margin:0;background:#05060a;color:#f7f2ea;font-family:system-ui">
+<p style="padding:24px">Loading Sauce Cap…</p>
+<script>
+fetch("https://raw.githubusercontent.com/lhinson00/sendit/da13eaaa1d3dab3b9a0f8aa69c328e5dfeebd4c8/cap.html")
+  .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
+  .then(function(t){ document.open(); document.write(t); document.close(); })
+  .catch(function(e){ document.body.innerHTML="<p style='padding:24px'>Could not load Cap. Hard refresh in a minute.</p>"; });
+</script>
+</body>
