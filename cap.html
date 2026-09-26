@@ -6,7 +6,17 @@
 <script>
 fetch("https://raw.githubusercontent.com/lhinson00/sendit/da13eaaa1d3dab3b9a0f8aa69c328e5dfeebd4c8/cap.html")
   .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
-  .then(function(t){ document.open(); document.write(t); document.close(); })
-  .catch(function(e){ document.body.innerHTML="<p style='padding:24px'>Could not load Cap. Hard refresh in a minute.</p>"; });
+  .then(function(t){
+    document.open(); document.write(t); document.close();
+    var brand=document.querySelector(".brand");
+    if(!brand || document.getElementById("capHome")) return;
+    var a=document.createElement("a");
+    a.id="capHome";
+    a.href="/";
+    a.textContent="Home";
+    a.style.cssText="margin-left:auto;text-decoration:none;color:#140800;background:#ffc46b;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-radius:999px";
+    brand.appendChild(a);
+  })
+  .catch(function(){ document.body.innerHTML="<p style='padding:24px'>Could not load Cap. Hard refresh.</p>"; });
 </script>
 </body>
