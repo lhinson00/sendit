@@ -8,17 +8,50 @@ if(!sessionStorage.getItem("capSun26")){
   sessionStorage.setItem("capSun26","1");
   try{ localStorage.removeItem("sauceCap.v1"); }catch(e){}
 }
+function patchCap(){
+  var ev=document.querySelector(".event h2"); if(ev) ev.textContent="Week 3";
+  var kick=document.querySelector(".event .kicker"); if(kick) kick.textContent="Sauce Cap · NFL";
+  var blurb=document.querySelector(".event p:last-of-type"); if(blurb) blurb.textContent="Sunday slate. Thursday\u2019s Falcons–Packers game is final — those players show stats only and cannot be rostered.";
+  document.querySelectorAll(".pill").forEach(function(el){ if(el.id!=="capHome") el.textContent="Week 3"; });
+  var brand=document.querySelector(".brand");
+  if(brand && !document.getElementById("capHome")){
+    var a=document.createElement("a");
+    a.id="capHome"; a.href="/"; a.textContent="Home";
+    a.style.cssText="margin-left:auto;text-decoration:none;color:#140800;background:#ffc46b;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-radius:999px";
+    brand.appendChild(a);
+  }
+  if(typeof addPlayer==="function" && !addPlayer._patched){
+    var orig=addPlayer;
+    addPlayer=function(id){
+      var p=STATE.pool.find(function(x){ return x.id===id; });
+      if(p && typeof gameStarted==="function" && gameStarted(p)) return toast("That game is final — stats only");
+      return orig(id);
+    };
+    addPlayer._patched=true;
+  }
+  if(typeof paintPool==="function" && !paintPool._patched){
+    var pp=paintPool;
+    paintPool=function(){
+      pp();
+      document.querySelectorAll("[data-add]").forEach(function(b){
+        var p=STATE.pool.find(function(x){ return x.id===b.getAttribute("data-add"); });
+        if(p && gameStarted(p)){
+          b.disabled=true;
+          b.textContent="—";
+        }
+      });
+    };
+    paintPool._patched=true;
+    paintPool();
+  }
+}
 fetch("https://raw.githubusercontent.com/lhinson00/sendit/da13eaaa1d3dab3b9a0f8aa69c328e5dfeebd4c8/cap.html")
   .then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); })
   .then(function(t){
     document.open(); document.write(t); document.close();
-    var brand=document.querySelector(".brand");
-    if(brand && !document.getElementById("capHome")){
-      var a=document.createElement("a");
-      a.id="capHome"; a.href="/"; a.textContent="Home";
-      a.style.cssText="margin-left:auto;text-decoration:none;color:#140800;background:#ffc46b;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-radius:999px";
-      brand.appendChild(a);
-    }
+    setTimeout(patchCap, 400);
+    setTimeout(patchCap, 2000);
+    setTimeout(patchCap, 6000);
   })
   .catch(function(){ document.body.innerHTML="<p style='padding:24px'>Could not load Cap. Hard refresh.</p>"; });
 </script>
