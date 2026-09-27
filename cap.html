@@ -348,7 +348,7 @@ function paintBudget(){
   $("remain").parentElement.className = "bcell "+(r<0?"over":"ok");
     $("btnLock").textContent = STATE.locked ? "Locked" : "Lock card";
   $("btnLock").disabled = STATE.locked || !filled() || r<0;
-  $("cardName").disabled = !!(STATE.locked || STATE.sealName);
+  $("cardName").disabled = SLOTS.some(k=>slotFrozen(k));
   const rt=$("rosterTitle");
   if(rt) rt.textContent = (STATE.name||$("cardName").value||"").trim() || "Name your card";
   $("newCardBtn").disabled = true;
@@ -1347,12 +1347,18 @@ function paintStand(){
     <div class="sub">${r.week} · final</div></div>`).join("") : `<p class="hint">Finals land here after a week is put to bed.</p>`;
 }
 
+function nameTaken(name){
+  const n=String(name||"").trim().toLowerCase();
+  return (STATE.cards||[]).some(c=>c.week===STATE.week && String(c.name||"").trim().toLowerCase()===n && !c.mine);
+}
 function lockCard(){
-  if(STATE.locked && STATE.week) return toast("This phone already locked a card this week");
+  if(STATE.locked && STATE.week) return toast("Already locked — rename is open until a game starts");
   if(!filled() || remain()<0) return toast("Fill 9 and stay under $50,000");
-  if(STATE.sealName) STATE.name = STATE.sealName;
-  else STATE.name = ($("cardName").value||"").trim() || "Sunday card";
-  STATE.sealName = STATE.name;
+  const name=($("cardName").value||"").trim();
+  if(!name || /^sunday card$/i.test(name)) return toast("Give the card a name — “Sunday card” is not unique");
+  if(nameTaken(name)) return toast("That name is taken this week — pick another");
+  STATE.name = name;
+  STATE.sealName = name;
   STATE.locked = true;
   upsertCard();
   snapshotIfFinal();
@@ -1515,7 +1521,24 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.datas
 $("posFilt").onchange=paintPool;
 $("gameFilt").onchange=paintPool;
 $("qFilt").oninput=paintPool;
-$("cardName").oninput=e=>{ STATE.name=e.target.value; saveStore(); };
+$("cardName").oninput=e=>{
+  const next=(e.target.value||"").trim();
+  const prev=STATE.name;
+  STATE.name=next;
+  saveStore();
+  const rt=$("rosterTitle"); if(rt) rt.textContent=next||"Name your card";
+};
+$("cardName").onchange=()=>{
+  if(!STATE.locked || SLOTS.some(k=>slotFrozen(k))) return;
+  const name=($("cardName").value||"").trim();
+  if(!name || /^sunday card$/i.test(name)) return toast("Need a unique card name");
+  if(nameTaken(name) && name!==STATE.sealName) return toast("That name is taken");
+  const old=STATE.sealName;
+  STATE.name=name; STATE.sealName=name;
+  saveStore(); upsertCard();
+  if(old && old!==name) deleteCard(old);
+  pushCard(true);
+};
 $("btnLock").onclick=lockCard;
 $("btnClear").onclick=()=>{
   const keep={};
