@@ -1449,28 +1449,31 @@ function fridaySelDate(d){
 }
 function parseTnBoard(html){
   const rows=[];
-  const re=/eventRow[\s\S]{0,2200}?visitingname[\s\S]{0,300}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,220}?visitingscore[^>]*>\s*(\d+)[\s\S]{0,900}?hostname[\s\S]{0,300}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,220}?hostscore[^>]*>\s*(\d+)/gi;
+  const re=/data-eventid="(\d+)"[\s\S]{0,800}?gameStatus[^>]*>([^<]{0,40})[\s\S]{0,4000}?visitingname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?visitingscore[^>]*>([\s\d]*)[\s\S]{0,4000}?hostname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?hostscore[^>]*>([\s\d]*)/gi;
   let m;
   while((m=re.exec(html||""))){
-    rows.push({away:m[1].trim(), as:m[2], home:m[3].trim(), hs:m[4]});
+    rows.push({id:m[1], status:(m[2]||"").trim()||"Final", away:m[3].trim(), as:(m[4]||"").trim(), home:m[5].trim(), hs:(m[6]||"").trim()});
   }
   return rows;
 }
-function applyTnScores(rows){
-  const pack=window.TNFB||{games:[]};
+function applyTnScores(rows, day){
+  const pack=window.TNFB||{games:[],standings:[]};
+  pack.games=pack.games||[];
   let hit=0;
-  (pack.games||[]).forEach(g=>{
-    const row=rows.find(r=>
-      (tnNameHit(r.home,g.home)&&tnNameHit(r.away,g.away)) ||
-      (tnNameHit(r.home,g.away)&&tnNameHit(r.away,g.home))
-    );
-    if(!row) return;
-    if(tnNameHit(row.home,g.home)){ g.hs=String(row.hs); g.as=String(row.as); }
-    else { g.hs=String(row.as); g.as=String(row.hs); }
-    g.status="Final";
+  rows.forEach(r=>{
+    if(!r.away||!r.home) return;
+    let g=pack.games.find(x=>String(x.id)===String(r.id));
+    if(!g) g=pack.games.find(x=>x.date===day && tnNameHit(x.home,r.home) && tnNameHit(x.away,r.away));
+    if(!g){
+      g={id:String(r.id), date:day, region:"", status:r.status||"Final", away:r.away, home:r.home, as:r.as||"", hs:r.hs||"", ar:"", hr:"", aid:"", hid:""};
+      pack.games.push(g);
+    }
+    g.as=r.as||g.as; g.hs=r.hs||g.hs;
+    if(r.status) g.status=r.status.replace(/\s+/g," ");
+    if((g.as!==""||g.hs!=="") && /final/i.test(g.status||"")) g.status="Final";
     hit++;
   });
-  pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
+pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
   window.TNFB=pack;
   return hit;
 }
@@ -1491,7 +1494,7 @@ async function refreshTnFromSource(why){
       const html=await r.text();
       const rows=parseTnBoard(html);
       if(!rows.length) continue;
-      const n=applyTnScores(rows);
+      const n=applyTnScores(rows, day);
       if(LEAGUE==="tssaa") paintTnSlate();
       const line=$("liveMeta");
       if(line) line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" scores";
