@@ -957,12 +957,16 @@ function dstPtsFromSum(sum, teamId){
 }
 
 async function refreshLive(){
+  if(window._capLiveBusy) return window._capLiveBusy;
+  let done;
+  window._capLiveBusy=new Promise(r=>done=r);
+  try{
   const ids = SLOTS.map(k=>STATE.lineup[k]).filter(Boolean);
   const allIds=[...ids];
   (STATE.cards||[]).forEach(c=>SLOTS.forEach(k=>{ if(c.lineup&&c.lineup[k]) allIds.push(c.lineup[k]); }));
   const events=[...new Set(allIds.map(id=>{
     const p=STATE.pool.find(x=>x.id===id); return p&&p.eventId;
-  }).filter(Boolean).concat((STATE.games||[]).filter(g=>g.state==="in"||g.state==="pre").map(g=>g.eventId)))];
+  }).filter(Boolean).concat((STATE.games||[]).filter(g=>g.state==="in").map(g=>g.eventId)))];
   if(!ids.length && !events.length){ $("liveTotal").textContent="0.0"; $("liveSub").textContent="No locked card yet"; $("liveGrid").innerHTML=""; return; }
   await Promise.all(events.map(async eid=>{
     try{
@@ -977,11 +981,12 @@ async function refreshLive(){
       }
     }catch(e){}
   }));
+  STATE.liveReady=true;
   paintLive();
   paintStand();
   if(STATE.breakId && $("drawer").classList.contains("on")) openLiveBreak(STATE.breakId);
   if(STATE.locked) pushCard(false);
-  pullBoard().then(paintStand);
+  } finally { done(); window._capLiveBusy=null; }
 }
 
 function scorePlayer(p){
@@ -1325,7 +1330,7 @@ function paintStand(){
   const note=STATE.boardErr?`<p class="hint">Board: ${STATE.boardErr.slice(0,120)}</p>`:`<p class="hint">Shared week board. <button type="button" id="adminBtn" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">${admin?"Admin on":"Manage board"}</button></p>`;
   $("standNow").innerHTML = note+(ranked.length ? ranked.map((c,i)=>`
     <div class="lrow" data-open="${c.name}" style="cursor:pointer">
-      <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${c.pts.toFixed(1)}</div></div>
+      <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${STATE.liveReady?c.pts.toFixed(1):"…"}</div></div>
       <div class="sub">${c.locked?"Locked":"Open"} · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
       <p class="hint cover">${lineupLine(c)}</p>
     </div>`).join("") : `<p class="hint">No shared cards this week yet.</p>`);
@@ -1565,7 +1570,8 @@ loadStore();
     await loadSlate();
     if(prevWeek && prevWeek!==STATE.week){ STATE.locked=false; STATE.lineup={}; STATE.name=""; STATE.sealName=""; saveStore(); }
     await loadPool();
-    if(STATE.locked) refreshLive();
+    await pullBoard();
+    await refreshLive();
     const stay=sessionStorage.getItem("sauceCap.tab")||"build";
     tabTo(stay);
     startInjuryClock();
