@@ -1600,12 +1600,14 @@ function paintTnSlate(){
     return `<p class="kicker" style="margin:14px 0 8px">${fmtTnDate(d)} · ${list.length} games</p>`+list.map(card).join("");
   }).join("") || `<p class="hint">No games in this region for that date.</p>`;
   $("liveList").innerHTML = weekPills + regPills + body;
-  $("tnWeeks") && $("tnWeeks").onclick=e=>{
+  const weeks=$("tnWeeks");
+  if(weeks) weeks.onclick=e=>{
     const b=e.target.closest("[data-tnweek]"); if(!b) return;
     window.TN_WEEK=b.getAttribute("data-tnweek");
     paintTnSlate();
   };
-  $("tnPills") && $("tnPills").onclick=e=>{
+  const pills=$("tnPills");
+  if(pills) pills.onclick=e=>{
     const b=e.target.closest("[data-tnreg]"); if(!b) return;
     window.TN_REG=b.getAttribute("data-tnreg");
     paintTnSlate();
