@@ -1743,7 +1743,8 @@ async function loadLeague(lg){
   if(window.trackUse) window.trackUse("league", lg);
   show("live");
   $("liveMeta").textContent = "Loading "+lg.toUpperCase();
-  $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
+  if(lg!=="tssaa") $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
+  else $("liveList").innerHTML = "<p class='hint'>Loading Tennessee scores…</p>";
   if($("tssaaTabs")) $("tssaaTabs").hidden = lg!=="tssaa";
   if($("tabEatAny")) $("tabEatAny").hidden = true;
   if(lg==="tssaa"){
@@ -1755,7 +1756,8 @@ async function loadLeague(lg){
     if($("eatPanel")) $("eatPanel").hidden=true;
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
-    tssaaTab("fb");
+    $("liveMeta").textContent = "TSSAA";
+    loadTnPack().then(()=>{ tssaaTab(window.TN_TAB||"fb"); });
     return;
   }
   try{
