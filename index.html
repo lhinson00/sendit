@@ -4036,77 +4036,61 @@ function mlbFindGame(games, abs){
   });
   return hit[0]||null;
 }
+function mlbNormAb(x){
+  const a=String(x||"").toUpperCase();
+  if(a==="CWS"||a==="CHW"||a==="SOX"&&false) return a==="CWS"?"CHW":a;
+  return a==="CWS"?"CHW":a;
+}
 function paintMlbBracket(games){
   const host=$("liveList");
-  const list=games||[];
+  const list=(games||[]).filter(g=>g && (g.awayAb||g.homeAb));
   const liveN=list.filter(g=>g.state==="in").length;
-  $("liveMeta").textContent = "MLB PLAYOFFS"+(liveN?" · "+liveN+" LIVE":" · Wild Card");
-  const pick=(abs)=>{
-    const set=new Set(abs.map(x=>x.toUpperCase()));
-    const hits=list.filter(g=>{
-      const a=String(g.awayAb||"").toUpperCase();
-      const h=String(g.homeAb||"").toUpperCase();
-      const an=String(g.away||"").toUpperCase();
-      const hn=String(g.home||"").toUpperCase();
-      const hit=x=>set.has(x)||[...set].some(s=>an.includes(s)||hn.includes(s)||a===s||h===s);
-      return set.has(a)&&set.has(h) || (hit(a)&&hit(h));
-    });
-    hits.sort((a,b)=>({in:0,post:1,pre:2}[a.state]??3)-({in:0,post:1,pre:2}[b.state]??3));
-    return hits[0]||null;
+  $("liveMeta").textContent = "MLB PLAYOFFS"+(liveN?" · "+liveN+" LIVE":" · Wild Card G1");
+  const find=need=>{
+    const want=new Set(need.map(mlbNormAb));
+    return list.find(g=>want.has(mlbNormAb(g.awayAb)) && want.has(mlbNormAb(g.homeAb))) || null;
   };
-  const logo=ab=>"https://a.espncdn.com/i/teamlogos/mlb/500/"+(ab==="CWS"?"chw":ab.toLowerCase())+".png";
+  const logo=ab=>"https://a.espncdn.com/i/teamlogos/mlb/500/"+mlbNormAb(ab).toLowerCase()+".png";
   const when=g=>{
-    if(!g) return "Game 1 · today";
-    if(g.state==="in") return "LIVE · "+(g.detail||"In progress");
-    if(g.state==="post") return "FINAL · "+(g.detail||"Game 1");
-    if(g.detail) return g.detail;
-    try{
-      const d=new Date(g.start);
-      if(!isNaN(d)) return d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Chicago"})+" CT";
-    }catch(e){}
-    return "Upcoming";
+    if(!g) return "";
+    if(g.state==="in") return "LIVE  "+(g.detail||"");
+    if(g.state==="post") return "FINAL";
+    return g.detail || (g.start?new Date(g.start).toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit",timeZone:"America/Chicago"})+" CT":"");
   };
+  const sc=(g,ab)=>{
+    if(!g) return "–";
+    if(mlbNormAb(g.awayAb)===mlbNormAb(ab)) return (g.awayScore==null||g.awayScore==="")?"–":g.awayScore;
+    if(mlbNormAb(g.homeAb)===mlbNormAb(ab)) return (g.homeScore==null||g.homeScore==="")?"–":g.homeScore;
+    return "–";
+  };
+  const won=(g,ab)=> !!(g && g.state==="post" && ((mlbNormAb(g.awayAb)===mlbNormAb(ab)&&g.awayWin)||(mlbNormAb(g.homeAb)===mlbNormAb(ab)&&g.homeWin)));
   const series=[
-    {lg:"NL", round:"WILD CARD", of:"Best of 3", abs:["PHI","ATL"], a:{seed:"6",ab:"PHI",n:"Phillies"}, h:{seed:"3",ab:"ATL",n:"Braves"}, wait:"Winner → Dodgers"},
-    {lg:"AL", round:"WILD CARD", of:"Best of 3", abs:["CHW","CWS","HOU"], a:{seed:"6",ab:"CHW",n:"White Sox"}, h:{seed:"3",ab:"HOU",n:"Astros"}, wait:"Winner → Guardians"},
-    {lg:"AL", round:"WILD CARD", of:"Best of 3", abs:["BOS","NYY"], a:{seed:"5",ab:"BOS",n:"Red Sox"}, h:{seed:"4",ab:"NYY",n:"Yankees"}, wait:"Winner → Rays"},
-    {lg:"NL", round:"WILD CARD", of:"Best of 3", abs:["CHC","SD"], a:{seed:"5",ab:"CHC",n:"Cubs"}, h:{seed:"4",ab:"SD",n:"Padres"}, wait:"Winner → Brewers"}
+    {need:["PHI","ATL"], road:{seed:6,ab:"PHI",n:"Phillies"}, host:{seed:3,ab:"ATL",n:"Braves"}, k:"NL WILD CARD"},
+    {need:["CHW","HOU"], road:{seed:6,ab:"CHW",n:"White Sox"}, host:{seed:3,ab:"HOU",n:"Astros"}, k:"AL WILD CARD"},
+    {need:["BOS","NYY"], road:{seed:5,ab:"BOS",n:"Red Sox"}, host:{seed:4,ab:"NYY",n:"Yankees"}, k:"AL WILD CARD"},
+    {need:["CHC","SD"], road:{seed:5,ab:"CHC",n:"Cubs"}, host:{seed:4,ab:"SD",n:"Padres"}, k:"NL WILD CARD"}
   ];
-  const byes=[
-    {lg:"AL", seed:"1", ab:"TB", n:"Rays", wait:"Plays Yankees / Red Sox winner"},
-    {lg:"AL", seed:"2", ab:"CLE", n:"Guardians", wait:"Plays Astros / White Sox winner"},
-    {lg:"NL", seed:"1", ab:"MIL", n:"Brewers", wait:"Plays Padres / Cubs winner"},
-    {lg:"NL", seed:"2", ab:"LAD", n:"Dodgers", wait:"Plays Braves / Phillies winner"}
-  ];
-  const cards=series.map(s=>{
-    const g=pick(s.abs);
+  const html=series.map(s=>{
+    const g=find(s.need);
     const live=g&&g.state==="in";
     const done=g&&g.state==="post";
-    const as=g&&g.awayScore!=null&&g.awayScore!==""?g.awayScore:"–";
-    const hs=g&&g.homeScore!=null&&g.homeScore!==""?g.homeScore:"–";
-    const aW=!!(g&&g.awayWin);
-    const hW=!!(g&&g.homeWin);
-    const cls=live?" live":done?" done":"";
-    const eid=g&&(g.eventId||g.id)||"";
-    return `<button type="button" class="series${cls}" data-gid="${eid}">
-      <div class="k"><span>${s.lg} ${s.round}</span><span class="${live?"pulse":""}">${when(g)}</span></div>
-      <div class="srow2${aW?" win":""}"><span class="seed">${s.a.seed}</span><img alt="" src="${logo(s.a.ab)}"/><div class="who"><b>${s.a.n}</b><em>${s.a.ab} · road</em></div><div class="sc">${as}</div></div>
-      <div class="srow2${hW?" win":""}"><span class="seed">${s.h.seed}</span><img alt="" src="${logo(s.h.ab)}"/><div class="who"><b>${s.h.n}</b><em>${s.h.ab} · host</em></div><div class="sc">${hs}</div></div>
-      <div class="foot">${s.of} · ${s.wait}${g&&g.broadcast?" · "+g.broadcast:""}</div>
+    const row=tm=>`<div class="srow2${won(g,tm.ab)?" win":""}"><span class="seed">${tm.seed}</span><img alt="" src="${logo(tm.ab)}"/><div class="who"><b>${tm.n}</b><em>${tm.ab}</em></div><div class="sc">${sc(g,tm.ab)}</div></div>`;
+    return `<button type="button" class="series${live?" live":done?" done":""}" data-gid="${g&&(g.eventId||g.id)||""}">
+      <div class="k"><b>${s.k}</b><span class="${live?"pulse":""}">${when(g)||"Game 1"}</span></div>
+      ${row(s.road)}${row(s.host)}
     </button>`;
   }).join("");
-  const byeHtml=byes.map(b=>`<div class="series bye"><div class="k"><span>${b.lg} DS BYE</span><span>#${b.seed}</span></div>
-    <div class="srow2"><span class="seed">${b.seed}</span><img alt="" src="${logo(b.ab)}"/><div class="who"><b>${b.n}</b><em>${b.ab}</em></div><div class="sc"></div></div>
-    <div class="foot">${b.wait}</div></div>`).join("");
-  host.innerHTML=`<div class="mlb-br">
-    <h3 style="margin:0;letter-spacing:.14em;font-size:12px;color:#ff7a18">TODAY · WILD CARD GAME 1</h3>
-    ${cards}
-    <h3 style="margin:8px 0 0;letter-spacing:.14em;font-size:12px;color:#8a8074">WAITING · DIVISION SERIES</h3>
-    ${byeHtml}
-    <div class="ws-slot"><b>WORLD SERIES</b>Set after LCS · late October</div>
-  </div>`;
+  const byes=`<div class="series bye"><div class="k"><span>ALDS BYES</span></div>
+    <div class="srow2"><span class="seed">1</span><img alt="" src="${logo("TB")}"/><div class="who"><b>Rays</b><em>plays BOS/NYY winner</em></div></div>
+    <div class="srow2"><span class="seed">2</span><img alt="" src="${logo("CLE")}"/><div class="who"><b>Guardians</b><em>plays HOU/CHW winner</em></div></div></div>
+    <div class="series bye"><div class="k"><span>NLDS BYES</span></div>
+    <div class="srow2"><span class="seed">1</span><img alt="" src="${logo("MIL")}"/><div class="who"><b>Brewers</b><em>plays SD/CHC winner</em></div></div>
+    <div class="srow2"><span class="seed">2</span><img alt="" src="${logo("LAD")}"/><div class="who"><b>Dodgers</b><em>plays ATL/PHI winner</em></div></div></div>`;
+  host.innerHTML=`<div class="mlb-br">${html}${byes}</div>`;
   host.querySelectorAll("[data-gid]").forEach(el=>{
-    el.onclick=()=>{ const id=el.getAttribute("data-gid"); if(id) openGame(id,id); };
+    const id=el.getAttribute("data-gid");
+    if(!id) return;
+    el.onclick=()=>openGame(id,id);
   });
 }
 function mlbTab(which){
