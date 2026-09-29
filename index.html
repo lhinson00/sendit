@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -632,7 +631,7 @@ table.mlstbl td.l{text-align:left;white-space:normal}
 .mlb-br{display:flex;flex-direction:column;gap:18px;padding-bottom:24px}
 .mlb-lg h3{margin:0 0 10px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18}
 .mlb-lg p.sub{margin:0 0 10px;color:#8a8074;font-size:12px}
-.series{background:#101218;border:1px solid #2a241c;border-radius:10px;padding:10px 12px;margin-bottom:10px}
+button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}.series{background:#101218;border:1px solid #2a241c;border-radius:10px;padding:10px 12px;margin-bottom:10px}
 .series.live{border-color:#3ee0a0;background:#0c1612;box-shadow:inset 3px 0 0 #3ee0a0}
 .series.done{border-color:#fff}
 .series.bye{opacity:.92;border-style:dashed}
@@ -4039,43 +4038,72 @@ function mlbFindGame(games, abs){
 }
 function paintMlbBracket(games){
   const host=$("liveList");
-  const liveN=(games||[]).filter(g=>g.state==="in").length;
-  $("liveMeta").textContent = "MLB PLAYOFFS · 2026"+(liveN?" · "+liveN+" LIVE":"");
-  const AL=[
-    {tag:"ALWC · BEST OF 3", abs:["CWS","CHW","HOU"], a:{seed:6,ab:"CWS",name:"White Sox"}, h:{seed:3,ab:"HOU",name:"Astros"}, next:"Winner plays Cleveland"},
-    {tag:"ALWC · BEST OF 3", abs:["BOS","NYY"], a:{seed:5,ab:"BOS",name:"Red Sox"}, h:{seed:4,ab:"NYY",name:"Yankees"}, next:"Winner plays Tampa Bay"},
-    {tag:"ALDS BYE · #1", abs:[], bye:true, h:{seed:1,ab:"TB",name:"Rays"}, next:"Waits for Yankees / Red Sox"},
-    {tag:"ALDS BYE · #2", abs:[], bye:true, h:{seed:2,ab:"CLE",name:"Guardians"}, next:"Waits for Astros / White Sox"}
+  const list=games||[];
+  const liveN=list.filter(g=>g.state==="in").length;
+  $("liveMeta").textContent = "MLB PLAYOFFS"+(liveN?" · "+liveN+" LIVE":" · Wild Card");
+  const pick=(abs)=>{
+    const set=new Set(abs.map(x=>x.toUpperCase()));
+    const hits=list.filter(g=>{
+      const a=String(g.awayAb||"").toUpperCase();
+      const h=String(g.homeAb||"").toUpperCase();
+      const an=String(g.away||"").toUpperCase();
+      const hn=String(g.home||"").toUpperCase();
+      const hit=x=>set.has(x)||[...set].some(s=>an.includes(s)||hn.includes(s)||a===s||h===s);
+      return set.has(a)&&set.has(h) || (hit(a)&&hit(h));
+    });
+    hits.sort((a,b)=>({in:0,post:1,pre:2}[a.state]??3)-({in:0,post:1,pre:2}[b.state]??3));
+    return hits[0]||null;
+  };
+  const logo=ab=>"https://a.espncdn.com/i/teamlogos/mlb/500/"+(ab==="CWS"?"chw":ab.toLowerCase())+".png";
+  const when=g=>{
+    if(!g) return "Game 1 · today";
+    if(g.state==="in") return "LIVE · "+(g.detail||"In progress");
+    if(g.state==="post") return "FINAL · "+(g.detail||"Game 1");
+    if(g.detail) return g.detail;
+    try{
+      const d=new Date(g.start);
+      if(!isNaN(d)) return d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Chicago"})+" CT";
+    }catch(e){}
+    return "Upcoming";
+  };
+  const series=[
+    {lg:"NL", round:"WILD CARD", of:"Best of 3", abs:["PHI","ATL"], a:{seed:"6",ab:"PHI",n:"Phillies"}, h:{seed:"3",ab:"ATL",n:"Braves"}, wait:"Winner → Dodgers"},
+    {lg:"AL", round:"WILD CARD", of:"Best of 3", abs:["CHW","CWS","HOU"], a:{seed:"6",ab:"CHW",n:"White Sox"}, h:{seed:"3",ab:"HOU",n:"Astros"}, wait:"Winner → Guardians"},
+    {lg:"AL", round:"WILD CARD", of:"Best of 3", abs:["BOS","NYY"], a:{seed:"5",ab:"BOS",n:"Red Sox"}, h:{seed:"4",ab:"NYY",n:"Yankees"}, wait:"Winner → Rays"},
+    {lg:"NL", round:"WILD CARD", of:"Best of 3", abs:["CHC","SD"], a:{seed:"5",ab:"CHC",n:"Cubs"}, h:{seed:"4",ab:"SD",n:"Padres"}, wait:"Winner → Brewers"}
   ];
-  const NL=[
-    {tag:"NLWC · BEST OF 3", abs:["PHI","ATL"], a:{seed:6,ab:"PHI",name:"Phillies"}, h:{seed:3,ab:"ATL",name:"Braves"}, next:"Winner plays Los Angeles"},
-    {tag:"NLWC · BEST OF 3", abs:["CHC","SD"], a:{seed:5,ab:"CHC",name:"Cubs"}, h:{seed:4,ab:"SD",name:"Padres"}, next:"Winner plays Milwaukee"},
-    {tag:"NLDS BYE · #1", abs:[], bye:true, h:{seed:1,ab:"MIL",name:"Brewers"}, next:"Waits for Padres / Cubs"},
-    {tag:"NLDS BYE · #2", abs:[], bye:true, h:{seed:2,ab:"LAD",name:"Dodgers"}, next:"Waits for Braves / Phillies"}
+  const byes=[
+    {lg:"AL", seed:"1", ab:"TB", n:"Rays", wait:"Plays Yankees / Red Sox winner"},
+    {lg:"AL", seed:"2", ab:"CLE", n:"Guardians", wait:"Plays Astros / White Sox winner"},
+    {lg:"NL", seed:"1", ab:"MIL", n:"Brewers", wait:"Plays Padres / Cubs winner"},
+    {lg:"NL", seed:"2", ab:"LAD", n:"Dodgers", wait:"Plays Braves / Phillies winner"}
   ];
-  const card=s=>{
-    const g=mlbFindGame(games, s.abs);
+  const cards=series.map(s=>{
+    const g=pick(s.abs);
     const live=g&&g.state==="in";
     const done=g&&g.state==="post";
-    const as=g?g.as:""; const hs=g?g.hs:"";
-    const aWin=done&&as!==""&&hs!==""&&Number(as)>Number(hs);
-    const hWin=done&&as!==""&&hs!==""&&Number(hs)>Number(as);
-    const clk=live?((g.clock||g.detail||"LIVE")):(done?"FINAL":(g&&(g.start||g.detail))||"");
-    const row=(tm,score,win,home)=>{
-      const ab=tm.ab==="CWS"?"chw":tm.ab.toLowerCase();
-      return `<div class="srow2${win?" win":""}"><span class="seed">${tm.seed}</span><img alt="" src="${mlbLogo(ab)}"/><div class="who"><b>${tm.name}</b><em>${tm.ab}${home?" · host":""}</em></div><div class="sc">${score===""||score==null?"–":score}</div></div>`;
-    };
-    if(s.bye){
-      return `<div class="series bye"><div class="k"><span>${s.tag}</span><span>LDS</span></div>${row(s.h,"",false,true)}<div class="foot">${s.next}</div></div>`;
-    }
+    const as=g&&g.awayScore!=null&&g.awayScore!==""?g.awayScore:"–";
+    const hs=g&&g.homeScore!=null&&g.homeScore!==""?g.homeScore:"–";
+    const aW=!!(g&&g.awayWin);
+    const hW=!!(g&&g.homeWin);
     const cls=live?" live":done?" done":"";
     const eid=g&&(g.eventId||g.id)||"";
-    return `<div class="series${cls}" data-gid="${eid}"><div class="k"><span>${s.tag}</span><span class="${live?"pulse":""}">${live?"● "+clk:(done?"FINAL":clk||"Game 1")}</span></div>${row(s.a,as,aWin,false)}${row(s.h,hs,hWin,true)}<div class="foot">${s.next}${g&&g.note?" · "+g.note:""}</div></div>`;
-  };
+    return `<button type="button" class="series${cls}" data-gid="${eid}">
+      <div class="k"><span>${s.lg} ${s.round}</span><span class="${live?"pulse":""}">${when(g)}</span></div>
+      <div class="srow2${aW?" win":""}"><span class="seed">${s.a.seed}</span><img alt="" src="${logo(s.a.ab)}"/><div class="who"><b>${s.a.n}</b><em>${s.a.ab} · road</em></div><div class="sc">${as}</div></div>
+      <div class="srow2${hW?" win":""}"><span class="seed">${s.h.seed}</span><img alt="" src="${logo(s.h.ab)}"/><div class="who"><b>${s.h.n}</b><em>${s.h.ab} · host</em></div><div class="sc">${hs}</div></div>
+      <div class="foot">${s.of} · ${s.wait}${g&&g.broadcast?" · "+g.broadcast:""}</div>
+    </button>`;
+  }).join("");
+  const byeHtml=byes.map(b=>`<div class="series bye"><div class="k"><span>${b.lg} DS BYE</span><span>#${b.seed}</span></div>
+    <div class="srow2"><span class="seed">${b.seed}</span><img alt="" src="${logo(b.ab)}"/><div class="who"><b>${b.n}</b><em>${b.ab}</em></div><div class="sc"></div></div>
+    <div class="foot">${b.wait}</div></div>`).join("");
   host.innerHTML=`<div class="mlb-br">
-    <div class="mlb-lg"><h3>American League</h3><p class="sub">Wild Card · best of 3 · higher seed hosts all</p>${AL.map(card).join("")}</div>
-    <div class="mlb-lg"><h3>National League</h3><p class="sub">Wild Card · best of 3 · higher seed hosts all</p>${NL.map(card).join("")}</div>
-    <div class="ws-slot"><b>World Series</b>AL champion vs NL champion · late October</div>
+    <h3 style="margin:0;letter-spacing:.14em;font-size:12px;color:#ff7a18">TODAY · WILD CARD GAME 1</h3>
+    ${cards}
+    <h3 style="margin:8px 0 0;letter-spacing:.14em;font-size:12px;color:#8a8074">WAITING · DIVISION SERIES</h3>
+    ${byeHtml}
+    <div class="ws-slot"><b>WORLD SERIES</b>Set after LCS · late October</div>
   </div>`;
   host.querySelectorAll("[data-gid]").forEach(el=>{
     el.onclick=()=>{ const id=el.getAttribute("data-gid"); if(id) openGame(id,id); };
