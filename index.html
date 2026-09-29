@@ -1650,30 +1650,56 @@ function paintTnStand(){
   if(!host) return;
   host.hidden=false;
   $("liveList").hidden=true;
-  const pack=window.TNFB||{};
-  const games=pack.games||[];
-  const map=tnRegMap(games);
-  const rec={};
+  const games=(window.TNFB||{}).games||[];
+  const votes={};
   games.forEach(g=>{
-    const add=(nm,w,l,t)=>{ if(!nm) return; rec[nm]=rec[nm]||{w:0,l:0,t:0,reg:map[nm]||tnGameReg(g,map)}; rec[nm].w+=w; rec[nm].l+=l; rec[nm].t+=t; if(map[nm]) rec[nm].reg=map[nm]; };
+    const r=tnCleanReg(g.region);
+    if(r==="Independent") return;
+    [g.away,g.home].forEach(nm=>{
+      if(!nm) return;
+      votes[nm]=votes[nm]||{};
+      votes[nm][r]=(votes[nm][r]||0)+1;
+    });
+  });
+  const map={};
+  Object.keys(votes).forEach(nm=>{
+    map[nm]=Object.keys(votes[nm]).sort((a,b)=>votes[nm][b]-votes[nm][a])[0];
+  });
+  const rec={};
+  const add=(nm,ow,ol,ot,rw,rl)=>{
+    if(!nm) return;
+    rec[nm]=rec[nm]||{ow:0,ol:0,ot:0,rw:0,rl:0,reg:map[nm]||"Independent"};
+    rec[nm].ow+=ow; rec[nm].ol+=ol; rec[nm].ot+=ot; rec[nm].rw+=rw; rec[nm].rl+=rl;
+  };
+  games.forEach(g=>{
     const as=parseInt(g.as,10), hs=parseInt(g.hs,10);
     if(isNaN(as)||isNaN(hs)) return;
-    if(as>hs){ add(g.away,1,0,0); add(g.home,0,1,0); }
-    else if(hs>as){ add(g.home,1,0,0); add(g.away,0,1,0); }
-    else { add(g.away,0,0,1); add(g.home,0,0,1); }
+    const same=map[g.away] && map[g.away]===map[g.home];
+    if(as>hs){ add(g.away,1,0,0,same?1:0,0); add(g.home,0,1,0,0,same?1:0); }
+    else if(hs>as){ add(g.home,1,0,0,same?1:0,0); add(g.away,0,1,0,0,same?1:0); }
+    else { add(g.away,0,0,1,0,0); add(g.home,0,0,1,0,0); }
   });
   const byReg={};
   Object.keys(rec).forEach(nm=>{
     const r=rec[nm].reg||"Independent";
-    (byReg[r]=byReg[r]||[]).push({team:nm, ...rec[nm]});
+    (byReg[r]=byReg[r]||[]).push({team:nm,...rec[nm]});
   });
-  const titles=Object.keys(byReg).sort();
+  const rank=r=>{
+    const d1=r.match(/DIVISION I · REGION (\d+)/i);
+    if(d1) return 10+Number(d1[1]);
+    if(/EAST/i.test(r)&&/II/.test(r)) return 21;
+    if(/MIDDLE/i.test(r)&&/II/.test(r)) return 22;
+    if(/WEST/i.test(r)&&/II/.test(r)) return 23;
+    if(/Independent/i.test(r)) return 90;
+    return 50;
+  };
+  const titles=Object.keys(byReg).sort((a,b)=>rank(a)-rank(b)||a.localeCompare(b));
   $("liveMeta").textContent="TSSAA · Standings · through "+fmtTnDate(tnLatestDate(games));
   host.innerHTML = titles.map(title=>{
-    const teams=byReg[title].slice().sort((a,b)=>b.w-a.w || a.l-b.l || a.team.localeCompare(b.team));
+    const teams=byReg[title].slice().sort((a,b)=>b.rw-a.rw || a.rl-b.rl || b.ow-a.ow || a.team.localeCompare(b.team));
     return `<div class="stable"><h3>${title}</h3>
-      <div class="srow head"><span>#</span><span></span><div>Team</div><span></span><span>Overall</span></div>
-      ${teams.map((t,i)=>`<div class="srow" data-tname="${String(t.team).replace(/"/g,"")}"><span>${i+1}</span><span></span><div><b>${t.team}</b></div><span></span><span>${t.w}-${t.l}${t.t?"-"+t.t:""}</span></div>`).join("")}
+      <div class="srow head"><span>#</span><span></span><div>Team</div><span>Region</span><span>Overall</span></div>
+      ${teams.map((t,i)=>`<div class="srow" data-tname="${String(t.team).replace(/"/g,"")}"><span>${i+1}</span><span></span><div><b>${t.team}</b></div><span>${t.rw}-${t.rl}</span><span>${t.ow}-${t.ol}${t.ot?"-"+t.ot:""}</span></div>`).join("")}
     </div>`;
   }).join("");
   host.querySelectorAll("[data-tname]").forEach(b=>b.onclick=()=>openTnTeam("", b.dataset.tname));
