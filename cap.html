@@ -1248,7 +1248,8 @@ async function pullBoard(){
     rows.forEach(row=>{
       const id=(row.name||"Card")+"|"+row.week;
       const lineup=typeof row.lineup==="string"?JSON.parse(row.lineup): (row.lineup||{});
-      STATE.cards.push({id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true});
+      const mine=String(row.name||"").trim().toLowerCase()===String(STATE.sealName||STATE.name||"").trim().toLowerCase();
+      STATE.cards.push({id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true,mine});
     });
   }catch(e){ STATE.boardErr=String(e.message||e); }
 }
@@ -1354,7 +1355,14 @@ function paintStand(){
 
 function nameTaken(name){
   const n=String(name||"").trim().toLowerCase();
-  return (STATE.cards||[]).some(c=>c.week===STATE.week && String(c.name||"").trim().toLowerCase()===n && !c.mine);
+  const mine=String(STATE.sealName||STATE.name||"").trim().toLowerCase();
+  if(n && n===mine) return false;
+  return (STATE.cards||[]).some(c=>{
+    if(c.week!==STATE.week) return false;
+    if(c.mine) return false;
+    if(String(c.name||"").trim().toLowerCase()!==n) return false;
+    return n!==mine;
+  });
 }
 function lockCard(){
   if(STATE.locked && STATE.week) return toast("Already locked — rename is open until a game starts");
@@ -1369,7 +1377,11 @@ function lockCard(){
   snapshotIfFinal();
   saveStore();
   paintAll();
-  pushCard(true).then(()=>{ toast("Locked · on the shared board"); tabTo("stand"); paintStand(); });
+  pushCard(false).then(()=>{
+    if(STATE.boardErr) return pushCard(true).then(()=>{ toast("Locked · on the shared board"); tabTo("stand"); paintStand(); });
+    toast("Locked · lineup updated");
+    tabTo("stand"); paintStand();
+  });
 }
 
 function snapshotIfFinal(){
