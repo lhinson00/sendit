@@ -1424,6 +1424,10 @@ async function pullScoreboard(lg){
     return (await res.json()).events||[];
   }
   const evs=[], seen=new Set();
+  try{
+    const live=await fetch(base,{cache:"no-store"});
+    if(live.ok) ((await live.json()).events||[]).forEach(ev=>{ if(!seen.has(ev.id)){ seen.add(ev.id); evs.push(ev); } });
+  }catch(e){}
   for(const day of boardDates()){
     try{
       const res=await fetch(base+(base.includes("?")?"&":"?")+"dates="+day,{cache:"no-store"});
@@ -4061,7 +4065,14 @@ function paintMlbBracket(games){
     const want=new Set(need.map(mlbNormAb));
     const hits=list.filter(g=>want.has(mlbNormAb(g.awayAb)) && want.has(mlbNormAb(g.homeAb)));
     if(!hits.length) return null;
-    const rank=g=>g.state==="in"?0:g.state==="pre"?1:2;
+    const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
+    const day=g=>chiDay(g.start||"");
+    const rank=g=>{
+      if(g.state==="in") return 0;
+      if(day(g)===today && g.state!=="post") return 1;
+      if(day(g)===today) return 2;
+      return 9;
+    };
     hits.sort((a,b)=>rank(a)-rank(b) || String(b.start||"").localeCompare(String(a.start||"")));
     return hits[0];
   };
