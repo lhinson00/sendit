@@ -1240,17 +1240,24 @@ function supaHeaders(extra){
 async function pullBoard(){
   if(!STATE.week) return;
   try{
+    await fetch(SUPA_URL+"/rest/v1/cards?week=neq."+encodeURIComponent(STATE.week),{
+      method:"DELETE",
+      headers:supaHeaders({"Prefer":"return=minimal"})
+    });
     const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&select=*&order=pts.desc",{headers:supaHeaders()});
     if(!r.ok){ STATE.boardErr=await r.text(); return; }
     const rows=await r.json();
     STATE.boardErr="";
-    STATE.cards=STATE.cards.filter(c=>c.week!==STATE.week);
+    STATE.cards=STATE.cards.filter(c=>c.week===STATE.week && c.mine);
     rows.forEach(row=>{
       const id=(row.name||"Card")+"|"+row.week;
       const lineup=typeof row.lineup==="string"?JSON.parse(row.lineup): (row.lineup||{});
       const mine=String(row.name||"").trim().toLowerCase()===String(STATE.sealName||STATE.name||"").trim().toLowerCase();
-      STATE.cards.push({id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true,mine});
+      const i=STATE.cards.findIndex(c=>c.id===id);
+      const card={id,name:row.name,week:row.week,lineup,locked:true,at:Date.parse(row.locked_at||0)||Date.now(),remote:true,mine};
+      if(i>=0) STATE.cards[i]=card; else STATE.cards.push(card);
     });
+    STATE.cards=STATE.cards.filter(c=>c.week===STATE.week);
   }catch(e){ STATE.boardErr=String(e.message||e); }
 }
 async function pushCard(create){
@@ -1325,16 +1332,15 @@ function lineupLine(c){
   }).join(" · ");
 }
 function paintStand(){
-  const weekCards=STATE.cards.filter(c=>c.week===STATE.week);
-  const ranked=weekCards.map(c=>({...c, pts:cardTotal(c.lineup)})).sort((a,b)=>b.pts-a.pts);
   const admin=sessionStorage.getItem("sauceCap.admin")==="1";
-  const note=STATE.boardErr?`<p class="hint">Board: ${STATE.boardErr.slice(0,120)}</p>`:`<p class="hint">Shared week board. <button type="button" id="adminBtn" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">${admin?"Admin on":"Manage board"}</button></p>`;
+  const ranked=STATE.cards.filter(c=>c.week===STATE.week).map(c=>({...c, pts:cardTotal(c.lineup)})).sort((a,b)=>b.pts-a.pts);
+  const note=STATE.boardErr?`<p class="hint">Board: ${STATE.boardErr.slice(0,120)}</p>`:`<p class="hint">This week only. Prior week clears when the slate resets. <button type="button" id="adminBtn" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">${admin?"Admin on":"Manage board"}</button></p>`;
   $("standNow").innerHTML = note+(ranked.length ? ranked.map((c,i)=>`
     <div class="lrow" data-open="${c.name}" style="cursor:pointer">
       <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${STATE.liveReady?c.pts.toFixed(1):"…"}</div></div>
-      <div class="sub">${c.locked?"Locked":"Open"} · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
+      <div class="sub">Locked · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
       <p class="hint cover">${lineupLine(c)}</p>
-    </div>`).join("") : `<p class="hint">No shared cards this week yet.</p>`);
+    </div>`).join("") : `<p class="hint">No locked lineups this week.</p>`);
   const ab=$("adminBtn");
   if(ab) ab.onclick=()=>{
     if(sessionStorage.getItem("sauceCap.admin")==="1"){ sessionStorage.removeItem("sauceCap.admin"); paintStand(); return; }
@@ -1377,9 +1383,10 @@ function lockCard(){
   snapshotIfFinal();
   saveStore();
   paintAll();
-  pushCard(false).then(()=>{
-    if(STATE.boardErr) return pushCard(true).then(()=>{ toast("Locked · on the shared board"); tabTo("stand"); paintStand(); });
-    toast("Locked · lineup updated");
+  pushCard(true).then(()=>{
+    return pullBoard();
+  }).then(()=>{
+    toast(STATE.boardErr ? "Locked on this phone — board save failed" : "Locked · on the shared board");
     tabTo("stand"); paintStand();
   });
 }
