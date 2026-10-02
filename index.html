@@ -1533,13 +1533,14 @@ async function refreshTnFromSource(why){
   const day=fridaySelDate();
   const src="https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day;
   const proxies=[
-    src,
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(src),
-    "https://r.jina.ai/http://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day
+    "https://r.jina.ai/http://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day,
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(src)
   ];
   for(const u of proxies){
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(), 12000);
     try{
-      const r=await fetch(u,{cache:"no-store"});
+      const r=await fetch(u,{cache:"no-store", signal:ctl.signal});
       if(!r.ok) continue;
       const html=await r.text();
       const rows=parseTnBoard(html);
@@ -1548,10 +1549,12 @@ async function refreshTnFromSource(why){
       window.TN_WEEK=day;
       if(LEAGUE==="tssaa") paintTnSlate();
       const line=$("liveMeta");
-      if(line) line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" scores";
+      if(line) line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
       return;
     }catch(e){}
+    finally{ clearTimeout(timer); }
   }
+  if(LEAGUE==="tssaa") paintTnSlate();
 }
 function msToNextFriNightPull(){
   const now=new Date();
@@ -1794,7 +1797,15 @@ async function loadLeague(lg){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     $("liveMeta").textContent = "TSSAA";
-    loadTnPack().then(()=>{ tssaaTab(window.TN_TAB||"fb"); refreshTnFromSource("open"); });
+    Promise.race([
+      loadTnPack(),
+      new Promise(res=>setTimeout(res, 8000))
+    ]).then(()=>{
+      tssaaTab(window.TN_TAB||"fb");
+      refreshTnFromSource("open");
+    }).catch(()=>{
+      tssaaTab(window.TN_TAB||"fb");
+    });
     return;
   }
   try{
