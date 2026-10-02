@@ -1538,7 +1538,7 @@ async function refreshTnFromSource(why){
   ];
   for(const u of proxies){
     const ctl=new AbortController();
-    const timer=setTimeout(()=>ctl.abort(), 12000);
+    const timer=setTimeout(()=>ctl.abort(), 8000);
     try{
       const r=await fetch(u,{cache:"no-store", signal:ctl.signal});
       if(!r.ok) continue;
@@ -1784,7 +1784,6 @@ async function loadLeague(lg){
   show("live");
   $("liveMeta").textContent = "Loading "+lg.toUpperCase();
   if(lg!=="tssaa") $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
-  else $("liveList").innerHTML = "<p class='hint'>Loading Tennessee scores…</p>";
   if($("tssaaTabs")) $("tssaaTabs").hidden = lg!=="tssaa";
   if($("tabEatAny")) $("tabEatAny").hidden = true;
   if(lg==="tssaa"){
@@ -1797,14 +1796,10 @@ async function loadLeague(lg){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     $("liveMeta").textContent = "TSSAA";
-    Promise.race([
-      loadTnPack(),
-      new Promise(res=>setTimeout(res, 8000))
-    ]).then(()=>{
+    tssaaTab(window.TN_TAB||"fb");
+    loadTnPack().then(()=>{
       tssaaTab(window.TN_TAB||"fb");
       refreshTnFromSource("open");
-    }).catch(()=>{
-      tssaaTab(window.TN_TAB||"fb");
     });
     return;
   }
