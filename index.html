@@ -1524,7 +1524,9 @@ function applyTnScores(rows, day){
     hit++;
   });
 pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
+  pack.liveDay=day;
   window.TNFB=pack;
+  try{ sessionStorage.setItem("sauceTnLive", JSON.stringify({day:day, games:pack.games.filter(g=>g.date===day), asOf:pack.asOf})); }catch(e){}
   return hit;
 }
 async function refreshTnFromSource(why){
@@ -1614,7 +1616,8 @@ function paintTnSlate(){
   const games=pack.games||[];
   const map=tnRegMap(games);
   const latest=tnLatestDate(games);
-  if(!window.TN_WEEK) window.TN_WEEK=latest;
+  const today=fridaySelDate();
+  if(!window.TN_WEEK) window.TN_WEEK = games.some(g=>g.date===today) ? today : latest;
   if(!window.TN_REG) window.TN_REG="all";
   $("liveMeta").textContent = "TSSAA · Football · "+(pack.asOf||latest);
   const days=[...new Set(games.map(g=>g.date).filter(Boolean))].sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)));
@@ -1633,7 +1636,7 @@ function paintTnSlate(){
     </div>`;
   };
   const weekPills=`<div class="pills" id="tnWeeks">
-    ${days.slice(0,6).map(d=>`<button type="button" data-tnweek="${d}" class="${window.TN_WEEK===d?"on":""}">${fmtTnDate(d)}</button>`).join("")}
+    ${days.slice(0,6).map(d=>`<button type="button" data-tnweek="${d}" class="${window.TN_WEEK===d?"on":""}">${d===today?"Tonight":fmtTnDate(d)}</button>`).join("")}
     <button type="button" data-tnweek="all" class="${window.TN_WEEK==="all"?"on":""}">All dates</button>
   </div>`;
   const regPills=`<div class="pills" id="tnPills">
@@ -1796,6 +1799,7 @@ async function loadLeague(lg){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     $("liveMeta").textContent = "TSSAA";
+    window.TNFB=keepTnLive(window.TNFB||{games:[]});
     tssaaTab(window.TN_TAB||"fb");
     loadTnPack().then(()=>{
       tssaaTab(window.TN_TAB||"fb");
@@ -5082,11 +5086,24 @@ restorePlace();
 <script>
 window.TNFB=window.TNFB||{asOf:"",sport:"football",games:[]};
 window.TNBB=window.TNBB||{asOf:"",girls:{games:[]},boys:{games:[]}};
+function keepTnLive(pack){
+  let live=null;
+  try{ live=JSON.parse(sessionStorage.getItem("sauceTnLive")||"null"); }catch(e){}
+  if(!live||!live.games||!live.games.length) return pack;
+  pack.games=pack.games||[];
+  const ids=new Set(pack.games.map(g=>String(g.id)));
+  live.games.forEach(g=>{ if(!ids.has(String(g.id))) pack.games.push(g); });
+  pack.asOf=live.asOf||pack.asOf;
+  pack.liveDay=live.day;
+  if(live.day) window.TN_WEEK=live.day;
+  return pack;
+}
 async function loadTnPack(){
   try{
     const r=await fetch("/data/tssaa.json",{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d&&d.games) window.TNFB=d; }
   }catch(e){}
+  window.TNFB=keepTnLive(window.TNFB||{games:[]});
   try{
     const r=await fetch("/data/tssaa-bball.json",{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d) window.TNBB=d; }
