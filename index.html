@@ -1490,17 +1490,19 @@ function parseTnBoard(html){
     rows.push({id:m[1], status:(m[2]||"").trim()||"Final", away:m[3].trim(), as:(m[4]||"").trim(), home:m[5].trim(), hs:(m[6]||"").trim()});
   }
   if(rows.length) return rows;
-  const blocks=src.split(/eventid=(\d+)/).slice(1);
-  for(let i=0;i<blocks.length-1;i+=2){
-    const id=blocks[i];
-    const chunk=blocks[i+1].slice(0,1800);
-    const teams=[...chunk.matchAll(/team\.cfm\?[^\)]*\)\[([^\]]+)\][^\n]{0,80}?(\d+\s*-\s*\d+)/gi)];
-    if(teams.length<2) continue;
+  const ids=[...src.matchAll(/eventid=(\d+)/gi)];
+  const seen=new Set();
+  ids.forEach(hit=>{
+    const id=hit[1];
+    if(seen.has(id)) return;
+    const chunk=src.slice(hit.index, hit.index+2200);
+    const teams=[...chunk.matchAll(/\[([^\]]+)\]\(https?:\/\/www\.coacht\.com\/[^)]*team\.cfm[^)]*\)\s+(\d+\s*-\s*\d+)/gi)];
+    if(teams.length<2) return;
+    seen.add(id);
     const time=(chunk.match(/\b\d{1,2}:\d{2}\s*[AP]M\b/i)||[])[0]||"";
-    const score=(chunk.match(/\b(\d+)\s*-\s*(\d+)\b/)||[]);
     const final=/final/i.test(chunk);
-    rows.push({id, status:final?"Final":(time||"Tonight"), away:teams[0][1].trim(), as:final?(score[1]||""):"", home:teams[1][1].trim(), hs:final?(score[2]||""):"", ar:teams[0][2].replace(/\s/g,""), hr:teams[1][2].replace(/\s/g,"")});
-  }
+    rows.push({id, status:final?"Final":(time||"Tonight"), away:teams[0][1].trim(), as:"", home:teams[1][1].trim(), hs:"", ar:teams[0][2].replace(/\s/g,""), hr:teams[1][2].replace(/\s/g,"")});
+  });
   return rows;
 }
 function applyTnScores(rows, day){
