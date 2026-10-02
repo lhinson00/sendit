@@ -4,87 +4,90 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Sauce Pick Em</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#07110c;--field:#0c1c14;--line:#234032;--orange:#ff7a18;--text:#f4f7f2;--muted:#8ea396;--live:#3ee0a0;--hot:#ff5d5d}
+:root{--bg:#07080c;--card:#12141b;--line:#2c313d;--orange:#ff7a18;--text:#f6f1ea;--muted:#9a938a;--live:#3ee0a0;--hot:#ff5d5d}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif}
-body{min-height:100vh;padding:18px 22px 96px;background:
-  radial-gradient(900px 280px at 12% -10%,rgba(255,122,24,.18),transparent 60%),
-  linear-gradient(180deg,#0d1b13 0%,#07110c 28%)}
-.top{display:grid;grid-template-columns:220px 1fr auto;gap:18px;align-items:end}
-.brand{font-family:"Bebas Neue",sans-serif;font-size:54px;letter-spacing:.04em;line-height:.8}
-.brand em{color:var(--orange);font-style:normal}
-.brand a{display:block;margin-top:8px;color:var(--muted);text-decoration:none;font-family:Manrope,sans-serif;font-size:12px;font-weight:800;letter-spacing:.08em}
-.strip{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:10px}
-.strip div{background:rgba(8,22,15,.72);border:1px solid var(--line);border-radius:8px 28px 8px 8px;padding:10px 16px 12px}
-.strip b{display:block;font-family:"Bebas Neue",sans-serif;font-size:40px;line-height:.85}
-.strip span{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
-.switch{display:flex;gap:8px;align-items:center}
-.switch button{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:999px;padding:10px 16px;font-weight:800}
-.switch button.on{background:var(--orange);color:#1a0e05;border-color:var(--orange)}
-.day{margin:22px 0 10px;font-family:Oswald,sans-serif;font-size:18px;letter-spacing:.16em;color:#d7e6db}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.match{display:grid;grid-template-columns:1fr 54px 1fr;min-height:118px;background:
-  linear-gradient(90deg,rgba(255,255,255,.03),transparent 18%),
-  repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 18px,transparent 18px 36px),
-  var(--field);
-  border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.pick{border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:14px;text-align:left}
-.pick.home{flex-direction:row-reverse;text-align:right}
-.pick img{width:54px;height:54px;object-fit:contain;background:#fff;border-radius:14px;padding:4px}
-.pick b{display:block;font-size:18px}
-.pick span{color:var(--muted);font-size:12px;font-weight:800}
-.pick.on{background:linear-gradient(90deg,rgba(255,122,24,.42),rgba(255,122,24,.08))}
-.pick.home.on{background:linear-gradient(270deg,rgba(255,122,24,.42),rgba(255,122,24,.08))}
-.pick.win{box-shadow:inset 0 -4px 0 var(--live)}
-.pick.loss.on{box-shadow:inset 0 -4px 0 var(--hot)}
-.at{display:flex;align-items:center;justify-content:center;font-family:"Bebas Neue",sans-serif;font-size:22px;color:#6f8b78;letter-spacing:.08em;background:rgba(0,0,0,.18)}
-.name{margin:14px 0 0;width:min(280px,100%);background:#0b1711;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px 14px;font-weight:700}
-.lockbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:flex-end;gap:8px;padding:12px 22px;background:rgba(7,17,12,.92);border-top:1px solid var(--line)}
-.lockbar button{border-radius:999px;padding:12px 18px;font-weight:800}
-.go{background:var(--orange);color:#1a0e05;border:0}
-.sec{background:transparent;color:var(--text);border:1px solid var(--line)}
-.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 2px}
-.toast{position:fixed;left:22px;bottom:74px;background:#1b140e;border:1px solid var(--orange);padding:8px 12px;border-radius:10px;display:none}
-@media(max-width:860px){
-  .top{grid-template-columns:1fr;gap:12px}
-  .grid{grid-template-columns:1fr}
-  .brand{font-size:44px}
-}
+.app{width:min(980px,100%);margin:0 auto;padding:0 16px 96px}
+.nav{display:flex;align-items:flex-end;padding:18px 0 10px}
+.nav b{font-family:"Bebas Neue",sans-serif;font-size:40px;letter-spacing:.05em;line-height:.85}
+.nav b em{color:var(--orange);font-style:normal}
+.nav a{margin-left:auto;color:var(--muted);text-decoration:none;font-weight:800;font-size:13px}
+.view{display:none;padding-top:14px}
+.view.on{display:block}
+.leagues{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.league{min-height:240px;border:1px solid var(--line);background:linear-gradient(165deg,#1b140e,#12141b 55%);color:var(--text);text-align:left;padding:22px;cursor:pointer}
+.league em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:72px;letter-spacing:.04em;display:block;line-height:.8;color:var(--orange)}
+.league small{color:var(--muted);letter-spacing:.14em;font-weight:800}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 14px}
+.stats div{background:var(--card);border:1px solid var(--line);border-top:3px solid var(--orange);padding:12px}
+.stats b{display:block;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:.9}
+.stats span{color:var(--muted);font-size:11px;letter-spacing:.12em;font-weight:800}
+.days{display:flex;gap:6px;overflow:auto;margin:0 0 12px}
+.days button{border:1px solid var(--line);background:#10131a;color:var(--text);padding:9px 12px;font-weight:800;white-space:nowrap}
+.days button.on{background:var(--orange);color:#1a0e05;border-color:var(--orange)}
+.match{display:grid;grid-template-columns:1fr 48px 1fr;background:var(--card);border:1px solid var(--line);margin:0 0 8px}
+.side{border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:16px;font-weight:800;text-align:left}
+.side.home{flex-direction:row-reverse;text-align:right}
+.side img{width:46px;height:46px;background:#fff;object-fit:contain;border-radius:8px;padding:3px}
+.side b{display:block;font-size:16px}
+.side small{color:var(--muted);font-weight:700}
+.side.on{background:#2a170c;box-shadow:inset 0 -3px 0 var(--orange)}
+.side.on small{color:#f6f1ea}
+.side.win{box-shadow:inset 0 -3px 0 var(--live)}
+.at{display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800;letter-spacing:.08em}
+.ticket{display:grid;gap:8px}
+.ticket div,.row{display:flex;justify-content:space-between;background:var(--card);border:1px solid var(--line);padding:14px}
+input{width:100%;background:#10131a;border:1px solid var(--line);color:var(--text);padding:13px;margin:4px 0 12px;border-radius:10px}
+.dock{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:12px;background:#0c0e13;border-top:1px solid var(--line)}
+.dock button{border:0;padding:12px 16px;font-weight:800;border-radius:10px}
+.go{background:var(--orange);color:#1a0e05}
+.sec{background:#171b24;color:var(--text);border:1px solid var(--line)!important}
+.toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;display:none;font-weight:800}
+@media(max-width:700px){.leagues{grid-template-columns:1fr}.league{min-height:150px}.league em{font-size:52px}}
 </style>
 </head>
 <body>
-<div class="top">
-  <div class="brand">SAUCE <em>PICK EM</em><a href="/">HOME</a></div>
-  <div class="strip">
-    <div><b id="made">0</b><span>Picks</span></div>
-    <div><b id="rec">0-0</b><span>Record</span></div>
-    <div><b id="open">0</b><span>Open</span></div>
-  </div>
-  <div class="switch">
-    <button type="button" id="lgNfl" class="on">NFL</button>
-    <button type="button" id="lgCfb">College</button>
-    <button type="button" class="on" data-tab="card">Card</button>
-    <button type="button" data-tab="board">Board</button>
-  </div>
+<div class="app">
+  <div class="nav"><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></div>
+  <section class="view on" id="lobby">
+    <div class="leagues">
+      <button class="league" id="goNfl"><small>CARD</small><em>NFL</em></button>
+      <button class="league" id="goCfb"><small>CARD</small><em>COLLEGE</em></button>
+    </div>
+  </section>
+  <section class="view" id="slate">
+    <div class="stats">
+      <div><b id="made">0</b><span>PICKS</span></div>
+      <div><b id="rec">0-0</b><span>RECORD</span></div>
+      <div><b id="open">0</b><span>OPEN</span></div>
+    </div>
+    <div class="days" id="days"></div>
+    <div id="games"></div>
+  </section>
+  <section class="view" id="ticket">
+    <input id="cardName" maxlength="24" placeholder="Name"/>
+    <div class="ticket" id="ticketList"></div>
+  </section>
+  <section class="view" id="board">
+    <div id="boardList"></div>
+  </section>
 </div>
-<div id="cardView">
-  <input class="name" id="cardName" maxlength="24" placeholder="Name"/>
-  <div id="games"></div>
-</div>
-<div id="boardView" hidden></div>
-<div class="lockbar" id="lockbar">
-  <button type="button" class="sec" id="unlock">Unlock</button>
-  <button type="button" class="go" id="lock">Lock</button>
+<div class="dock" id="dock">
+  <button class="sec" id="back" type="button">Lobby</button>
+  <button class="sec" id="toTicket" type="button">Ticket</button>
+  <button class="sec" id="toBoard" type="button">Board</button>
+  <button class="go" id="lock" type="button">Lock</button>
 </div>
 <div class="toast" id="toast"></div>
 <script>
 const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNneGd5eHp5dW5va2lxZmVkdHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzQ2OTMsImV4cCI6MjEwNTc1MDY5M30.LBhCjY33GLZZ3BbpLVqoyx8ND20Egow0yH_rkui09pU";
-const state={lg:"nfl",games:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
+const state={lg:"nfl",view:"lobby",day:"",games:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
 const $ = id => document.getElementById(id);
-function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1400); }
+function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1200); }
+function show(v){ state.view=v; document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on", x.id===v)); $("dock").style.display=v==="lobby"?"none":"flex"; }
 function weekKey(lg){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date());
@@ -104,12 +107,10 @@ function loadLocal(){
   $("cardName").value=card().name||"";
 }
 function mine(){
-  const picks=card().picks;
-  let w=0,l=0,open=0,made=Object.keys(picks).length;
+  const picks=card().picks; let w=0,l=0,open=0,made=Object.keys(picks).length;
   state.games.forEach(g=>{
     if(g.state!=="in"&&g.state!=="post") open++;
-    const pick=picks[g.id];
-    if(!pick||g.state!=="post") return;
+    const pick=picks[g.id]; if(!pick||g.state!=="post") return;
     const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
     if(winner&&pick===winner) w++; else if(winner) l++;
   });
@@ -118,63 +119,26 @@ function mine(){
 function saveLocal(){
   card().name=$("cardName").value.trim();
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
-  const s=mine();
-  $("made").textContent=s.made;
-  $("rec").textContent=s.w+"-"+s.l;
-  $("open").textContent=s.open;
+  const s=mine(); $("made").textContent=s.made; $("rec").textContent=s.w+"-"+s.l; $("open").textContent=s.open;
 }
 function headers(extra){ return Object.assign({apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY,"Content-Type":"application/json"}, extra||{}); }
-function rankOf(comp){
-  const r=comp.curatedRank && comp.curatedRank.current ? comp.curatedRank.current : comp.curatedRank;
-  const n=Number(r);
-  return n>0 && n<90 ? n : 99;
-}
+function rankOf(comp){ const r=comp.curatedRank&&comp.curatedRank.current?comp.curatedRank.current:comp.curatedRank; const n=Number(r); return n>0&&n<90?n:99; }
 function isSec(comp){ return String((comp.team||{}).conferenceId)==="8"; }
-function dates(){
-  const out=[];
-  for(let i=0;i<=3;i++){
-    const d=new Date(Date.now()+i*86400000);
-    out.push(d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,""));
-  }
-  return out;
-}
+function dates(){ const out=[]; for(let i=0;i<=3;i++){ const d=new Date(Date.now()+i*86400000); out.push(d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"")); } return out; }
 async function eventsFor(lg){
-  const base=lg==="nfl"
-    ? "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard"
-    : "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard";
-  const seen=new Set(), evs=[];
-  const days=lg==="nfl"?[""]:dates();
-  for(const day of days){
-    const url=base+(day?"?dates="+day+"&limit=200":"");
-    const d=await (await fetch(url,{cache:"no-store"})).json();
-    (d.events||[]).forEach(ev=>{ if(!seen.has(ev.id)){ seen.add(ev.id); evs.push(ev); } });
-  }
+  const base=lg==="nfl"?"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard":"https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard";
+  const seen=new Set(), evs=[]; const days=lg==="nfl"?[""]:dates();
+  for(const day of days){ const d=await (await fetch(base+(day?"?dates="+day+"&limit=200":""),{cache:"no-store"})).json(); (d.events||[]).forEach(ev=>{ if(!seen.has(ev.id)){ seen.add(ev.id); evs.push(ev); } }); }
   if(lg==="cfb") return evs.filter(ev=>((ev.competitions||[])[0].competitors||[]).some(c=>isSec(c)||rankOf(c)<=25));
   return evs;
 }
-function dayLabel(iso){
-  if(!iso) return "WEEK";
-  return new Date(iso).toLocaleDateString("en-US",{timeZone:"America/Chicago",weekday:"long",month:"short",day:"numeric"}).toUpperCase();
-}
-function dayKey(iso){
-  if(!iso) return "0000";
-  return new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"});
-}
+function dayLabel(iso){ return iso?new Date(iso).toLocaleDateString("en-US",{timeZone:"America/Chicago",weekday:"short",month:"short",day:"numeric"}).toUpperCase():"WEEK"; }
+function dayKey(iso){ return iso?new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"}):"0000"; }
 function mapEv(ev,lg){
-  const c=(ev.competitions||[])[0]||{};
-  const st=((c.status||{}).type)||{};
-  const comps=c.competitors||[];
-  const away=comps.find(x=>x.homeAway==="away")||comps[0]||{};
-  const home=comps.find(x=>x.homeAway==="home")||comps[1]||{};
-  const team=x=>{
-    const t=x.team||{};
-    return {id:String(t.id||""), ab:t.abbreviation||"", name:t.shortDisplayName||t.displayName||"Team", score:x.score||"", rank:rankOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")};
-  };
+  const c=(ev.competitions||[])[0]||{}; const st=((c.status||{}).type)||{}; const comps=c.competitors||[];
+  const away=comps.find(x=>x.homeAway==="away")||comps[0]||{}; const home=comps.find(x=>x.homeAway==="home")||comps[1]||{};
+  const team=x=>{ const t=x.team||{}; return {id:String(t.id||""), ab:t.abbreviation||"", name:t.shortDisplayName||t.displayName||"Team", score:x.score||"", rank:rankOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")}; };
   return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||c.date||"", away:team(away), home:team(home)};
-}
-async function loadSlate(){
-  state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick)));
-  paint();
 }
 function started(g){ return g.state==="in"||g.state==="post"; }
 async function pushCard(){
@@ -182,83 +146,72 @@ async function pushCard(){
   const r=await fetch(SUPA_URL+"/rest/v1/cards?on_conflict=week,name",{method:"POST",headers:headers({"Prefer":"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(body)});
   if(!r.ok) throw new Error(await r.text());
 }
+function days(){
+  const map=[];
+  state.games.forEach(g=>{ const key=dayKey(g.kick); if(!map.find(x=>x.key===key)) map.push({key,label:dayLabel(g.kick)}); });
+  if(!map.find(x=>x.key===state.day)) state.day=map[0]?map[0].key:"";
+  $("days").innerHTML=map.map(d=>`<button type="button" class="${d.key===state.day?"on":""}" data-day="${d.key}">${d.label}</button>`).join("");
+  $("days").querySelectorAll("button").forEach(b=>b.onclick=()=>{ state.day=b.dataset.day; paint(); });
+}
+function paint(){
+  days();
+  const picks=card().picks;
+  const games=state.games.filter(g=>dayKey(g.kick)===state.day);
+  $("games").innerHTML=games.map(g=>{
+    const side=(tm,home)=>{
+      const on=picks[g.id]===tm.id; const done=g.state==="post"; const other=home?g.away:g.home;
+      const win=done&&+tm.score>+other.score;
+      return `<button type="button" class="side${home?" home":""}${on?" on":""}${win?" win":""}" data-g="${g.id}" data-t="${tm.id}"><img alt="" src="${tm.logo}"/><div><b>${tm.rank<=25?"#"+tm.rank+" ":""}${tm.name}</b><small>${tm.score||tm.ab}</small></div></button>`;
+    };
+    return `<article class="match">${side(g.away,false)}<div class="at">AT</div>${side(g.home,true)}</article>`;
+  }).join("");
+  $("games").querySelectorAll(".side").forEach(b=>b.onclick=()=>{
+    const g=state.games.find(x=>x.id===b.dataset.g);
+    if(!g) return;
+    if(card().locked) return toast("Locked");
+    if(started(g)) return toast("Started");
+    card().picks[g.id]=b.dataset.t; saveLocal(); paint(); paintTicket();
+  });
+  saveLocal();
+}
+function paintTicket(){
+  const picks=card().picks;
+  $("ticketList").innerHTML=state.games.filter(g=>picks[g.id]).map(g=>{
+    const tm=picks[g.id]===g.away.id?g.away:g.home;
+    return `<div><b>${tm.name}</b><span>${g.away.ab} at ${g.home.ab}</span></div>`;
+  }).join("");
+}
 async function paintBoard(){
   const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&select=name,lineup",{headers:headers()});
   const rows=r.ok?await r.json():[];
   const scored=rows.map(row=>{
     const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{});
-    let w=0,l=0,left=0;
-    state.games.forEach(g=>{
-      const pick=picks[g.id]; if(!pick) return;
-      if(g.state!=="post"){ left++; return; }
-      const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
-      if(winner&&pick===winner) w++; else if(winner) l++;
-    });
-    return {name:row.name,w,l,left};
+    let w=0,l=0;
+    state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; });
+    return {name:row.name,w,l};
   }).sort((a,b)=>b.w-a.w||a.l-b.l);
-  $("boardView").innerHTML=scored.map((x,i)=>`<div class="row"><b>${i+1} ${x.name}</b><span>${x.w}-${x.l}</span></div>`).join("")||"";
+  $("boardList").innerHTML=scored.map((x,i)=>`<div class="row"><b>${i+1}  ${x.name}</b><span>${x.w}-${x.l}</span></div>`).join("");
 }
-function paint(){
-  const picks=card().picks;
-  const groups=[];
-  state.games.forEach(g=>{
-    const key=dayKey(g.kick);
-    let gday=groups.find(x=>x.key===key);
-    if(!gday){ gday={key,label:dayLabel(g.kick),games:[]}; groups.push(gday); }
-    gday.games.push(g);
-  });
-  $("games").innerHTML=groups.map(day=>{
-    const rows=day.games.map(g=>{
-      const side=(tm,home)=>{
-        const on=picks[g.id]===tm.id;
-        const done=g.state==="post";
-        const other=home?g.away:g.home;
-        const win=done&&+tm.score>+other.score;
-        const loss=done&&on&&!win;
-        const line=tm.score||g.detail||tm.ab;
-        return `<button type="button" class="pick${home?" home":""}${on?" on":""}${win?" win":""}${loss?" loss":""}" data-g="${g.id}" data-t="${tm.id}"><img alt="" src="${tm.logo}"/><div><b>${tm.rank<=25?"#"+tm.rank+" ":""}${tm.name}</b><span>${line}</span></div></button>`;
-      };
-      return `<article class="match">${side(g.away,false)}<div class="at">AT</div>${side(g.home,true)}</article>`;
-    }).join("");
-    return `<div class="day">${day.label}</div><div class="grid">${rows}</div>`;
-  }).join("");
-  $("games").querySelectorAll(".pick").forEach(b=>b.onclick=()=>{
-    const g=state.games.find(x=>x.id===b.dataset.g);
-    if(!g||!b.dataset.t) return;
-    if(card().locked) return toast("Locked");
-    if(started(g)) return toast("Started");
-    card().picks[g.id]=b.dataset.t;
-    saveLocal(); paint();
-  });
-  saveLocal();
+async function enter(lg){
+  state.lg=lg; loadLocal();
+  state.games=(await eventsFor(lg)).map(ev=>mapEv(ev,lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick)));
+  state.day=""; paint(); paintTicket(); show("slate");
 }
-function setLg(lg){
-  state.lg=lg;
-  $("lgNfl").classList.toggle("on", lg==="nfl");
-  $("lgCfb").classList.toggle("on", lg==="cfb");
-  $("cardName").value=card().name||"";
-  loadSlate();
-}
-$("lgNfl").onclick=()=>setLg("nfl");
-$("lgCfb").onclick=()=>setLg("cfb");
-document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("on", x===b));
-  const board=b.dataset.tab==="board";
-  $("cardView").hidden=board; $("boardView").hidden=!board; $("lockbar").style.display=board?"none":"flex";
-  if(board) paintBoard();
-});
+$("goNfl").onclick=()=>enter("nfl");
+$("goCfb").onclick=()=>enter("cfb");
+$("back").onclick=()=>show("lobby");
+$("toTicket").onclick=()=>{ paintTicket(); show("ticket"); };
+$("toBoard").onclick=()=>{ paintBoard(); show("board"); };
 $("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
   saveLocal();
   if(!card().name) return toast("Name");
   if(!Object.keys(card().picks).length) return toast("Pick");
   card().locked=true; saveLocal();
-  try{ await pushCard(); toast("Locked"); }
-  catch(e){ toast("Saved"); }
-  paint();
+  try{ await pushCard(); toast("Locked"); }catch(e){ toast("Saved"); }
+  paintTicket(); show("ticket");
 };
-$("unlock").onclick=()=>{ card().locked=false; saveLocal(); paint(); };
-loadLocal(); loadSlate();
+loadLocal(); show("lobby");
 </script>
 </body>
 </html>
