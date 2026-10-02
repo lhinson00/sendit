@@ -220,6 +220,47 @@ body{background:#07080c}
 .addbtn{border:0;background:#ff7a18;color:#1a0e05;font-weight:800;border-radius:8px;padding:8px 10px;letter-spacing:.04em}
 .addbtn:disabled{background:#2a241c;color:#8a8074}
 .chips button{background:#141820;border-color:#2a3140}
+\n
+#tab-build .desk{background:#0e1014;border:1px solid #242830;border-radius:12px;box-shadow:none}
+#tab-build .desk-top{padding:12px 12px 0}
+#tab-build .desk-top h2{font-size:18px;font-weight:700}
+#tab-build .remain-block b{font-size:20px}
+#tab-build .slots{display:flex;flex-direction:column;gap:4px;padding:8px}
+#tab-build .slot{display:grid !important;grid-template-columns:32px 22px minmax(0,1fr) auto 22px !important;min-height:40px !important;padding:4px 8px !important;margin:0 !important;border-radius:8px}
+#tab-build .slot img{width:22px;height:22px}
+#tab-build .posmark{width:28px;height:22px;font-size:9px}
+#tab-build .pick{display:grid;grid-template-columns:28px 22px minmax(0,1fr) 46px 28px;align-items:center;gap:8px;min-height:44px;padding:4px 8px;border-bottom:1px solid #1c2028}
+#tab-build .pick img{width:22px;height:22px;background:#fff;border-radius:3px;padding:1px}
+#tab-build .pick .pos{font-size:9px;font-weight:800;color:#ff7a18}
+#tab-build .pick .who b{font-size:13px;font-weight:700}
+#tab-build .pick .who span{font-size:11px;color:#8b847c}
+#tab-build .pick .sal{font-size:12px;text-align:right;color:#ffc46b}
+#tab-build .pick .addbtn{width:28px;height:28px;padding:0;border-radius:6px;font-size:14px}
+#tab-build .pcard,#tab-build .pcard-top,#tab-build .pcard-bot{display:none}
+\n
+#tab-build .fx{font-family:Manrope,sans-serif}
+#tab-build .fx-head{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:10px}
+#tab-build .fx-head input{background:#11141c;border:1px solid #2c3344;color:#f4efe8;border-radius:10px;padding:10px 12px;font-size:15px}
+#tab-build .fx-head button{background:#1b2030;color:#f4efe8;border:0;border-radius:10px;padding:10px 12px}
+#tab-build .fx-bank{text-align:right;min-width:72px}
+#tab-build .fx-bank small{display:block;font-size:9px;letter-spacing:.12em;color:#8d93a3}
+#tab-build .fx-bank b{font-size:16px;color:#7CFFB2}
+#tab-build .fx-line{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:4px}
+#tab-build .slot{display:grid !important;grid-template-columns:36px 1fr auto 22px !important;min-height:36px !important;padding:6px 8px !important;background:#11141c !important;border:1px solid #232838 !important;border-radius:8px !important;box-shadow:none !important}
+#tab-build .slot img{display:none}
+#tab-build .fx-pos,#tab-build .fx-games{display:flex;gap:6px;overflow:auto;margin-bottom:8px}
+#tab-build .fx-pos button,#tab-build .fx-games button{border:0;background:#1b2030;color:#c9ceda;border-radius:8px;padding:7px 10px;font-size:12px}
+#tab-build .fx-pos button.on,#tab-build .fx-games button.on{background:#7CFFB2;color:#07140c}
+#tab-build .fx-search{display:grid;grid-template-columns:1fr 92px;gap:6px;margin-bottom:8px}
+#tab-build .fx-search input,#tab-build .fx-search select{background:#11141c;border:1px solid #232838;color:#f4efe8;border-radius:8px;padding:8px}
+#tab-build .pick{display:grid;grid-template-columns:32px 1fr auto 32px;gap:8px;align-items:center;padding:8px;border-bottom:1px solid #1c2130}
+#tab-build .pick img{width:0;height:0;display:none}
+#tab-build .pick .pos{font-size:10px;font-weight:800;color:#7CFFB2}
+#tab-build .pick .who b{font-size:14px}
+#tab-build .pick .who span{display:block;font-size:11px;color:#8d93a3}
+#tab-build .pick .sal{font-size:13px;color:#f4efe8}
+#tab-build .pick .addbtn{width:32px;height:32px;border:0;border-radius:8px;background:#7CFFB2;color:#07140c;font-weight:800}
+#tab-build .desk,#tab-build .pcard{display:none}
 \n</style>
 </head>
 <body>
@@ -234,37 +275,27 @@ body{background:#07080c}
 </nav>
 
 <section class="panel" id="tab-build">
-  <section class="desk">
-    <div class="desk-top">
-      <div>
-        <p class="kicker">Your card</p>
-        <h2 id="rosterTitle">Name your card</h2>
-      </div>
-      <div class="remain-block">
-        <span>Left</span>
-        <b id="remain">$50,000</b>
-        <em id="spent">$0 spent</em>
-      </div>
-    </div>
-    <div class="namebar">
-      <input id="cardName" type="text" maxlength="24" placeholder="Card name"/>
-      <button type="button" class="rowbtns" id="newCardBtn">New</button>
-    </div>
-    <div class="slots" id="slots"></div>
-    <div class="desk-pool">
-      <div class="chips" id="posChips"></div>
-      <div class="chips games" id="gameChips"></div>
-      <div class="filters">
+  <div class="fx">
+    <header class="fx-head">
+      <input id="cardName" maxlength="24" placeholder="Lineup name"/>
+      <button type="button" id="newCardBtn">Clear</button>
+      <div class="fx-bank"><small>LEFT</small><b id="remain">$50,000</b><small id="spent">$0</small></div>
+    </header>
+    <h2 id="rosterTitle" hidden>Name your card</h2>
+    <ol class="fx-line" id="slots"></ol>
+    <div class="fx-tools">
+      <div class="fx-pos" id="posChips"></div>
+      <div class="fx-games" id="gameChips"></div>
+      <div class="fx-search">
         <select id="posFilt" hidden></select>
         <select id="gameFilt" hidden></select>
-        <input id="qFilt" type="search" placeholder="Search"/>
-        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Points</option><option value="name">Name</option></select>
+        <input id="qFilt" type="search" placeholder="Find a player"/>
+        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Points</option><option value="name">A–Z</option></select>
       </div>
-      <div class="pool" id="pool"><p class="hint">Pulling this week’s rosters…</p></div>
     </div>
-  </section>
+    <div class="fx-list" id="pool"><p class="hint">Loading slate…</p></div>
+  </div>
 </section>
-
 <section class="panel" id="tab-live" hidden>
   <div class="bigscore"><b id="liveTotal">0.0</b><span id="liveSub">Lock a card to score it live</span></div>
   <div class="livegrid" id="liveGrid"></div>
@@ -549,10 +580,13 @@ function paintPool(){
     const hurt=p.inj==="Out"||p.inj==="Injured Reserve";
     const qst=p.inj==="Questionable"||p.inj==="Doubtful";
     const tag=p.inj?`<em class="${hurt?"tag-out":qst?"tag-q":"tag-q"}"> ${p.inj}</em>`:"";
-    return `<article class="pcard${on?" on":""}${hurt?" hurt":""}" data-info="${p.id}">
-      <div class="pcard-top"><span class="posmark">${p.pos}</span><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" @ "+p.opp):""}</span></div><button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"IN":gameStarted(p)?"LOCK":"ADD"}</button></div>
-      <div class="pcard-bot"><span>${leaderLine(p)||"No season line"}</span><b>$${p.sal.toLocaleString()}</b>${tag}</div>
-    </article>`;
+    return `<div class="pick${on?" on":""}${hurt?" hurt":""}" data-info="${p.id}">
+      <span class="pos">${p.pos}</span>
+      <img alt="" src="${nflLogo(p.team)}"/>
+      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" @ "+p.opp):""} · ${leaderLine(p)||""}${tag}</span></div>
+      <div class="sal">$${Math.round(p.sal/100)/10}k</div>
+      <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"IN":"+"}</button>
+    </div>`;
   }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No players loaded. Refresh and try again."}</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
   $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
