@@ -4,57 +4,79 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Sauce Pick Em</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet"/>
 <style>
-:root{--bg:#07080c;--card:#12141b;--line:#2c313d;--orange:#ff7a18;--text:#f6f1ea;--muted:#9a938a;--live:#3ee0a0;--hot:#ff5d5d}
+:root{--bg:#07110c;--field:#0c1c14;--line:#234032;--orange:#ff7a18;--text:#f4f7f2;--muted:#8ea396;--live:#3ee0a0;--hot:#ff5d5d}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,system-ui,sans-serif}
-body{width:min(680px,100%);margin:0 auto;padding:0 12px 100px}
-header{display:flex;align-items:flex-end;padding:16px 0 8px}
-header b{font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.05em}
-header b em{color:var(--orange);font-style:normal}
-header a{margin-left:auto;color:var(--muted);text-decoration:none;font-size:13px}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
-.seg button{border:1px solid var(--line);background:#10131a;color:var(--text);border-radius:10px;padding:10px;font-weight:800}
-.seg button.on{border-color:var(--orange);color:#1a0e05;background:var(--orange)}
-.sub{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin:6px 2px 10px}
-input{width:100%;background:#10131a;border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--text);margin-bottom:10px}
-.match{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 8px;overflow:hidden}
-.match .top{display:flex;justify-content:space-between;padding:8px 10px 0;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.vs{display:grid;grid-template-columns:1fr 1fr}
-.pick{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px 12px;border:0;background:transparent;color:inherit;border-top:1px solid #222733}
-.pick img{width:42px;height:42px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
-.pick b{font-size:13px;text-align:center}
-.pick span{font-size:11px;color:var(--muted)}
-.pick.on{background:#2a170c;box-shadow:inset 0 -3px 0 var(--orange)}
-.pick.win{box-shadow:inset 0 -3px 0 var(--live)}
-.pick.loss.on{box-shadow:inset 0 -3px 0 var(--hot)}
-.lockbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;padding:10px;background:#0c0e13;border-top:1px solid var(--line)}
-.lockbar .go{background:var(--orange);color:#1a0e05;border:0;border-radius:10px;padding:12px 18px;font-weight:800}
-.lockbar .sec{background:#171b24;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-.row{display:flex;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}
-.toast{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;border-radius:8px;display:none}
+body{min-height:100vh;padding:18px 22px 96px;background:
+  radial-gradient(900px 280px at 12% -10%,rgba(255,122,24,.18),transparent 60%),
+  linear-gradient(180deg,#0d1b13 0%,#07110c 28%)}
+.top{display:grid;grid-template-columns:220px 1fr auto;gap:18px;align-items:end}
+.brand{font-family:"Bebas Neue",sans-serif;font-size:54px;letter-spacing:.04em;line-height:.8}
+.brand em{color:var(--orange);font-style:normal}
+.brand a{display:block;margin-top:8px;color:var(--muted);text-decoration:none;font-family:Manrope,sans-serif;font-size:12px;font-weight:800;letter-spacing:.08em}
+.strip{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:10px}
+.strip div{background:rgba(8,22,15,.72);border:1px solid var(--line);border-radius:8px 28px 8px 8px;padding:10px 16px 12px}
+.strip b{display:block;font-family:"Bebas Neue",sans-serif;font-size:40px;line-height:.85}
+.strip span{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.switch{display:flex;gap:8px;align-items:center}
+.switch button{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:999px;padding:10px 16px;font-weight:800}
+.switch button.on{background:var(--orange);color:#1a0e05;border-color:var(--orange)}
+.day{margin:22px 0 10px;font-family:Oswald,sans-serif;font-size:18px;letter-spacing:.16em;color:#d7e6db}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.match{display:grid;grid-template-columns:1fr 54px 1fr;min-height:118px;background:
+  linear-gradient(90deg,rgba(255,255,255,.03),transparent 18%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 18px,transparent 18px 36px),
+  var(--field);
+  border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.pick{border:0;background:transparent;color:inherit;display:flex;align-items:center;gap:10px;padding:14px;text-align:left}
+.pick.home{flex-direction:row-reverse;text-align:right}
+.pick img{width:54px;height:54px;object-fit:contain;background:#fff;border-radius:14px;padding:4px}
+.pick b{display:block;font-size:18px}
+.pick span{color:var(--muted);font-size:12px;font-weight:800}
+.pick.on{background:linear-gradient(90deg,rgba(255,122,24,.42),rgba(255,122,24,.08))}
+.pick.home.on{background:linear-gradient(270deg,rgba(255,122,24,.42),rgba(255,122,24,.08))}
+.pick.win{box-shadow:inset 0 -4px 0 var(--live)}
+.pick.loss.on{box-shadow:inset 0 -4px 0 var(--hot)}
+.at{display:flex;align-items:center;justify-content:center;font-family:"Bebas Neue",sans-serif;font-size:22px;color:#6f8b78;letter-spacing:.08em;background:rgba(0,0,0,.18)}
+.name{margin:14px 0 0;width:min(280px,100%);background:#0b1711;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:12px 14px;font-weight:700}
+.lockbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:flex-end;gap:8px;padding:12px 22px;background:rgba(7,17,12,.92);border-top:1px solid var(--line)}
+.lockbar button{border-radius:999px;padding:12px 18px;font-weight:800}
+.go{background:var(--orange);color:#1a0e05;border:0}
+.sec{background:transparent;color:var(--text);border:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 2px}
+.toast{position:fixed;left:22px;bottom:74px;background:#1b140e;border:1px solid var(--orange);padding:8px 12px;border-radius:10px;display:none}
+@media(max-width:860px){
+  .top{grid-template-columns:1fr;gap:12px}
+  .grid{grid-template-columns:1fr}
+  .brand{font-size:44px}
+}
 </style>
 </head>
 <body>
-<header><b>SAUCE <em>PICK EM</em></b><a href="/">Home</a></header>
-<div class="seg">
-  <button type="button" id="lgNfl" class="on">NFL</button>
-  <button type="button" id="lgCfb">College</button>
+<div class="top">
+  <div class="brand">SAUCE <em>PICK EM</em><a href="/">HOME</a></div>
+  <div class="strip">
+    <div><b id="made">0</b><span>Picks</span></div>
+    <div><b id="rec">0-0</b><span>Record</span></div>
+    <div><b id="open">0</b><span>Open</span></div>
+  </div>
+  <div class="switch">
+    <button type="button" id="lgNfl" class="on">NFL</button>
+    <button type="button" id="lgCfb">College</button>
+    <button type="button" class="on" data-tab="card">Card</button>
+    <button type="button" data-tab="board">Board</button>
+  </div>
 </div>
-<div class="seg">
-  <button type="button" class="on" data-tab="card">Card</button>
-  <button type="button" data-tab="board">Standings</button>
-</div>
-<p class="sub"><span id="meta">Loading slate…</span><b id="count">0 picks</b></p>
 <div id="cardView">
-  <input id="cardName" maxlength="24" placeholder="Name on this board"/>
+  <input class="name" id="cardName" maxlength="24" placeholder="Name"/>
   <div id="games"></div>
 </div>
 <div id="boardView" hidden></div>
 <div class="lockbar" id="lockbar">
   <button type="button" class="sec" id="unlock">Unlock</button>
-  <button type="button" class="go" id="lock">Lock card</button>
+  <button type="button" class="go" id="lock">Lock</button>
 </div>
 <div class="toast" id="toast"></div>
 <script>
@@ -62,7 +84,7 @@ const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNneGd5eHp5dW5va2lxZmVkdHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzQ2OTMsImV4cCI6MjEwNTc1MDY5M30.LBhCjY33GLZZ3BbpLVqoyx8ND20Egow0yH_rkui09pU";
 const state={lg:"nfl",games:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
 const $ = id => document.getElementById(id);
-function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1600); }
+function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1400); }
 function weekKey(lg){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date());
@@ -81,11 +103,25 @@ function loadLocal(){
   });
   $("cardName").value=card().name||"";
 }
+function mine(){
+  const picks=card().picks;
+  let w=0,l=0,open=0,made=Object.keys(picks).length;
+  state.games.forEach(g=>{
+    if(g.state!=="in"&&g.state!=="post") open++;
+    const pick=picks[g.id];
+    if(!pick||g.state!=="post") return;
+    const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
+    if(winner&&pick===winner) w++; else if(winner) l++;
+  });
+  return {w,l,open,made};
+}
 function saveLocal(){
   card().name=$("cardName").value.trim();
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
-  const n=Object.keys(card().picks).length;
-  $("count").textContent=n+" / "+state.games.length;
+  const s=mine();
+  $("made").textContent=s.made;
+  $("rec").textContent=s.w+"-"+s.l;
+  $("open").textContent=s.open;
 }
 function headers(extra){ return Object.assign({apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY,"Content-Type":"application/json"}, extra||{}); }
 function rankOf(comp){
@@ -116,6 +152,14 @@ async function eventsFor(lg){
   if(lg==="cfb") return evs.filter(ev=>((ev.competitions||[])[0].competitors||[]).some(c=>isSec(c)||rankOf(c)<=25));
   return evs;
 }
+function dayLabel(iso){
+  if(!iso) return "WEEK";
+  return new Date(iso).toLocaleDateString("en-US",{timeZone:"America/Chicago",weekday:"long",month:"short",day:"numeric"}).toUpperCase();
+}
+function dayKey(iso){
+  if(!iso) return "0000";
+  return new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"});
+}
 function mapEv(ev,lg){
   const c=(ev.competitions||[])[0]||{};
   const st=((c.status||{}).type)||{};
@@ -126,13 +170,10 @@ function mapEv(ev,lg){
     const t=x.team||{};
     return {id:String(t.id||""), ab:t.abbreviation||"", name:t.shortDisplayName||t.displayName||"Team", score:x.score||"", rank:rankOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")};
   };
-  return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", away:team(away), home:team(home)};
+  return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||c.date||"", away:team(away), home:team(home)};
 }
 async function loadSlate(){
-  const lg=state.lg;
-  const evs=await eventsFor(lg);
-  state.games=evs.map(ev=>mapEv(ev,lg)).sort((a,b)=>String(a.detail).localeCompare(String(b.detail)));
-  $("meta").textContent=lg==="nfl"?"NFL · this week":"College · SEC and top 25 · this weekend";
+  state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick)));
   paint();
 }
 function started(g){ return g.state==="in"||g.state==="post"; }
@@ -155,31 +196,41 @@ async function paintBoard(){
     });
     return {name:row.name,w,l,left};
   }).sort((a,b)=>b.w-a.w||a.l-b.l);
-  const title=state.lg==="nfl"?"NFL standings":"College standings";
-  $("boardView").innerHTML=`<p class="sub"><b>${title}</b><span>Separate board</span></p>`+(scored.map((x,i)=>`<div class="row"><b>#${i+1} ${x.name}</b><span>${x.w}-${x.l} · ${x.left} left</span></div>`).join("")||`<p class="sub">No locked cards on this board.</p>`);
+  $("boardView").innerHTML=scored.map((x,i)=>`<div class="row"><b>${i+1} ${x.name}</b><span>${x.w}-${x.l}</span></div>`).join("")||"";
 }
 function paint(){
   const picks=card().picks;
-  $("games").innerHTML=state.games.map(g=>{
-    const side=(tm,other)=>{
-      const on=picks[g.id]===tm.id;
-      const done=g.state==="post";
-      const win=done&&+tm.score>+other.score;
-      const loss=done&&on&&!win;
-      return `<button type="button" class="pick${on?" on":""}${win?" win":""}${loss?" loss":""}" data-g="${g.id}" data-t="${tm.id}"><img alt="" src="${tm.logo}"/><b>${tm.rank<=25?"#"+tm.rank+" ":""}${tm.name}</b><span>${tm.score||tm.ab}</span></button>`;
-    };
-    return `<article class="match"><div class="top"><span>${g.detail||"Upcoming"}</span><span>${picks[g.id]?"Picked":""}</span></div><div class="vs">${side(g.away,g.home)}${side(g.home,g.away)}</div></article>`;
-  }).join("")||`<p class="sub">No games in this slate.</p>`;
+  const groups=[];
+  state.games.forEach(g=>{
+    const key=dayKey(g.kick);
+    let gday=groups.find(x=>x.key===key);
+    if(!gday){ gday={key,label:dayLabel(g.kick),games:[]}; groups.push(gday); }
+    gday.games.push(g);
+  });
+  $("games").innerHTML=groups.map(day=>{
+    const rows=day.games.map(g=>{
+      const side=(tm,home)=>{
+        const on=picks[g.id]===tm.id;
+        const done=g.state==="post";
+        const other=home?g.away:g.home;
+        const win=done&&+tm.score>+other.score;
+        const loss=done&&on&&!win;
+        const line=tm.score||g.detail||tm.ab;
+        return `<button type="button" class="pick${home?" home":""}${on?" on":""}${win?" win":""}${loss?" loss":""}" data-g="${g.id}" data-t="${tm.id}"><img alt="" src="${tm.logo}"/><div><b>${tm.rank<=25?"#"+tm.rank+" ":""}${tm.name}</b><span>${line}</span></div></button>`;
+      };
+      return `<article class="match">${side(g.away,false)}<div class="at">AT</div>${side(g.home,true)}</article>`;
+    }).join("");
+    return `<div class="day">${day.label}</div><div class="grid">${rows}</div>`;
+  }).join("");
   $("games").querySelectorAll(".pick").forEach(b=>b.onclick=()=>{
     const g=state.games.find(x=>x.id===b.dataset.g);
     if(!g||!b.dataset.t) return;
-    if(card().locked) return toast("Unlock to change an open game");
-    if(started(g)) return toast("That game has started");
+    if(card().locked) return toast("Locked");
+    if(started(g)) return toast("Started");
     card().picks[g.id]=b.dataset.t;
     saveLocal(); paint();
   });
   saveLocal();
-  $("lock").textContent=card().locked?"Locked":"Lock card";
 }
 function setLg(lg){
   state.lg=lg;
@@ -199,14 +250,14 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
 $("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
   saveLocal();
-  if(!card().name) return toast("Add your name");
-  if(!Object.keys(card().picks).length) return toast("Pick a game first");
+  if(!card().name) return toast("Name");
+  if(!Object.keys(card().picks).length) return toast("Pick");
   card().locked=true; saveLocal();
-  try{ await pushCard(); toast(state.lg==="nfl"?"NFL card locked":"College card locked"); }
-  catch(e){ toast("Saved on this phone"); }
+  try{ await pushCard(); toast("Locked"); }
+  catch(e){ toast("Saved"); }
   paint();
 };
-$("unlock").onclick=()=>{ card().locked=false; saveLocal(); toast("Open games can change"); paint(); };
+$("unlock").onclick=()=>{ card().locked=false; saveLocal(); paint(); };
 loadLocal(); loadSlate();
 </script>
 </body>
