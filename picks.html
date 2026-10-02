@@ -28,22 +28,25 @@ body{max-width:720px;margin:0 auto;padding-bottom:88px}
 .team span{color:var(--muted);font-size:12px}
 .team.on{background:#2a170c;box-shadow:inset 0 -3px 0 var(--orange)}
 .mid{border:0;background:transparent;color:var(--orange);font-weight:800;font-size:12px}
-.sheet{margin:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.head{display:grid;grid-template-columns:1fr 88px 1fr;align-items:center;padding:16px 8px 8px;background:linear-gradient(90deg,#1b140e,#12151c 42%,#12151c 58%,#1b140e)}
+.sheet{margin:12px;display:grid;gap:10px}
+.head{display:grid;grid-template-columns:1fr 88px 1fr;align-items:center;padding:16px 8px 8px;background:linear-gradient(90deg,#1b140e,#12151c 42%,#12151c 58%,#1b140e);border:1px solid var(--line);border-radius:16px}
 .head button{border:0;background:transparent;color:inherit;text-align:center}
 .head img{width:64px;height:64px;background:#fff;border-radius:14px;padding:5px}
 .head b{display:block;font-family:"Bebas Neue",sans-serif;font-size:28px}
 .head span,.when{color:var(--muted);font-size:12px;font-weight:700}
 .head .on{outline:2px solid var(--orange);border-radius:14px}
 .when{text-align:center}
-.pred{padding:10px 14px 12px}
+.cat{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.pred{padding:12px 14px}
 .pred .labs{display:flex;justify-content:space-between;font-size:12px;font-weight:800}
 .track{display:flex;height:8px;border-radius:99px;overflow:hidden;background:#2a241c;margin-top:6px}
 .track i{background:var(--orange);height:100%}
 .track u{background:#3a342c;height:100%;text-decoration:none}
-.info{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
+.chip{background:#0c0e14;border-radius:10px;padding:10px}
+.chip span{display:block;color:var(--muted);font-size:10px;letter-spacing:.14em;font-weight:800;margin-bottom:4px}
 .info b{color:var(--text)}
-.sec{padding:12px 14px 4px;font-size:11px;letter-spacing:.16em;color:var(--orange);font-weight:800}
+.sec{padding:12px 14px 8px;font-size:11px;letter-spacing:.18em;color:var(--orange);font-weight:800;border-bottom:1px solid #242833}
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px 14px;border-top:1px solid #242833;font-size:13px;vertical-align:top}
 th{color:var(--muted);font-size:11px;letter-spacing:.08em;font-weight:800;text-align:center}
@@ -167,18 +170,11 @@ function openMatch(id){
           <div class="when">${g.detail||"AT"}<br>${g.tv||""}</div>
           <button class="${picks[g.id]===g.home.id?"on":""}" data-t="${g.home.id}" type="button"><img src="${g.home.logo}" alt=""/><b>${g.home.ab}</b><span>${g.home.rec}</span></button>
         </div>
-        <div class="pred"><div class="labs"><span>${g.away.ab} ${awayPct}%</span><span>${g.home.ab} ${homePct}%</span></div><div class="track"><i style="width:${awayPct}%"></i><u style="width:${homePct}%"></u></div></div>
-        <div class="info"><span>Site <b>${g.place||"—"}</b></span><span>TV <b>${g.tv||"—"}</b></span></div>
-        <div class="sec">SEASON LEADERS</div>
-        <table><tr><th>${g.away.ab}</th><th></th><th>${g.home.ab}</th></tr>${rows||"<tr><td colspan='3'>No leaders</td></tr>"}</table>
-        <div class="split">
-          <section><div class="sec">LAST FIVE · ${g.away.ab}</div>${five(g.away.id)}</section>
-          <section><div class="sec">LAST FIVE · ${g.home.ab}</div>${five(g.home.id)}</section>
-        </div>
-        <div class="split">
-          <section><div class="sec">INJURIES · ${g.away.ab}</div>${inj(g.away.id)}</section>
-          <section><div class="sec">INJURIES · ${g.home.ab}</div>${inj(g.home.id)}</section>
-        </div>
+        <section class="cat"><div class="sec">PREDICTOR</div><div class="pred"><div class="labs"><span>${g.away.ab} ${awayPct}%</span><span>${g.home.ab} ${homePct}%</span></div><div class="track"><i style="width:${awayPct}%"></i><u style="width:${homePct}%"></u></div></div></section>
+        <section class="cat"><div class="sec">GAME</div><div class="info"><div class="chip"><span>SITE</span><b>${g.place||"—"}</b></div><div class="chip"><span>TV</span><b>${g.tv||"—"}</b></div></div></section>
+        <section class="cat"><div class="sec">SEASON LEADERS</div><table><tr><th>${g.away.ab}</th><th>STAT</th><th>${g.home.ab}</th></tr>${rows||"<tr><td colspan='3'>No leaders</td></tr>"}</table></section>
+        <section class="cat"><div class="sec">LAST FIVE</div><div class="split"><section><div class="sec">${g.away.ab}</div>${five(g.away.id)}</section><section><div class="sec">${g.home.ab}</div>${five(g.home.id)}</section></div></section>
+        <section class="cat"><div class="sec">INJURIES</div><div class="split"><section><div class="sec">${g.away.ab}</div>${inj(g.away.id)}</section><section><div class="sec">${g.home.ab}</div>${inj(g.home.id)}</section></div></section>
       </article>`;
     $("back").onclick=()=>show("slate");
     $("match").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ pick(g.id,b.dataset.t); openMatch(id); });
