@@ -194,6 +194,19 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 \n.chips{display:flex;gap:6px;overflow:auto;padding-bottom:8px}
 .chips button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#efe8df;border-radius:99px;padding:6px 10px;font-size:12px}
 .chips button.on{border-color:#ff7a18;color:#ff7a18}
+\n
+.desk{background:#101218;border:1px solid #2a241c;border-radius:16px;overflow:hidden}
+.desk-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:14px 14px 0}
+.desk-top h2{margin:0;font-size:22px}
+.remain-block{text-align:right}
+.remain-block span,.remain-block em{display:block;color:#8a8074;font-size:11px;font-style:normal}
+.remain-block b{font-size:26px;color:#ff7a18;letter-spacing:-.03em}
+.desk .namebar{padding:10px 14px 0}
+.desk .slots{padding:10px 10px 4px}
+.desk-pool{border-top:1px solid #2a241c;margin-top:8px;padding:10px 10px 16px;background:#0c0d12}
+.desk-pool .chips.games{margin-bottom:8px}
+.poolhead{display:none}
+.event,.steps,.labbox,.rosterbox{display:none}
 \n</style>
 </head>
 <body>
@@ -208,52 +221,34 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 </nav>
 
 <section class="panel" id="tab-build">
-  <div class="event">
-    <p class="kicker">Sauce Cap · NFL</p>
-    <h2>Week 3</h2>
-    <p>One card Thu–Mon. New week starts Wednesday. A player locks when their game starts.</p>
-  </div>
-  <ol class="steps">
-    <li><i>1</i><span><b>Name your lineup card.</b> One name per phone this week.</span></li>
-    <li><i>2</i><span><b>Field your roster</b> with the $50,000 budget. Tap a name for 2026 stats.</span></li>
-    <li><i>3</i><span><b>Lock your card.</b> You can unlock and change it. If a player’s game has started, they stay on the card.</span></li>
-  </ol>
-  <section class="rosterbox">
-    <div class="rhead">
+  <section class="desk">
+    <div class="desk-top">
       <div>
-        <p class="kicker">Your lineup</p>
+        <p class="kicker">Your card</p>
         <h2 id="rosterTitle">Name your card</h2>
+      </div>
+      <div class="remain-block">
+        <span>Left</span>
+        <b id="remain">$50,000</b>
+        <em id="spent">$0 spent</em>
       </div>
     </div>
     <div class="namebar">
       <input id="cardName" type="text" maxlength="24" placeholder="Card name"/>
       <button type="button" class="rowbtns" id="newCardBtn">New</button>
     </div>
-    <div class="budget">
-      <div class="bcell"><span>Remaining</span><b id="remain">$50,000</b></div>
-      <div class="bcell"><span>Spent</span><b id="spent">$0</b></div>
-    </div>
     <div class="slots" id="slots"></div>
-  </section>
-  <section class="labbox">
-    <div class="rhead">
-      <div>
-        <p class="kicker">Player pool</p>
-        <h2>Build the card</h2>
+    <div class="desk-pool">
+      <div class="chips" id="posChips"></div>
+      <div class="chips games" id="gameChips"></div>
+      <div class="filters">
+        <select id="posFilt" hidden></select>
+        <select id="gameFilt" hidden></select>
+        <input id="qFilt" type="search" placeholder="Search"/>
+        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Points</option><option value="name">Name</option></select>
       </div>
+      <div class="pool" id="pool"><p class="hint">Pulling this week’s rosters…</p></div>
     </div>
-    <div class="chips" id="posChips"></div>
-    <div class="chips" id="gameChips"></div>
-  <div class="filters">
-    <select id="posFilt" hidden></select>
-    <select id="gameFilt" hidden></select>
-    <input id="qFilt" type="search" placeholder="Search a player"/>
-    <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Season points</option><option value="name">Name</option></select>
-  </div>
-    <div class="board">
-    <div class="poolhead"><span>Pos</span><span>Player</span><span style="text-align:right">Salary</span><span></span></div>
-    <div class="pool" id="pool"><p class="hint">Pulling this week’s rosters…</p></div>
-  </div>
   </section>
 </section>
 
