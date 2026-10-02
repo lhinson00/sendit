@@ -9,8 +9,8 @@
 :root{--bg:#07080c;--orange:#ff7a18;--text:#f7f2ea;--muted:#9b9288;--line:#2c313d;--card:#12151c}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,sans-serif}
-body{max-width:760px;margin:0 auto;padding-bottom:88px}
-.top{display:flex;align-items:flex-end;gap:12px;padding:14px 16px;border-bottom:2px solid var(--orange)}
+body{max-width:720px;margin:0 auto;padding-bottom:88px}
+.top{display:flex;align-items:flex-end;padding:14px 16px;border-bottom:2px solid var(--orange)}
 .top b{font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.04em}
 .top em{color:var(--orange);font-style:normal}
 .top a,.top button{margin-left:auto;background:none;border:0;color:var(--muted);font-weight:800}
@@ -25,31 +25,36 @@ body{max-width:760px;margin:0 auto;padding-bottom:88px}
 .team{border:0;background:transparent;color:inherit;padding:12px 8px;text-align:center}
 .team img{width:52px;height:52px;background:#fff;border-radius:12px;object-fit:contain;padding:4px}
 .team b{display:block;margin-top:4px}
-.team span,.bug span{color:var(--muted);font-size:12px}
+.team span{color:var(--muted);font-size:12px}
 .team.on{background:#2a170c;box-shadow:inset 0 -3px 0 var(--orange)}
 .mid{border:0;background:transparent;color:var(--orange);font-weight:800;font-size:12px}
-.bug{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;padding:8px 8px 4px}
-.bug button{border:0;background:transparent;color:inherit;text-align:center;padding:10px}
-.bug img{width:68px;height:68px;background:#fff;border-radius:16px;padding:6px}
-.bug b{display:block;font-family:"Bebas Neue",sans-serif;font-size:28px}
-.bug .on{outline:2px solid var(--orange);border-radius:14px}
-.block{margin:12px}
-.sec{margin:0 0 8px;font-size:11px;letter-spacing:.16em;color:var(--orange);font-weight:800}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
-.track{display:flex;height:8px;border-radius:99px;overflow:hidden;background:#2a241c;margin:8px 0}
+.sheet{margin:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.head{display:grid;grid-template-columns:1fr 88px 1fr;align-items:center;padding:16px 8px 8px;background:linear-gradient(90deg,#1b140e,#12151c 42%,#12151c 58%,#1b140e)}
+.head button{border:0;background:transparent;color:inherit;text-align:center}
+.head img{width:64px;height:64px;background:#fff;border-radius:14px;padding:5px}
+.head b{display:block;font-family:"Bebas Neue",sans-serif;font-size:28px}
+.head span,.when{color:var(--muted);font-size:12px;font-weight:700}
+.head .on{outline:2px solid var(--orange);border-radius:14px}
+.when{text-align:center}
+.pred{padding:10px 14px 12px}
+.pred .labs{display:flex;justify-content:space-between;font-size:12px;font-weight:800}
+.track{display:flex;height:8px;border-radius:99px;overflow:hidden;background:#2a241c;margin-top:6px}
 .track i{background:var(--orange);height:100%}
 .track u{background:#3a342c;height:100%;text-decoration:none}
-.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.meta div{background:#0c0e14;border-radius:10px;padding:10px}
-.meta span{display:block;color:var(--muted);font-size:10px;letter-spacing:.12em;font-weight:800}
-.table{width:100%;border-collapse:collapse}
-.table th,.table td{text-align:left;padding:8px 4px;border-bottom:1px solid #242833;font-size:13px;vertical-align:top}
-.table th{color:var(--muted);font-size:11px;letter-spacing:.08em;font-weight:800}
-.table td:last-child,.table th:last-child{text-align:right}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mini{background:#0c0e14;border-radius:10px;padding:8px}
-.mini div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #242833;font-size:12px}
-.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(760px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr;background:#101218;border:1px solid #3a2a18;border-radius:12px;overflow:hidden}
+.info{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.info b{color:var(--text)}
+.sec{padding:12px 14px 4px;font-size:11px;letter-spacing:.16em;color:var(--orange);font-weight:800}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 14px;border-top:1px solid #242833;font-size:13px;vertical-align:top}
+th{color:var(--muted);font-size:11px;letter-spacing:.08em;font-weight:800;text-align:center}
+td:first-child{text-align:left}
+td:last-child{text-align:right}
+td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spacing:.06em}
+.split{display:grid;grid-template-columns:1fr 1fr}
+.split section{padding:0 0 10px}
+.split section+section{border-left:1px solid var(--line)}
+.item{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-size:12px;border-top:1px solid #242833}
+.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(720px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr;background:#101218;border:1px solid #3a2a18;border-radius:12px;overflow:hidden}
 .dock button{border:0;background:transparent;color:var(--muted);padding:14px;font-weight:800}
 .dock button.on{background:var(--orange);color:#140800}
 .line{display:flex;justify-content:space-between;margin:8px 12px;padding:12px;background:#12151c;border-radius:12px}
@@ -99,8 +104,8 @@ function mapEv(ev,lg){
   const c=(ev.competitions||[])[0]||{}; const st=((c.status||{}).type)||{}; const comps=c.competitors||[];
   const away=comps.find(x=>x.homeAway==="away")||comps[0]||{}; const home=comps.find(x=>x.homeAway==="home")||comps[1]||{};
   const team=x=>{ const t=x.team||{}; return {id:String(t.id||""), ab:t.abbreviation||"", name:t.shortDisplayName||t.displayName||"Team", score:x.score||"", rank:rankOf(x), rec:recOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")}; };
-  const odd=(c.odds||[])[0]||{}; const broad=((c.broadcasts||[])[0]||{}).names||[]; const venue=c.venue||{};
-  return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||"", away:team(away), home:team(home), spread:odd.details||"", over:odd.overUnder?String(odd.overUnder):"", mlA:((odd.awayTeamOdds||{}).moneyLine)||"", mlH:((odd.homeTeamOdds||{}).moneyLine)||"", tv:broad.join(" / "), place:[venue.fullName,(venue.address||{}).city].filter(Boolean).join(", ")};
+  const broad=((c.broadcasts||[])[0]||{}).names||[]; const venue=c.venue||{};
+  return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||"", away:team(away), home:team(home), tv:broad.join(" / "), place:[venue.fullName,(venue.address||{}).city].filter(Boolean).join(", ")};
 }
 function started(g){ return g.state==="in"||g.state==="post"; }
 function saveLocal(){
@@ -114,7 +119,7 @@ function paint(){
   const picks=card().picks;
   $("games").innerHTML=state.games.map(g=>`<article class="game"><div class="row">
     <button class="team${picks[g.id]===g.away.id?" on":""}" data-g="${g.id}" data-t="${g.away.id}" type="button"><img alt="" src="${g.away.logo}"/><b>${g.away.name}</b><span>${g.away.score||g.away.rec}</span></button>
-    <button class="mid" data-open="${g.id}" type="button">${g.detail||"AT"}<br>${g.tv||"MATCHUP"}</button>
+    <button class="mid" data-open="${g.id}" type="button">${g.detail||"AT"}<br>${g.tv||"SHEET"}</button>
     <button class="team${picks[g.id]===g.home.id?" on":""}" data-g="${g.id}" data-t="${g.home.id}" type="button"><img alt="" src="${g.home.logo}"/><b>${g.home.name}</b><span>${g.home.score||g.home.rec}</span></button>
   </div></article>`).join("");
   $("games").querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openMatch(b.dataset.open));
@@ -131,53 +136,53 @@ function teamLeaders(block){
   ((block||{}).leaders||[]).forEach(cat=>{
     const top=(cat.leaders||[])[0]||{};
     const who=(top.athlete||{}).shortName||"";
-    out[cat.displayName||cat.name]=who?(who+" · "+(top.displayValue||"")):(top.displayValue||"—");
+    out[cat.displayName||cat.name]=who?(who+" "+(top.displayValue||"")):(top.displayValue||"—");
   });
   return out;
 }
 function openMatch(id){
   const g=state.games.find(x=>x.id===id); if(!g) return;
   show("match");
-  $("match").innerHTML=`<header class="top"><b>MATCHUP</b><button id="back" type="button">SLATE</button></header><p style="padding:16px">Loading</p>`;
+  $("match").innerHTML=`<header class="top"><b>SHEET</b><button id="back" type="button">SLATE</button></header>`;
   $("back").onclick=()=>show("slate");
   const sport=state.lg==="nfl"?"nfl":"college-football";
   fetch("https://site.api.espn.com/apis/site/v2/sports/football/"+sport+"/summary?event="+id,{cache:"no-store"}).then(r=>r.json()).then(d=>{
     const blocks=d.leaders||[];
-    const awayB=blocks.find(x=>String((x.team||{}).id)===g.away.id)||blocks[0]||{};
-    const homeB=blocks.find(x=>String((x.team||{}).id)===g.home.id)||blocks[1]||{};
-    const aL=teamLeaders(awayB), hL=teamLeaders(homeB);
+    const aL=teamLeaders(blocks.find(x=>String((x.team||{}).id)===g.away.id)||blocks[0]);
+    const hL=teamLeaders(blocks.find(x=>String((x.team||{}).id)===g.home.id)||blocks[1]);
     const cats=[...new Set(Object.keys(aL).concat(Object.keys(hL)))];
-    const leadRows=cats.map(c=>`<tr><td>${aL[c]||"—"}</td><th>${c}</th><td>${hL[c]||"—"}</td></tr>`).join("");
+    const rows=cats.map(c=>`<tr><td>${aL[c]||"—"}</td><td>${c}</td><td>${hL[c]||"—"}</td></tr>`).join("");
     const pred=d.predictor||{};
     const awayPct=Math.round(Number((pred.awayTeam||{}).gameProjection)||50);
     const homePct=Math.round(Number((pred.homeTeam||{}).gameProjection)||(100-awayPct));
-    const inj=d.injuries||[];
-    const injCol=side=>{
-      const team=inj.find(x=>String((x.team||{}).id)===side)||{};
-      return ((team.injuries||[]).slice(0,5).map(x=>`<div><span>${(x.athlete||{}).displayName||""}</span><span>${x.status||""}</span></div>`).join(""))||"<div><span>None</span><span></span></div>";
-    };
-    const fives=d.lastFiveGames||[];
-    const fiveCol=side=>{
-      const team=fives.find(x=>String((x.team||{}).id)===side)||{};
-      return ((team.events||[]).slice(0,5).map(ev=>`<div><span>${ev.atVs||""} ${(ev.opponent||{}).abbreviation||""}</span><span>${ev.gameResult||""} ${ev.score||""}</span></div>`).join(""))||"<div><span>None</span><span></span></div>";
-    };
+    const list=(arr,side,map)=>((arr.find(x=>String((x.team||{}).id)===side)||{})[map]||[]).slice(0,5);
+    const five=side=>list(d.lastFiveGames||[],side,"events").map(ev=>`<div class="item"><span>${ev.atVs||""} ${(ev.opponent||{}).abbreviation||""}</span><b>${ev.gameResult||""} ${ev.score||""}</b></div>`).join("")||`<div class="item"><span>None</span></div>`;
+    const inj=side=>list(d.injuries||[],side,"injuries").map(x=>`<div class="item"><span>${(x.athlete||{}).displayName||""}</span><b>${x.status||""}</b></div>`).join("")||`<div class="item"><span>None</span></div>`;
     const picks=card().picks;
     $("match").innerHTML=`
-      <header class="top"><b>${g.away.ab} AT ${g.home.ab}</b><button id="back" type="button">SLATE</button></header>
-      <div class="bug">
-        <button class="${picks[g.id]===g.away.id?"on":""}" data-t="${g.away.id}" type="button"><img src="${g.away.logo}" alt=""/><b>${g.away.ab}</b><span>${g.away.rec}</span></button>
-        <div style="text-align:center;color:#9b9288;font-size:12px;font-weight:800">${g.detail||"AT"}<br>${g.tv||""}</div>
-        <button class="${picks[g.id]===g.home.id?"on":""}" data-t="${g.home.id}" type="button"><img src="${g.home.logo}" alt=""/><b>${g.home.ab}</b><span>${g.home.rec}</span></button>
-      </div>
-      <div class="block"><div class="sec">MATCHUP PREDICTOR</div><div class="panel"><div>${g.away.ab} ${awayPct}% · ${g.home.ab} ${homePct}%</div><div class="track"><i style="width:${awayPct}%"></i><u style="width:${homePct}%"></u></div></div></div>
-      <div class="block"><div class="sec">GAME INFORMATION</div><div class="meta"><div><span>SITE</span><b>${g.place||"—"}</b></div><div><span>TV</span><b>${g.tv||"—"}</b></div><div><span>SPREAD</span><b>${g.spread||"—"}</b></div><div><span>TOTAL</span><b>${g.over||"—"}</b></div></div></div>
-      <div class="block"><div class="sec">SEASON LEADERS</div><div class="panel"><table class="table"><tr><th>${g.away.ab}</th><th></th><th>${g.home.ab}</th></tr>${leadRows||"<tr><td colspan='3'>No leaders</td></tr>"}</table></div></div>
-      <div class="block"><div class="sec">LAST FIVE</div><div class="cols"><div class="mini"><b>${g.away.ab}</b>${fiveCol(g.away.id)}</div><div class="mini"><b>${g.home.ab}</b>${fiveCol(g.home.id)}</div></div></div>
-      <div class="block"><div class="sec">INJURY REPORT</div><div class="cols"><div class="mini"><b>${g.away.ab}</b>${injCol(g.away.id)}</div><div class="mini"><b>${g.home.ab}</b>${injCol(g.home.id)}</div></div></div>
-      <div class="block"><div class="sec">ODDS</div><div class="meta"><div><span>SPREAD</span><b>${g.spread||"—"}</b></div><div><span>TOTAL</span><b>${g.over||"—"}</b></div><div><span>${g.away.ab} ML</span><b>${g.mlA||"—"}</b></div><div><span>${g.home.ab} ML</span><b>${g.mlH||"—"}</b></div></div></div>`;
+      <header class="top"><b>${g.away.name} at ${g.home.name}</b><button id="back" type="button">SLATE</button></header>
+      <article class="sheet">
+        <div class="head">
+          <button class="${picks[g.id]===g.away.id?"on":""}" data-t="${g.away.id}" type="button"><img src="${g.away.logo}" alt=""/><b>${g.away.ab}</b><span>${g.away.rec}</span></button>
+          <div class="when">${g.detail||"AT"}<br>${g.tv||""}</div>
+          <button class="${picks[g.id]===g.home.id?"on":""}" data-t="${g.home.id}" type="button"><img src="${g.home.logo}" alt=""/><b>${g.home.ab}</b><span>${g.home.rec}</span></button>
+        </div>
+        <div class="pred"><div class="labs"><span>${g.away.ab} ${awayPct}%</span><span>${g.home.ab} ${homePct}%</span></div><div class="track"><i style="width:${awayPct}%"></i><u style="width:${homePct}%"></u></div></div>
+        <div class="info"><span>Site <b>${g.place||"—"}</b></span><span>TV <b>${g.tv||"—"}</b></span></div>
+        <div class="sec">SEASON LEADERS</div>
+        <table><tr><th>${g.away.ab}</th><th></th><th>${g.home.ab}</th></tr>${rows||"<tr><td colspan='3'>No leaders</td></tr>"}</table>
+        <div class="split">
+          <section><div class="sec">LAST FIVE · ${g.away.ab}</div>${five(g.away.id)}</section>
+          <section><div class="sec">LAST FIVE · ${g.home.ab}</div>${five(g.home.id)}</section>
+        </div>
+        <div class="split">
+          <section><div class="sec">INJURIES · ${g.away.ab}</div>${inj(g.away.id)}</section>
+          <section><div class="sec">INJURIES · ${g.home.ab}</div>${inj(g.home.id)}</section>
+        </div>
+      </article>`;
     $("back").onclick=()=>show("slate");
     $("match").querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ pick(g.id,b.dataset.t); openMatch(id); });
-  }).catch(()=>{ $("match").innerHTML=`<header class="top"><b>MATCHUP</b><button id="back" type="button">SLATE</button></header><p style="padding:16px">Could not load matchup</p>`; $("back").onclick=()=>show("slate"); });
+  }).catch(()=>{ $("match").innerHTML=`<header class="top"><b>SHEET</b><button id="back" type="button">SLATE</button></header><p style="padding:16px">Could not load</p>`; $("back").onclick=()=>show("slate"); });
 }
 function paintTicket(){
   const picks=card().picks;
