@@ -207,6 +207,19 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .desk-pool .chips.games{margin-bottom:8px}
 .poolhead{display:none}
 .event,.steps,.labbox,.rosterbox{display:none}
+\n
+body{background:#07080c}
+.desk{background:linear-gradient(180deg,#16130f 0%,#101218 120px);border:1px solid #3a2a1c;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.desk .slot{background:#0e1016;border-radius:12px;border:1px solid #2c261e;margin-bottom:6px}
+.desk .slot.empty{background:transparent}
+.pcard{display:block;margin:0 0 8px;padding:10px 12px;border-radius:14px;background:#141820;border:1px solid #2a3140}
+.pcard.on{border-color:#3ee0a0}
+.pcard-top{display:grid;grid-template-columns:34px 32px 1fr auto;gap:8px;align-items:center}
+.pcard-bot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid #242a36;color:#9b9288;font-size:12px}
+.pcard-bot b{color:#ffc46b;font-size:15px}
+.addbtn{border:0;background:#ff7a18;color:#1a0e05;font-weight:800;border-radius:8px;padding:8px 10px;letter-spacing:.04em}
+.addbtn:disabled{background:#2a241c;color:#8a8074}
+.chips button{background:#141820;border-color:#2a3140}
 \n</style>
 </head>
 <body>
@@ -536,13 +549,10 @@ function paintPool(){
     const hurt=p.inj==="Out"||p.inj==="Injured Reserve";
     const qst=p.inj==="Questionable"||p.inj==="Doubtful";
     const tag=p.inj?`<em class="${hurt?"tag-out":qst?"tag-q":"tag-q"}"> ${p.inj}</em>`:"";
-    return `<div class="prow${on?" on":""}${hurt?" hurt":qst?" qst":""}" data-info="${p.id}">
-      <div class="posmark">${p.pos}</div>
-      <img class="tm" alt="" src="${nflLogo(p.team)}"/>
-      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${tag}</span></div>
-      <div class="price">$${p.sal.toLocaleString()}</div>
-      <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"✓":gameStarted(p)?"—":"+"}</button>
-    </div>`;
+    return `<article class="pcard${on?" on":""}${hurt?" hurt":""}" data-info="${p.id}">
+      <div class="pcard-top"><span class="posmark">${p.pos}</span><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" @ "+p.opp):""}</span></div><button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"IN":gameStarted(p)?"LOCK":"ADD"}</button></div>
+      <div class="pcard-bot"><span>${leaderLine(p)||"No season line"}</span><b>$${p.sal.toLocaleString()}</b>${tag}</div>
+    </article>`;
   }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No players loaded. Refresh and try again."}</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
   $("pool").querySelectorAll("[data-info]").forEach(r=>r.onclick=()=>openResearch(r.dataset.info));
