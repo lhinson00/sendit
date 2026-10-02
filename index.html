@@ -1798,13 +1798,14 @@ async function loadLeague(lg){
     if($("eatPanel")) $("eatPanel").hidden=true;
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
-    $("liveMeta").textContent = "TSSAA";
-    window.TNFB=keepTnLive(window.TNFB||{games:[]});
-    tssaaTab(window.TN_TAB||"fb");
-    loadTnPack().then(()=>{
-      tssaaTab(window.TN_TAB||"fb");
-      refreshTnFromSource("open");
-    });
+    $("liveMeta").textContent = "TSSAA · Football";
+    if(typeof keepTnLive==="function") window.TNFB=keepTnLive(window.TNFB||{games:[]});
+    const today=fridaySelDate();
+    const hasToday=((window.TNFB&&window.TNFB.games)||[]).some(g=>g.date===today);
+    if(hasToday){ window.TN_WEEK=today; tssaaTab(window.TN_TAB||"fb"); }
+    else if($("liveList")) $("liveList").innerHTML = "<p class='hint'>Friday slate</p>";
+    const packer = typeof loadTnPack==="function" ? loadTnPack() : Promise.resolve();
+    packer.then(()=>refreshTnFromSource("open")).catch(()=>{ if(LEAGUE==="tssaa") paintTnSlate(); });
     return;
   }
   try{
@@ -4908,7 +4909,7 @@ $("toSlate").onclick = ()=>{
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
-restorePlace();
+setTimeout(restorePlace, 0);
 (async function openFromQuery(){
   try{
     const q=new URLSearchParams(location.search);
