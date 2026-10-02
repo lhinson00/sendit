@@ -180,7 +180,21 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .namebar{margin-bottom:10px}
 #newCardBtn{border:1px solid var(--line);background:#101218;border-radius:10px;padding:0 14px;color:var(--muted);font-weight:800}
 .namebar{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:12px}
-</style>
+
+.slots{display:grid;gap:6px}
+.slot{display:grid;grid-template-columns:36px 28px minmax(0,1fr) auto 28px;align-items:center;gap:8px;min-height:56px;padding:8px 10px;border:1px solid #2a241c;border-radius:10px;background:#101218}
+.slot.empty{border-style:dashed;background:#0c0d12}
+.slot.onpick{border-color:#ff7a18;box-shadow:inset 3px 0 0 #ff7a18}
+.slot img.tm,.prow img.tm{width:28px;height:28px;object-fit:contain;background:#fff;border-radius:4px;padding:2px}
+.prow{display:grid;grid-template-columns:36px 28px minmax(0,1fr) auto 36px;align-items:center;gap:8px;min-height:58px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.salbar{height:6px;border-radius:99px;background:#1c1a16;margin:8px 0 10px;overflow:hidden}
+.salbar i{display:block;height:100%;background:#ff7a18}
+.slot .who b,.prow .who b{font-size:14px}
+.slot .who span,.prow .who span{display:block;color:#8a8074;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+\n.chips{display:flex;gap:6px;overflow:auto;padding-bottom:8px}
+.chips button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#efe8df;border-radius:99px;padding:6px 10px;font-size:12px}
+.chips button.on{border-color:#ff7a18;color:#ff7a18}
+\n</style>
 </head>
 <body>
 <header class="top">
@@ -224,14 +238,17 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
   <section class="labbox">
     <div class="rhead">
       <div>
-        <p class="kicker">Research</p>
-        <h2>Add from the slate</h2>
+        <p class="kicker">Player pool</p>
+        <h2>Build the card</h2>
       </div>
     </div>
-  <div class="filters three">
-    <select id="posFilt"></select>
-    <select id="gameFilt"></select>
-    <input id="qFilt" type="search" placeholder="Search"/>
+    <div class="chips" id="posChips"></div>
+    <div class="chips" id="gameChips"></div>
+  <div class="filters">
+    <select id="posFilt" hidden></select>
+    <select id="gameFilt" hidden></select>
+    <input id="qFilt" type="search" placeholder="Search a player"/>
+    <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Season points</option><option value="name">Name</option></select>
   </div>
     <div class="board">
     <div class="poolhead"><span>Pos</span><span>Player</span><span style="text-align:right">Salary</span><span></span></div>
@@ -356,16 +373,27 @@ function paintBudget(){
   if(un){ un.disabled = !STATE.locked; }
 }
 
+function nflLogo(ab){ return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png"; }
 function paintSlots(){
-  $("slots").innerHTML = SLOTS.map(k=>{
+  const filled=SLOTS.filter(k=>STATE.lineup[k]).length;
+  const spent=SLOTS.reduce((n,k)=>{ const p=STATE.pool.find(x=>x.id===STATE.lineup[k]); return n+(p?p.sal:0); },0);
+  const pct=Math.min(100, Math.round(spent/BUDGET*100));
+  $("slots").innerHTML = `<div class="salbar" title="Salary used"><i style="width:${pct}%"></i></div>`+SLOTS.map(k=>{
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
-    if(!p) return `<div class="slot empty"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>Open</b><span>Pick from the list</span></div><div class="sal">—</div><span></span></div>`;
-    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
-  }).join("");
+    const active = (window.PICK_SLOT||"")===k;
+    if(!p) return `<button type="button" class="slot empty${active?" onpick":""}" data-pick="${k}"><div class="posmark">${slotLabel(k)}</div><span></span><div class="who"><b>Open ${slotLabel(k)}</b><span>Tap to filter the slate</span></div><div class="sal">—</div><span></span></button>`;
+    return `<div class="slot"><div class="posmark">${slotLabel(k)}</div><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${p.sal.toLocaleString()}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
+  }).join("")+`<p class="hint">${filled}/9 filled · $${(BUDGET-spent).toLocaleString()} left</p>`;
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     if(slotFrozen(b.dataset.drop)) return toast("That game started — they stay on the card");
     delete STATE.lineup[b.dataset.drop];
     saveStore(); paintAll();
+  });
+  $("slots").querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{
+    window.PICK_SLOT=b.getAttribute("data-pick");
+    const sel=$("posFilt");
+    if(sel){ sel.value = window.PICK_SLOT==="RB2"?"RB":window.PICK_SLOT==="WR2"||window.PICK_SLOT==="WR3"?"WR":window.PICK_SLOT; }
+    paintSlots(); paintPool();
   });
 }
 
@@ -506,14 +534,16 @@ function paintPool(){
   if(game) rows = rows.filter(p=>String(p.eventId)===String(game));
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
   rows = rows.filter(isRelevant);
-  rows.sort((a,b)=> (b.sal-a.sal) || (fptsOf(b)-fptsOf(a)) || a.name.localeCompare(b.name));
-  $("pool").innerHTML = rows.slice(0,80).map(p=>{
+  const sort=($("sortFilt")&&$("sortFilt").value)||"sal";
+  rows.sort((a,b)=> sort==="name" ? a.name.localeCompare(b.name) : sort==="fpts" ? (fptsOf(b)-fptsOf(a)) : (b.sal-a.sal) || (fptsOf(b)-fptsOf(a)));
+  $("pool").innerHTML = rows.slice(0,120).map(p=>{
     const on = taken.has(p.id);
     const hurt=p.inj==="Out"||p.inj==="Injured Reserve";
     const qst=p.inj==="Questionable"||p.inj==="Doubtful";
     const tag=p.inj?`<em class="${hurt?"tag-out":qst?"tag-q":"tag-q"}"> ${p.inj}</em>`:"";
     return `<div class="prow${on?" on":""}${hurt?" hurt":qst?" qst":""}" data-info="${p.id}">
       <div class="posmark">${p.pos}</div>
+      <img class="tm" alt="" src="${nflLogo(p.team)}"/>
       <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""} · ${leaderLine(p)}${tag}</span></div>
       <div class="price">$${p.sal.toLocaleString()}</div>
       <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"✓":gameStarted(p)?"—":"+"}</button>
@@ -561,6 +591,16 @@ function paintFilters(){
   const games = STATE.games;
   const gcur = $("gameFilt").value;
   $("gameFilt").innerHTML = `<option value="">All games</option>`+games.map(g=>`<option value="${g.eventId}"${g.eventId===gcur?" selected":""}>${g.awayAb} @ ${g.homeAb}</option>`).join("");
+  const chips=$("posChips");
+  if(chips){
+    chips.innerHTML=["QB","RB","WR","TE","FLEX","DST"].map(p=>`<button type="button" data-pos="${p}" class="${p===cur?"on":""}">${p}</button>`).join("");
+    chips.querySelectorAll("button").forEach(b=>b.onclick=()=>{ posSel.value=b.dataset.pos; window.PICK_SLOT=""; paintFilters(); paintPool(); paintSlots(); });
+  }
+  const gc=$("gameChips");
+  if(gc){
+    gc.innerHTML=`<button type="button" data-g="" class="${!gcur?"on":""}">All</button>`+games.map(g=>`<button type="button" data-g="${g.eventId}" class="${g.eventId===gcur?"on":""}">${g.awayAb}@${g.homeAb}</button>`).join("");
+    gc.querySelectorAll("button").forEach(b=>b.onclick=()=>{ $("gameFilt").value=b.dataset.g; paintFilters(); paintPool(); });
+  }
 }
 
 function paintAll(){
