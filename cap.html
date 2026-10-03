@@ -1319,7 +1319,7 @@ function supaHeaders(extra){
 async function pullBoard(){
   if(!STATE.week) return;
   try{
-    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&select=*&order=pts.desc",{headers:supaHeaders()});
+    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&week=like.cap-*&select=*&order=pts.desc",{headers:supaHeaders()});
     if(!r.ok){ STATE.boardErr=await r.text(); return; }
     const rows=await r.json();
     STATE.boardErr="";
@@ -1356,7 +1356,7 @@ async function pushCard(create){
       else STATE.boardErr="";
       return;
     }
-    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&name=eq."+encodeURIComponent(name),{
+    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&week=like.cap-*&name=eq."+encodeURIComponent(name),{
       method:"PATCH",
       headers:supaHeaders({"Prefer":"return=minimal"}),
       body:JSON.stringify({pts:body.pts,lineup:body.lineup,locked_at:body.locked_at})
@@ -1377,7 +1377,7 @@ function upsertCard(){
 
 async function deleteCard(name){
   try{
-    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&name=eq."+encodeURIComponent(name),{
+    const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&week=like.cap-*&name=eq."+encodeURIComponent(name),{
       method:"DELETE",
       headers:supaHeaders({"Prefer":"return=minimal"})
     });
