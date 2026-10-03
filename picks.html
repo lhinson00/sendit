@@ -77,6 +77,11 @@ td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spaci
 .pickrow b{padding:12px;font-size:14px}
 .pickrow b.on{background:#2a170c;box-shadow:inset 0 -3px 0 #ff7a18}
 .pickrow i{font-style:normal;color:#9b9288;font-size:11px;font-weight:800}
+.gcast{margin:0 12px 10px;background:#12151c;border:1px solid #2c313d;border-radius:14px;overflow:hidden}
+.gcast .who{padding:12px 14px 4px;font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.03em}
+.gcast .who em{font-style:normal;color:#ff7a18}
+.gcast .sub{display:flex;justify-content:space-between;gap:8px;padding:0 14px 12px;color:#9b9288;font-size:12px}
+.gcast a{color:#ffc46b;font-weight:800;text-decoration:none}
 input{width:calc(100% - 24px);margin:8px 12px;background:#101218;border:1px solid var(--line);color:#fff;padding:12px;border-radius:10px}
 .toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;display:none}
 </style>
@@ -97,7 +102,7 @@ const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const state={lg:"nfl",games:[],board:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
 const $ = id => document.getElementById(id);
 function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1200); }
-function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); const dock=document.querySelector(".dock"); if(dock) dock.style.display=id==="match"?"none":"grid"; }
 function weekKey(lg){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date()); const g=k=>parts.find(x=>x.type===k).value;
@@ -216,11 +221,14 @@ async function paintBoard(){
 function openCard(name){
   const row=(state.board||[]).find(x=>x.name===name); if(!row) return;
   const picks=row.picks||{};
+  const sport=state.lg==="nfl"?"nfl":"college-football";
   const rows=state.games.filter(g=>picks[g.id]).map(g=>{
-    const a=picks[g.id]===g.away.id, h=picks[g.id]===g.home.id;
-    return `<div class="pickrow"><b class="${a?"on":""}">${g.away.name}</b><i>AT</i><b class="${h?"on":""}">${g.home.name}</b></div>`;
+    const tm=picks[g.id]===g.away.id?g.away:g.home;
+    const opp=tm===g.away?g.home:g.away;
+    const href="https://www.espn.com/"+sport+"/game/_/gameId/"+g.id;
+    return `<article class="gcast"><div class="who"><em>${tm.name}</em></div><div class="sub"><span>${g.away.ab} at ${g.home.ab}</span><a href="${href}" target="_blank" rel="noopener">Gamecast</a></div></article>`;
   }).join("");
-  $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div>${rows||"<p style='padding:16px'>No picks</p>"}`;
+  $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div><div style="padding:12px 0 28px">${rows||"<p style='padding:16px'>No picks</p>"}</div>`;
   show("match");
   $("backBoard").onclick=()=>show("board");
 }
