@@ -73,7 +73,7 @@ input{width:calc(100% - 24px);margin:8px 12px;background:#101218;border:1px soli
 <section class="screen" id="match"></section>
 <section class="screen" id="ticket"><input id="cardName" maxlength="24" placeholder="Name"/><div id="ticketList"></div></section>
 <section class="screen" id="board"><div id="boardList"></div></section>
-<div class="dock"><button class="on" data-view="slate" type="button">Picks</button><button data-view="ticket" type="button">Ticket</button><button data-view="board" type="button">Board</button></div>
+<div class="dock"><button class="on" data-view="slate" type="button">Picks</button><button data-view="ticket" type="button">Ticket</button><button data-view="board" type="button">Board</button><button id="lock" type="button">Lock</button></div>
 <div class="toast" id="toast"></div>
 <script>
 const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
@@ -184,16 +184,35 @@ function paintTicket(){
   const picks=card().picks;
   $("ticketList").innerHTML=state.games.filter(g=>picks[g.id]).map(g=>{ const tm=picks[g.id]===g.away.id?g.away:g.home; return `<div class="line"><b>${tm.name}</b><span>${g.away.ab} at ${g.home.ab}</span></div>`; }).join("");
 }
+function lineupText(picks){
+  return state.games.filter(g=>picks[g.id]).map(g=>{
+    const tm=picks[g.id]===g.away.id?g.away:g.home;
+    return tm.ab+" over "+(tm===g.away?g.home.ab:g.away.ab);
+  }).join(" · ");
+}
+async function pushCard(){
+  const body={week:weekKey(state.lg), name:card().name.slice(0,24), lineup:card().picks, pts:0, locked_at:new Date().toISOString()};
+  const r=await fetch(SUPA_URL+"/rest/v1/cards?on_conflict=week,name",{method:"POST",headers:headers({"Prefer":"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(body)});
+  if(!r.ok) throw new Error(await r.text());
+}
 async function paintBoard(){
   const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&select=name,lineup",{headers:headers()});
   const rows=r.ok?await r.json():[];
-  const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l}; }).sort((a,b)=>b.w-a.w||a.l-b.l);
-  $("boardList").innerHTML=scored.map((x,i)=>`<div class="line"><b>${i+1}  ${x.name}</b><span>${x.w}-${x.l}</span></div>`).join("");
+  const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l,picks}; }).sort((a,b)=>b.w-a.w||a.l-b.l||a.name.localeCompare(b.name));
+  $("boardList").innerHTML=scored.map((x,i)=>`<div class="line" style="display:block"><b>${i+1}  ${x.name}</b> <span>${x.w}-${x.l}</span><div style="color:#9b9288;font-size:13px;margin-top:6px">${lineupText(x.picks)||"No picks"}</div></div>`).join("")||"<p style='padding:12px;color:#9b9288'>No cards locked for this week.</p>";
 }
 async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick))); paint(); }
 function setLg(lg){ state.lg=lg; $("lgNfl").classList.toggle("on",lg==="nfl"); $("lgCfb").classList.toggle("on",lg==="cfb"); loadLocal(); show("slate"); load(); }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board") paintBoard(); if(b.dataset.view==="ticket") paintTicket(); });
 $("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb"); $("cardName").oninput=saveLocal;
+$("lock").onclick=async()=>{
+  saveLocal();
+  if(!card().name){ show("ticket"); return toast("Name"); }
+  if(!Object.keys(card().picks).length) return toast("Pick");
+  card().locked=true; saveLocal();
+  try{ await pushCard(); toast("Locked"); paintBoard(); show("board"); }
+  catch(e){ toast("Not saved"); }
+};
 loadLocal(); load();
 </script>
 </body>
