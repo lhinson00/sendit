@@ -1319,10 +1319,6 @@ function supaHeaders(extra){
 async function pullBoard(){
   if(!STATE.week) return;
   try{
-    await fetch(SUPA_URL+"/rest/v1/cards?week=like.cap-*&week=neq."+encodeURIComponent(STATE.week),{
-      method:"DELETE",
-      headers:supaHeaders({"Prefer":"return=minimal"})
-    });
     const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(STATE.week)+"&select=*&order=pts.desc",{headers:supaHeaders()});
     if(!r.ok){ STATE.boardErr=await r.text(); return; }
     const rows=await r.json();
