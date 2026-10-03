@@ -221,11 +221,10 @@ async function paintBoard(){
 function openCard(name){
   const row=(state.board||[]).find(x=>x.name===name); if(!row) return;
   const picks=row.picks||{};
-  const sport=state.lg==="nfl"?"nfl":"college-football";
   const rows=state.games.filter(g=>picks[g.id]).map(g=>{
     const tm=picks[g.id]===g.away.id?g.away:g.home;
     const opp=tm===g.away?g.home:g.away;
-    const href="https://www.espn.com/"+sport+"/game/_/gameId/"+g.id;
+    const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
     return `<article class="gcast"><div class="who"><em>${tm.name}</em></div><div class="sub"><span>${g.away.ab} at ${g.home.ab}</span><a href="${href}" target="_blank" rel="noopener">Gamecast</a></div></article>`;
   }).join("");
   $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div><div style="padding:12px 0 28px">${rows||"<p style='padding:16px'>No picks</p>"}</div>`;
