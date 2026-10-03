@@ -1319,7 +1319,7 @@ function supaHeaders(extra){
 async function pullBoard(){
   if(!STATE.week) return;
   try{
-    await fetch(SUPA_URL+"/rest/v1/cards?week=neq."+encodeURIComponent(STATE.week),{
+    await fetch(SUPA_URL+"/rest/v1/cards?week=like.cap-*&week=neq."+encodeURIComponent(STATE.week),{
       method:"DELETE",
       headers:supaHeaders({"Prefer":"return=minimal"})
     });
