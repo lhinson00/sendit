@@ -57,7 +57,7 @@ td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spaci
 .split section{padding:0 0 10px}
 .split section+section{border-left:1px solid var(--line)}
 .item{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-size:12px;border-top:1px solid #242833}
-.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(720px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr;background:#101218;border:1px solid #3a2a18;border-radius:12px;overflow:hidden}
+.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(720px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:#101218;border:1px solid #3a2a18;border-radius:12px;overflow:hidden}
 .dock button{border:0;background:transparent;color:var(--muted);padding:14px;font-weight:800}
 .dock button.on{background:var(--orange);color:#140800}
 .line{display:flex;justify-content:space-between;margin:8px 12px;padding:12px;background:#12151c;border-radius:12px}
@@ -215,7 +215,7 @@ async function paintBoard(){
   const rows=r.ok?await r.json():[];
   const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l,picks}; }).sort((a,b)=>b.w-a.w||a.l-b.l||a.name.localeCompare(b.name));
   state.board=scored;
-  $("boardList").innerHTML=scored.length?`<div class="ladder">`+scored.map((x,i)=>`<button class="seat" type="button" data-who="${x.name}"><b>${i+1}</b><span><b style="color:#fff;font-size:18px">${x.name}</b><br>${Object.keys(x.picks).length} picks</span><em>${x.w}-${x.l}</em></button>`).join("")+`</div>`:"<p style='padding:16px;color:#9b9288'>No cards locked this week.</p>";
+  $("boardList").innerHTML=scored.length?`<div class="ladder">`+scored.map((x,i)=>`<button class="seat" type="button" data-who="${x.name}"><b>${i+1}</b><span><b style="color:#fff;font-size:18px">${x.name}</b><br>${Object.keys(x.picks).length} picks</span><em>${x.w}-${x.l}</em></button>`).join("")+`</div>`:"<p style='padding:16px;color:#9b9288'>No "+(state.lg==="nfl"?"NFL":"college")+" cards locked this week. Lock on the "+(state.lg==="nfl"?"NFL":"College")+" tab.</p>";
   $("boardList").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>openCard(b.dataset.who));
 }
 function openCard(name){
