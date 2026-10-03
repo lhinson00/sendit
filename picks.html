@@ -67,6 +67,10 @@ td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spaci
 .seat b{font-family:"Bebas Neue",sans-serif;font-size:28px;font-weight:500}
 .seat span{color:#9b9288;font-size:12px}
 .seat em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:26px;color:#ff7a18}
+.backbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#1b140e;border-bottom:2px solid #ff7a18}
+.backbar button{border:0;background:#ff7a18;color:#140800;font-weight:800;letter-spacing:.08em;padding:10px 14px;border-radius:999px}
+.backbar b{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em}
+.backbar span{margin-left:auto;color:#ffc46b;font-weight:800}
 .cardhead{display:flex;align-items:flex-end;padding:8px 16px 0}
 .cardhead button{border:0;background:none;color:#9b9288;font-weight:800}
 .pickrow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:8px 12px;background:#12151c;border-radius:12px;overflow:hidden}
@@ -216,7 +220,7 @@ function openCard(name){
     const a=picks[g.id]===g.away.id, h=picks[g.id]===g.home.id;
     return `<div class="pickrow"><b class="${a?"on":""}">${g.away.name}</b><i>AT</i><b class="${h?"on":""}">${g.home.name}</b></div>`;
   }).join("");
-  $("match").innerHTML=`<header class="top"><b>${name}</b><button id="backBoard" type="button">BOARD</button></header><p style="padding:0 16px;color:#9b9288">${row.w}-${row.l}</p>${rows||"<p style='padding:16px'>No picks</p>"}`;
+  $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div>${rows||"<p style='padding:16px'>No picks</p>"}`;
   show("match");
   $("backBoard").onclick=()=>show("board");
 }
