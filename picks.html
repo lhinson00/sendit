@@ -211,7 +211,7 @@ async function pushCard(){
   if(!r.ok) throw new Error(await r.text());
 }
 async function paintBoard(){
-  const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&select=name,lineup",{headers:headers()});
+  const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&week=like.pem-*&select=name,lineup",{headers:headers()});
   const rows=r.ok?await r.json():[];
   const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l,picks}; }).sort((a,b)=>b.w-a.w||a.l-b.l||a.name.localeCompare(b.name));
   state.board=scored;
