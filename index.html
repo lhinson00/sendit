@@ -507,6 +507,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .spark i b{font-size:9px;line-height:1;margin-bottom:2px;color:#efe6d8}
 .spark i.hit b{color:var(--orange)}
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
+.statsec{margin:16px 12px 0}.statsec h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18;font-weight:800}.statline{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.statline div{background:#101218;border:1px solid #2a241c;border-radius:12px;padding:12px 8px;text-align:center}.statline i{display:block;font-style:normal;font-size:10px;letter-spacing:.14em;color:#9b9288}.statline b{display:block;font-family:"Bebas Neue",sans-serif;font-size:28px;font-weight:400;color:#f7f2ea;line-height:1}
 .seasonline{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;margin:0}.seasonline span{background:#14110e;border:1px solid #2a241c;padding:10px;text-align:center}.seasonline i{display:block;font-style:normal;color:#9b9288;font-size:10px;letter-spacing:.12em}.seasonline b,.seasonline span{color:#f4efe6;font-family:"Bebas Neue",sans-serif;font-size:22px}
 .seasonline i{font-style:normal;color:var(--ember);font-size:10px;letter-spacing:.1em;margin-right:4px}
 .krow .ktop{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start}
@@ -2826,11 +2827,30 @@ async function openPlayer(pid, name){
         ${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
         ${(()=>{
-          const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM|SOLO|TOT|SACK|TFL)$/i;
-          const bits=labels.map((lab,i)=>({lab,s:season.stats[i]})).filter(x=>keep.test(x.lab));
-          const line = bits.length ? `<p class="seasonline">${bits.map(x=>`<span><i>${x.lab}</i> ${x.s||"—"}</span>`).join("")}</p>` : (fromKit?"":`<div class="tiles">${tiles}</div>`);
-          if(fromKit) return line+"</div>";
-          return line + `${careerBits?`<div class="career"><span>Career</span>${careerBits}</div>`:""}</div>${lastGame}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No earlier games posted</p>"}</div>`;
+          const pack=(labs,stats)=>{
+            const items=(labs||[]).map((lab,i)=>({lab:String(lab||"").toUpperCase(),s:(stats||[])[i]}));
+            const buckets=[]; let cur=[]; const seen=new Set();
+            items.forEach(it=>{
+              if(!it.lab) return;
+              if(cur.length && seen.has(it.lab)){ buckets.push(cur); cur=[]; seen.clear(); }
+              cur.push(it); seen.add(it.lab);
+            });
+            if(cur.length) buckets.push(cur);
+            const title=b=>{
+              const f=b[0].lab;
+              if(f==="CMP"||f==="ATT"||f==="C/ATT") return "Passing";
+              if(f==="REC"||f==="TGTS") return "Receiving";
+              if(f==="CAR") return "Rushing";
+              if(f==="SOLO"||f==="TOT"||f==="SACK"||f==="TFL") return "Defense";
+              if(f==="GP"||f==="G") return "Skater";
+              return "Season";
+            };
+            return buckets.map(b=>`<section class="statsec"><h3>${title(b)}</h3><div class="statline">${b.map(r=>`<div><i>${r.lab}</i><b>${r.s||"—"}</b></div>`).join("")}</div></section>`).join("");
+          };
+          const seasonSheet = labels.length ? pack(labels, season.stats) : "";
+          const careerSheet = career ? pack(labels, career.stats).replace(/<h3>/g,"<h3>Career · ") : "";
+          if(fromKit) return (seasonSheet||"")+"</div>";
+          return (seasonSheet||`<div class="tiles">${tiles}</div>`) + careerSheet + `</div>${lastGame}<div class="glog"><h3>Recent</h3>${cards||"<p class='hint'>No earlier games posted</p>"}</div>`;
         })()}
       `;
   }catch(e){
