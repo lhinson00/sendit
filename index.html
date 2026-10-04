@@ -4529,7 +4529,11 @@ async function openLeagueTeam(tid, name, sport){
       }).join("");
       return `<div class="sgrp"><h3>${blk.displayName||nm}</h3><div style="overflow:auto"><table class="ptable"><thead><tr><th>NAME</th>${spec.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join("");
-    const games=(sched.events||[]).slice(-20).map(ev=>{
+    const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+    const now=Date.now();
+    const past=all.filter(ev=>String((((ev.competitions||[])[0]||{}).status||{}).type||{}).state==="post" || new Date(ev.date||0).getTime()<now-3*3600000).slice(-5);
+    const upcoming=all.filter(ev=>!past.includes(ev) && (((((ev.competitions||[])[0]||{}).status||{}).type||{}).state!=="post")).slice(0,5);
+    const games=past.concat(upcoming).map(ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
       const me=comps.find(x=>String(x.id)===String(tid))||{};
@@ -4556,7 +4560,7 @@ async function openLeagueTeam(tid, name, sport){
         <div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div>
         ${leadHtml}
         ${tableHtml}
-        <h3 class="kicker" style="margin-top:18px">Schedule</h3>
+        <h3 class="kicker" style="margin-top:18px">Last 5 · Next 5</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
         <div class="sgrp"><h3>Roster</h3>${(rost.athletes||[]).map(g=>`<p class="hint">${g.position||""}</p>${(g.items||[]).map(p=>{
           const shot=(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/mlb/players/full/"+p.id+".png");
