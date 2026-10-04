@@ -287,6 +287,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .scorebug .gteam b{font-size:28px;color:var(--orange)}
 .hist{margin:0 var(--pad) 16px}
 .chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
+.pshot{width:84px;height:84px;border-radius:50%;object-fit:cover;background:#1a120c;border:2px solid #ff7a18}
 .phero{margin:0 var(--pad) 16px;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d10}
 .phero-top{display:grid;grid-template-columns:120px 1fr;min-height:150px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 55%)}
 .phero-top img{width:120px;height:168px;object-fit:cover;object-position:top center;background:#16120e}
@@ -2633,13 +2634,9 @@ async function openPlayer(pid, name){
       const line = (ev.stats||[]).slice(0,7).join(" · ");
       return "<tr><td>"+String(info.gameDate||"").slice(0,10)+"</td><td>"+dec+" "+opp+"</td><td>"+line+"</td></tr>";
     }).join("");
-    const shot = LEAGUE==="nfl"
-      ? "https://a.espncdn.com/i/headshots/nfl/players/full/"+pid+".png"
-      : LEAGUE==="cfb"
-        ? "https://a.espncdn.com/i/headshots/college-football/players/full/"+pid+".png"
-        : LEAGUE==="mls"
-          ? "https://a.espncdn.com/i/headshots/soccer/players/full/"+pid+".png"
-        : "https://a.espncdn.com/i/headshots/mlb/players/full/"+pid+".png";
+    const sportShot = LEAGUE==="nfl" ? "nfl" : LEAGUE==="cfb" ? "college-football" : LEAGUE==="nhl" ? "nhl" : LEAGUE==="mls" ? "soccer" : "mlb";
+    const apiShot = (d.athlete && d.athlete.headshot && (d.athlete.headshot.href || d.athlete.headshot)) || "";
+    const shot = apiShot || ("https://a.espncdn.com/i/headshots/"+sportShot+"/players/full/"+pid+".png");
     const season = (st.splits||[]).find(s=>/regular/i.test(s.displayName||"")) || (st.splits||[])[0] || {stats:[]};
     const career = (st.splits||[]).find(s=>/career/i.test(s.displayName||"")) || null;
     const tiles = labels.map((lab,i)=>"<div class='tile'><em>"+lab+"</em><b>"+(season.stats[i]||"—")+"</b></div>").join("");
@@ -2735,7 +2732,7 @@ async function openPlayer(pid, name){
     $("playerRoom").innerHTML = `
       <div class="phero">
         <div class="phero-top">
-          <img alt="" src="${shot}"/>
+          <img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/>
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
@@ -3891,7 +3888,7 @@ async function openMlsLeaders(){
           }
         }catch(e){}
         const shot="https://a.espncdn.com/i/headshots/soccer/players/full/"+aid+".png";
-        return `<div class="lrow prow" data-pid="${aid}" data-pname="${String(name).replace(/"/g,"")}"><span class="rk">${i+1}</span><img alt="" src="${shot}"/><div><b>${name}</b><em>${tid?"":""}</em></div><span class="val">${(L.shortDisplayValue||L.displayValue||L.value||"").replace("Matches:","M").replace("Goals:","G").replace("Assists:","A")}</span></div>`;
+        return `<div class="lrow prow" data-pid="${aid}" data-pname="${String(name).replace(/"/g,"")}"><span class="rk">${i+1}</span><img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/><div><b>${name}</b><em>${tid?"":""}</em></div><span class="val">${(L.shortDisplayValue||L.displayValue||L.value||"").replace("Matches:","M").replace("Goals:","G").replace("Assists:","A")}</span></div>`;
       }));
       return `<h3>${c.displayName||c.name}</h3>${rows.join("")}`;
     }));
@@ -3937,7 +3934,7 @@ async function openMlsTeam(tid, name){
         const shot=(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/soccer/players/full/"+a.id+".png"):"");
         const pos=(a.position&&a.position.abbreviation)||"";
         const nat=a.citizenship||"";
-        return `<div class="xirow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${a.jersey?("#"+a.jersey+"  "):""}${a.displayName||""}</b><em>${pos}${nat?(" · "+nat):""}</em></div></div>`;
+        return `<div class="xirow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/><div><b>${a.jersey?("#"+a.jersey+"  "):""}${a.displayName||""}</b><em>${pos}${nat?(" · "+nat):""}</em></div></div>`;
       }).join("");
       return `<div class="sgrp"><h3>${k} · ${groups[k].length}</h3><div class="squadg">${rows||"<p class='hint'>None listed</p>"}</div></div>`;
     }).join("");
@@ -4096,7 +4093,7 @@ function renderSoccer(g, sum){
       const shot=(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/soccer/players/full/"+a.id+".png"):"");
       const pos=(p.position&&p.position.abbreviation)||"";
       const tag=p.starter?"XI":(p.subbedIn?"ON":"");
-      return `<div class="xirow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${a.displayName||""}</b><em>${pos}${p.jersey?(" · #"+p.jersey):""}${tag?(" · "+tag):""}</em></div></div>`;
+      return `<div class="xirow prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/><div><b>${a.displayName||""}</b><em>${pos}${p.jersey?(" · #"+p.jersey):""}${tag?(" · "+tag):""}</em></div></div>`;
     }).join("");
     return `<div><h3>${tm.abbreviation||tm.displayName||""} · ${form}</h3>${rows}</div>`;
   }).join("");
@@ -4106,7 +4103,7 @@ function renderSoccer(g, sum){
       const top=(c.leaders||[])[0]||{};
       const a=top.athlete||{};
       const shot=(a.headshot&&(a.headshot.href||a.headshot))||"";
-      return `<div class="xirow"><img alt="" src="${shot}"/><div><i>${c.displayName||""}</i><b>${a.displayName||""}</b><em>${top.displayValue||""}</em></div></div>`;
+      return `<div class="xirow"><img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/><div><i>${c.displayName||""}</i><b>${a.displayName||""}</b><em>${top.displayValue||""}</em></div></div>`;
     }).join("");
     return `<div><h3>${tm.abbreviation||""} leaders</h3>${cats}</div>`;
   }).join("");
@@ -4525,7 +4522,7 @@ async function openMlbTeam(tid, name){
         <div class="sgrp"><h3>Roster</h3>${(rost.athletes||[]).map(g=>`<p class="hint">${g.position||""}</p>${(g.items||[]).map(p=>{
           const shot=(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/mlb/players/full/"+p.id+".png");
           const pos=(p.position&&p.position.abbreviation)||"";
-          return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${p.displayName||""}</b><em>#${p.jersey||"—"} · ${pos}</em></div></div>`;
+          return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/><div><b>${p.displayName||""}</b><em>#${p.jersey||"—"} · ${pos}</em></div></div>`;
         }).join("")}`).join("")}</div>
       </div>`;
   }catch(e){
