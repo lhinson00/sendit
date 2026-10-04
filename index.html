@@ -2150,8 +2150,51 @@ function videoClips(sum){
     return `<div class="clip"><video controls preload="none" poster="${thumb}" src="${src}"></video><p>${title}</p></div>`;
   }).join("");
 }
+function renderHockey(g, sum){
+  const hdr=((sum.header||{}).competitions||[])[0]||{};
+  const comps=hdr.competitors||[];
+  const home=comps.find(x=>x.homeAway==="home")||{};
+  const away=comps.find(x=>x.homeAway==="away")||{};
+  const st=((hdr.status||{}).type||{}).detail||g.detail||"";
+  const live=((hdr.status||{}).type||{}).state==="in";
+  const as=scoreOf(away)||g.awayScore||"0";
+  const hs=scoreOf(home)||g.homeScore||"0";
+  const cells=c=>{
+    const ls=c.linescores||[];
+    const vals=ls.map(x=>x.displayValue!=null?x.displayValue:x.value);
+    while(vals.length<3) vals.push("");
+    return vals;
+  };
+  const aL=cells(away), hL=cells(home);
+  const heads=["1","2","3"].concat(aL.slice(3).map((_,i)=>i===0&&aL.length===4?"OT":"OT"+(i+1)));
+  const stat=(c,n)=>{ const s=((c.statistics||[]).find(x=>x.name===n)||{}); return s.displayValue||""; };
+  const shotsA=stat(away,"shots"), shotsH=stat(home,"shots");
+  const plays=(sum.plays||[]).filter(p=>p.scoringPlay).slice(-8).reverse().map(p=>{
+    const per=(p.period&&p.period.displayValue)||"";
+    const clk=(p.clock&&p.clock.displayValue)||"";
+    return `<div class="play"><span>${per} ${clk} · ${p.awayScore||""}–${p.homeScore||""}</span><p>${p.text||""}</p></div>`;
+  }).join("");
+  if(!$("gameBody")) $("gameRoom").innerHTML="<div id='gameBody'></div>";
+  $("gameBody").innerHTML=`
+    <div class="scorebug${live?" islive":""}">
+      <div class="gstat"><span>${live?"LIVE · ":""}${st||"Pregame"}</span><span>${g.broadcast||""}</span></div>
+      <div class="bigline">
+        <div class="nm"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span><span>${g.away}</span></div>
+        <div class="sc"><em>${as}</em><span>–</span><em>${hs}</em></div>
+        <div class="nm r"><span>${g.home}</span><span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+      </div>
+      <table class="qtr">
+        <tr><th></th>${heads.map(h=>`<th>${h}</th>`).join("")}<th>T</th>${shotsA||shotsH?"<th>SOG</th>":""}</tr>
+        <tr><td>${g.awayAb||g.away}</td>${aL.map(v=>`<td>${v||"—"}</td>`).join("")}<td>${as}</td>${shotsA||shotsH?`<td>${shotsA||"—"}</td>`:""}</tr>
+        <tr><td>${g.homeAb||g.home}</td>${hL.map(v=>`<td>${v||"—"}</td>`).join("")}<td>${hs}</td>${shotsA||shotsH?`<td>${shotsH||"—"}</td>`:""}</tr>
+      </table>
+    </div>
+    ${plays?`<h3 class="sec">Scoring</h3>${plays}`:""}
+    ${boxHtml(sum)}`;
+}
 function renderGame(g, sum){
   if(LEAGUE==="nfl" || LEAGUE==="cfb"){ renderFootball(g,sum); return; }
+  if(LEAGUE==="nhl"){ renderHockey(g,sum); return; }
   if(LEAGUE==="mls"){ renderSoccer(g,sum); return; }
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
