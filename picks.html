@@ -59,7 +59,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .gcard .nm{font-family:"Bebas Neue",sans-serif;font-size:18px;line-height:1.05;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap}
 .gcard .nm.r{justify-content:flex-end}
 .gcard .nm .who{display:block;max-width:118px}
-.star{color:#5c564e;font-size:16px}.nm .star:first-child,.nm.r .star:last-child{color:#ff7a18}
+.pickside{border:0;background:transparent;color:inherit;font:inherit;padding:0;text-align:left}.pickside.r{text-align:right}.star{color:#5c564e;font-size:16px}.nm .star:first-child,.nm.r .star:last-child{color:#ff7a18}
 .logoplate{width:36px;height:36px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:none;box-shadow:0 0 0 1px #fff}
 .logoplate img{width:28px;height:28px;object-fit:contain;background:transparent}
 .gcard .sc{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
@@ -154,16 +154,18 @@ function saveLocal(){
 }
 function paint(){
   const picks=card().picks;
-  let day="";
-  $("games").innerHTML=state.games.map(g=>{
-    const head=day===dayLabel(g.kick)?"":(day=dayLabel(g.kick), `<div class="day">${day}</div>`);
-    return head+`<article class="plate"><div class="meta"><span>${g.detail||"UPCOMING"}</span><span>${g.tv||""}</span></div><div class="sides">
-      <button class="side${picks[g.id]===g.away.id?" on":""}" data-g="${g.id}" data-t="${g.away.id}" type="button"><img alt="" src="${g.away.logo}"/><b>${g.away.name}</b><span>${g.away.score||g.away.rec}</span></button>
-      <div class="vs">AT</div>
-      <button class="side${picks[g.id]===g.home.id?" on":""}" data-g="${g.id}" data-t="${g.home.id}" type="button"><img alt="" src="${g.home.logo}"/><b>${g.home.name}</b><span>${g.home.score||g.home.rec}</span></button>
-    </div></article>`;
-  }).join("");
-  $("games").querySelectorAll(".side").forEach(b=>b.onclick=()=>pick(b.dataset.g,b.dataset.t));
+  $("games").innerHTML=`<div class="list">`+state.games.map(g=>{
+    const when=g.detail||"";
+    return `<article class="gcard">
+      <div class="gstat"><span>${when}</span><span>${g.tv||""}</span></div>
+      <div class="bigline">
+        <button class="nm pickside" data-g="${g.id}" data-t="${g.away.id}" type="button"><span class="star">${picks[g.id]===g.away.id?"★":"☆"}</span><span class="logoplate"><img alt="" src="${g.away.logo}"/></span><span class="who">${g.away.name}</span></button>
+        <div class="sc"><em>–</em><span>–</span><em>–</em></div>
+        <button class="nm r pickside" data-g="${g.id}" data-t="${g.home.id}" type="button"><span class="who">${g.home.name}</span><span class="logoplate"><img alt="" src="${g.home.logo}"/></span><span class="star">${picks[g.id]===g.home.id?"★":"☆"}</span></button>
+      </div>
+    </article>`;
+  }).join("")+`</div>`;
+  $("games").querySelectorAll(".pickside").forEach(b=>b.onclick=()=>pick(b.dataset.g,b.dataset.t));
   saveLocal();
 }
 function pick(id,tid){
