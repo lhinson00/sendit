@@ -45,14 +45,16 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 :root{--orange:#ff7a18;--pad:14px;--muted:#9b9288;--text:#f4efe6}
 .bar{display:flex;align-items:center;gap:10px;padding:8px var(--pad) 4px}
 .back{border:0;background:0;color:var(--orange);font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:0;font-size:12px}
-.list{display:grid;gap:10px;padding:0 var(--pad) 24px}
-.gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;text-decoration:none;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
+.list{display:grid;gap:14px;padding:8px var(--pad) 28px}
+.gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;text-decoration:none;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:16px}
 .gcard.done{border-color:#fff}
 .gcard .nm.win,.gcard .nm.win span{color:#3ee0a0}
 .gcard .sc em.win{color:#3ee0a0;text-shadow:0 0 12px rgba(62,224,160,.25)}
+.gcard .sc em.miss{color:#ff5a3c}
+.gcard .nm.miss .star{color:#ff5a3c}
 .gcard.live{border-color:#3ee0a0;background:#0c1612;box-shadow:inset 3px 0 0 #3ee0a0}
 .gstat{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.gcard .bigline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:6px 0 4px}
+.gcard .bigline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:8px 0 6px}
 .gcard .nm{font-family:"Bebas Neue",sans-serif;font-size:18px;line-height:1.05;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap}
 .gcard .nm.r{justify-content:flex-end}
 .gcard .nm .who{display:block;max-width:118px}
@@ -79,7 +81,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .scard .win{color:#3ee0a0}
 .scard .pick{box-shadow:inset 0 -2px 0 #ff7a18}
 .scard .sub{margin-top:6px;color:#c9c2b8;font-size:12px}
-.lockbar{display:none;gap:8px;padding:12px;position:sticky;bottom:64px;background:#1b140e}
+.lockbar{display:none;gap:8px;margin:12px;padding:0}
 .lockbar.on{display:grid;grid-template-columns:1fr auto}
 .lockbar input{background:#101218;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:12px}
 .lockbar button{border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px;padding:0 16px}
@@ -187,8 +189,8 @@ function openCard(name){
     const live=g.state==="in"?" live":"";
     const done=g.state==="post"?" done":"";
     const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
-    const aWin=cls==="hit"&&picks[g.id]===g.away.id?" win":"";
-    const hWin=cls==="hit"&&picks[g.id]===g.home.id?" win":"";
+    const aWin=cls==="hit"&&picks[g.id]===g.away.id?" win":cls==="miss"&&picks[g.id]===g.away.id?" miss":"";
+    const hWin=cls==="hit"&&picks[g.id]===g.home.id?" win":cls==="miss"&&picks[g.id]===g.home.id?" miss":"";
     const when=g.state==="in"?("LIVE · "+(g.detail||"")):g.state==="post"?(g.detail||"Final"):(g.detail||"");
     return `<a class="gcard${live}${done}" href="${href}">
       <div class="gstat"><span>${when}</span><span>${g.tv||""}</span></div>
