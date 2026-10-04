@@ -1851,7 +1851,7 @@ function boxHtml(sum){
   if(!sides.length) return "<p class='hint'>Box not up yet.</p>";
   const prefer = (LEAGUE==="nfl"||LEAGUE==="cfb")
     ? ["passing","rushing","receiving","kicking"]
-    : null;
+    : LEAGUE==="nhl" ? ["forwards","defenses","goalies"] : null;
   return sides.map(side=>{
     const team = (side.team && (side.team.abbreviation||side.team.displayName)) || "";
     let groups = (side.statistics||[]).filter(g=>g && (g.athletes||[]).length);
@@ -1860,11 +1860,18 @@ function boxHtml(sum){
       groups = groups.filter(g=>rank(g.name)<99).sort((a,b)=>rank(a.name)-rank(b.name));
     }
     return groups.map(grp=>{
-      const labels = (grp.labels||grp.names||[]).slice(0,8);
+      let labels = (grp.labels||grp.names||[]).slice(0,8);
+      let idx=null;
+      if(LEAGUE==="nhl"){
+        const want = grp.name==="goalies" ? ["SV","SV%","GA","SA","TOI"] : ["G","A","SOG","+/-","TOI"];
+        const src=grp.labels||grp.names||[];
+        idx=want.map(w=>src.indexOf(w)).filter(i=>i>=0);
+        labels=idx.map(i=>src[i]);
+      }
       const head = "<tr><th>"+(grp.label||grp.displayName||grp.name||team)+"</th>"+labels.map(l=>"<th>"+l+"</th>").join("")+"</tr>";
       const rows = (grp.athletes||[]).map(a=>{
         const n=(a.athlete&&a.athlete.displayName)||"";
-        const st=a.stats||[];
+        const st=idx?idx.map(i=>a.stats[i]):(a.stats||[]);
         const pid=a.athlete&&a.athlete.id||"";
         return "<tr class='prow' data-pid='"+pid+"' data-pname='"+String(n).replace(/"/g,"")+"'><td><span class='pname'>"+n+"</span></td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
       }).join("");
@@ -2576,7 +2583,7 @@ async function openPlayer(pid, name){
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
-    const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : LEAGUE==="mls" ? "soccer/usa.1" : "baseball/mlb";
+    const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : LEAGUE==="nhl" ? "hockey/nhl" : LEAGUE==="mls" ? "soccer/usa.1" : "baseball/mlb";
     const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/overview",{cache:"no-store"});
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
@@ -2910,7 +2917,7 @@ function liveStatFromBox(sum, pid, stat){
       const keys=grp.keys||grp.names||[];
       (grp.athletes||[]).forEach(a=>{
         if(!a.athlete || String(a.athlete.id)!==String(pid)) return;
-        const st=a.stats||[];
+        const st=idx?idx.map(i=>a.stats[i]):(a.stats||[]);
         const get=n=>{ const i=keys.indexOf(n); return i>=0?Number(String(st[i]||"0").split("/")[0])||0:0; };
         rec+=get("receptions"); recY+=get("receivingYards"); recTd+=get("receivingTouchdowns");
         rush+=get("rushingYards"); rushTd+=get("rushingTouchdowns");
