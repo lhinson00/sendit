@@ -2701,7 +2701,8 @@ async function openPlayer(pid, name){
     };
     const chipRow = bits => bits.filter(x=>x.lab||x.v).map(x=>"<div class='gchip'><em>"+x.lab+"</em><b>"+x.v+"</b></div>").join("");
     const last = list[0] ? gameBits(list[0]) : null;
-    const lastGame = last ? "<div class='lastg'><div class='lastg-h'><div class='dec "+last.dec+"'>"+(last.dec||"·")+"</div><div class='opp'>"+last.opp+"<span>"+last.dt+" · last game</span></div></div><div class='lastg-stats'>"+chipRow(last.bits)+"</div></div>" : "";
+    const lastBits = last && last.bits.some(x=>x.v && x.v!=="0" && x.v!=="0.0") ? chipRow(last.bits) : "";
+    const lastGame = last ? "<div class='lastg'><div class='lastg-h'><div class='dec "+last.dec+"'>"+(last.dec||"·")+"</div><div class='opp'>"+last.opp+"<span>"+last.dt+" · last game</span></div></div>"+(lastBits?`<div class='lastg-stats'>${lastBits}</div>`:"")+"</div>" : "";
     const cards = list.slice(1).map(ev=>{
       const g=gameBits(ev);
       return "<div class='lastg'><div class='lastg-h'><div class='dec "+g.dec+"'>"+(g.dec||"·")+"</div><div class='opp'>"+g.opp+"<span>"+g.dt+"</span></div></div><div class='lastg-stats'>"+chipRow(g.bits)+"</div></div>";
@@ -2787,7 +2788,8 @@ async function openPlayer(pid, name){
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
-            ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:"<p>Last 18 tape</p>"}
+            <p>${[(d.athlete&&d.athlete.displayHeight)||"", (d.athlete&&d.athlete.displayWeight)||"", (d.athlete&&d.athlete.displayBirthPlace)||""].filter(Boolean).join(" · ")||""}</p>
+            ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:""}
           </div>
         </div>
         <div class="lead3">${leads}</div>
