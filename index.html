@@ -4415,7 +4415,7 @@ async function openMlbLeaders(){
   host.hidden=false;
   host.innerHTML="<p class='hint'>Loading "+LEAGUE.toUpperCase()+" leaders…</p>";
   try{
-    const sport=LEAGUE==="nhl"?"hockey/nhl":"baseball/mlb";
+    const sport=LEAGUE==="nhl"?"hockey/leagues/nhl":"baseball/leagues/mlb";
     const res=await fetch("https://sports.core.api.espn.com/v2/sports/"+sport+"/seasons/2026/types/2/leaders?limit=15",{cache:"no-store"});
     if(!res.ok) throw new Error("ESPN "+res.status);
     const d=await res.json();
@@ -4471,7 +4471,16 @@ async function openLeagueTeam(tid, name, sport){
       }
       return "—";
     };
-    const tiles=[
+    const tiles=sport==="nhl"?[
+      ["Record", rec.summary||"—"],
+      ["Goals", grab("offensive",["goals"])],
+      ["Assists", grab("offensive",["assists"])],
+      ["Points", grab("offensive",["points"])],
+      ["PPG", grab("offensive",["powerPlayGoals"])],
+      ["GA/G", grab("defensive",["avgGoalsAgainst"])],
+      ["SV%", grab("defensive",["savePct"])],
+      ["Saves", grab("defensive",["saves"])]
+    ]:[
       ["Record", rec.summary||"—"],
       ["RS/G", grab("batting",["runsPerGame","runs"])],
       ["AVG", grab("batting",["avg","AVG"])],
@@ -4974,6 +4983,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
     window.FROM_TEAM_PLAYER=false;
     if(window.FROMNFL) openNflTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMMLS) openMlsTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
+    else if(window.FROMNHL) openLeagueTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team", "nhl");
     else if(window.FROMMLB) openMlbTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMTN) openTnTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else openTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
@@ -4987,11 +4997,13 @@ $("toGame") && ($("toGame").onclick = ()=>{
       if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
       else if(window.FROMMLS){ window.FROMMLS=false; mlsTab("slate"); }
       else if(window.FROMMLB){ window.FROMMLB=false; mlbTab("slate"); }
+      else if(window.FROMNHL){ window.FROMNHL=false; mlbTab("slate"); }
       else if(window.FROMNFL){ window.FROMNFL=false; nflTab("live"); }
       else cfbTab("slate");
       return;
     }
     if(window.FROMMLS){ window.FROMMLS=false; mlsTab("stand"); }
+    else if(window.FROMNHL){ window.FROMNHL=false; mlbTab("stand"); }
     else if(window.FROMMLB){ window.FROMMLB=false; mlbTab("stand"); }
     else if(window.FROMNFL){ window.FROMNFL=false; nflTab("stand"); }
     else if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
