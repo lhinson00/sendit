@@ -292,7 +292,16 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .scorebug .gteam b{font-size:28px;color:var(--orange)}
 .hist{margin:0 var(--pad) 16px}
 .chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
-.pshot{width:84px;height:84px;border-radius:50%;object-fit:cover;background:#1a120c;border:2px solid #ff7a18}
+.biofacts{display:grid;gap:6px;padding:4px 12px 10px}
+.biofacts div{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:baseline}
+.biofacts i{font-style:normal;font-size:10px;letter-spacing:.14em;color:#9b9288}
+.biofacts b{font-weight:700}
+.seasonbar{margin:0 12px 12px;background:#101218;border:1px solid #2a241c;border-radius:12px;overflow:hidden}
+.seasonbar>span{display:block;padding:8px 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#c9c2b8;background:#1b140e}
+.seasonbar .lead3{padding:0}
+.seasonbar .lead{background:transparent;border:0;border-right:1px solid #2a241c}
+.pshot{width:96px;height:112px;border-radius:18px;object-fit:cover;object-position:top;background:#1a120c;border:0}
+
 .phero{margin:0 var(--pad) 16px;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d10}
 .phero-top{display:grid;grid-template-columns:120px 1fr;min-height:150px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 55%)}
 .phero-top img{width:120px;height:168px;object-fit:cover;object-position:top center;background:#16120e}
@@ -2795,11 +2804,13 @@ async function openPlayer(pid, name){
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
-            <p>${[bio.displayHeight, bio.displayWeight, bio.age?bio.age+" yrs":"", bio.displayBirthPlace].filter(Boolean).join(" · ")}</p>
             ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:""}
           </div>
         </div>
-        <div class="lead3">${leads}</div>
+        <div class="biofacts">
+          ${[["HT/WT", [bio.displayHeight, bio.displayWeight].filter(Boolean).join(", ")],["AGE", bio.age||""],["BORN", bio.displayBirthPlace||""],["DRAFT", bio.displayDraft||""]].filter(x=>x[1]).map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}
+        </div>
+        <div class="seasonbar"><span>${st.displayName||"Season"}</span><div class="lead3">${leads}</div></div>
         ${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
         ${(()=>{
