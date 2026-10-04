@@ -9,7 +9,7 @@
 :root{--bg:#07080c;--orange:#ff7a18;--text:#f7f2ea;--muted:#9b9288;--line:#2a241c}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,sans-serif}
-body{max-width:760px;margin:0 auto;min-height:100dvh}
+body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .top{display:flex;align-items:flex-end;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
 .top b{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em}
 .top em{color:var(--orange);font-style:normal}
@@ -42,8 +42,11 @@ body{max-width:760px;margin:0 auto;min-height:100dvh}
 .meter{height:6px;border-radius:99px;background:#241e18;margin-top:6px;overflow:hidden}
 .meter i{display:block;height:100%;background:linear-gradient(90deg,#3ee0a0,#ff7a18)}
 .rec{font-family:"Bebas Neue",sans-serif;font-size:28px}
-:root{--orange:#ff7a18;--ember:#ff9a3c;--muted:#9b9288}
-.gcard{display:block;width:calc(100% - 24px);margin:8px 12px;text-align:left;color:inherit;font:inherit;text-decoration:none;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
+:root{--orange:#ff7a18;--pad:14px;--muted:#9b9288;--text:#f4efe6}
+.bar{display:flex;align-items:center;gap:10px;padding:8px var(--pad) 4px}
+.back{border:0;background:0;color:var(--orange);font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:0;font-size:12px}
+.list{display:grid;gap:10px;padding:0 var(--pad) 24px}
+.gcard{display:block;width:100%;text-align:left;color:inherit;font:inherit;text-decoration:none;background:#101218;border:1px solid #2a241c;border-radius:8px;padding:12px}
 .gcard.done{border-color:#fff}
 .gcard .nm.win,.gcard .nm.win span{color:#3ee0a0}
 .gcard .sc em.win{color:#3ee0a0;text-shadow:0 0 12px rgba(62,224,160,.25)}
@@ -185,7 +188,7 @@ function openCard(name){
     const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
     const aWin=cls==="hit"&&picks[g.id]===g.away.id?" win":"";
     const hWin=cls==="hit"&&picks[g.id]===g.home.id?" win":"";
-    const when=g.state==="in"?("LIVE · "+(g.detail||"")):g.state==="post"?(g.detail||"Final"):g.detail||"";
+    const when=g.state==="in"?("LIVE · "+(g.detail||"")):g.state==="post"?(g.detail||"Final"):(g.detail||"");
     return `<a class="gcard${live}${done}" href="${href}">
       <div class="gstat"><span>${when}</span><span>${g.tv||""}</span></div>
       <div class="bigline">
@@ -196,7 +199,7 @@ function openCard(name){
       <div class="sub">${g.detail||""}</div>
     </a>`;
   }).join("");
-  $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Board</button><b>${name}</b><span style="margin-left:auto;font-family:Bebas Neue,sans-serif;font-size:28px;color:#ff7a18">${row.w}-${row.l}</span></div>${rows}`;
+  $("match").innerHTML=`<div class="bar"><button class="back" id="backBoard" type="button">← Board</button></div><div class="list">${rows}</div>`;
   show("match");
   $("backBoard").onclick=()=>show("board");
 }
