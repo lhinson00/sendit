@@ -230,10 +230,11 @@ $("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
   saveLocal();
   if(!card().name) return toast("Name");
-  if(Object.keys(card().picks).length!==state.games.length) return toast("Finish the slate");
+  const need=state.games.filter(g=>!started(g));
+  if(!need.length || need.some(g=>!card().picks[g.id])) return toast("Finish the open games");
   card().locked=true; saveLocal();
-  try{ await pushCard(); toast("On the board"); paintBoard(); show("board"); }
-  catch(e){ toast("Not saved"); }
+  try{ await pushCard(); toast("On the board"); paintBoard(); show("board"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="board")); }
+  catch(e){ card().locked=false; saveLocal(); toast("Not saved"); }
 };
 loadLocal();
 </script>
