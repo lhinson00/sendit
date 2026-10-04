@@ -241,6 +241,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .rinkbug em{font-family:"Bebas Neue",sans-serif;font-style:normal;font-size:42px}
 .rinkbug span{color:#c9c2b8;font-size:12px;text-align:center}
 .rinkbug b{font-size:12px}
+.rink{position:relative;margin:8px 0 12px}
+.rink svg{width:100%;height:auto;display:block}
+.rink img{position:absolute;width:28px;height:28px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}
 .scorebug{margin:0 var(--pad) 16px;padding:12px;background:#101218;border:1px solid #3a2a18}
 .mlb-bug{background:linear-gradient(180deg,#1a140c,#0c0d12);border-color:#ff7a18;padding:16px}
 .mlb-inning{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange);letter-spacing:.04em}
@@ -2182,6 +2185,15 @@ function renderHockey(g, sum){
   const heads=["1","2","3"].concat(aL.slice(3).map((_,i)=>i===0&&aL.length===4?"OT":"OT"+(i+1)));
   const stat=(c,n)=>{ const s=((c.statistics||[]).find(x=>x.name===n)||{}); return s.displayValue||""; };
   const shotsA=stat(away,"shots"), shotsH=stat(home,"shots");
+  const spot=(sum.plays||[]).slice().reverse().find(p=>p.coordinate&&p.coordinate.x!=null);
+  const rink=(()=>{
+    if(!spot) return "";
+    const x=Number(spot.coordinate.x), y=Number(spot.coordinate.y)||0;
+    const px=Math.max(8,Math.min(92, 50+(x/100)*42));
+    const py=Math.max(12,Math.min(88, 50-(y/42)*38));
+    const logo=(spot.team&&spot.team.logo)||g.homeImg;
+    return `<div class="rink"><svg viewBox="0 0 200 85" aria-hidden="true"><rect x="2" y="2" width="196" height="81" rx="18" fill="#f7f4ee" stroke="#d7d2c8"/><line x1="100" y1="2" x2="100" y2="83" stroke="#c23b3b" stroke-width="2"/><line x1="66" y1="2" x2="66" y2="83" stroke="#2f5fbf"/><line x1="134" y1="2" x2="134" y2="83" stroke="#2f5fbf"/><circle cx="100" cy="42" r="15" fill="none" stroke="#2f5fbf"/><circle cx="50" cy="42" r="12" fill="none" stroke="#c23b3b"/><circle cx="150" cy="42" r="12" fill="none" stroke="#c23b3b"/><circle cx="30" cy="18" r="6" fill="none" stroke="#c23b3b"/><circle cx="30" cy="66" r="6" fill="none" stroke="#c23b3b"/><circle cx="170" cy="18" r="6" fill="none" stroke="#c23b3b"/><circle cx="170" cy="66" r="6" fill="none" stroke="#c23b3b"/></svg><img alt="" src="${logo}" style="left:${px}%;top:${py}%"/></div>`;
+  })();
   const plays=(sum.plays||[]).filter(p=>p.scoringPlay).slice(-8).reverse().map(p=>{
     const per=(p.period&&p.period.displayValue)||"";
     const clk=(p.clock&&p.clock.displayValue)||"";
@@ -2198,6 +2210,7 @@ function renderHockey(g, sum){
         <em>${hs}</em>
         <div><span class="logoplate"><img alt="" src="${g.homeImg}"/></span><b>${g.homeAb||g.home}</b></div>
       </div>
+      ${rink}
       <table class="qtr">
         <tr><th></th>${heads.map(h=>`<th>${h}</th>`).join("")}<th>T</th>${shotsA||shotsH?"<th>SOG</th>":""}</tr>
         <tr><td>${g.awayAb||g.away}</td>${aL.map(v=>`<td>${v||"—"}</td>`).join("")}<td>${as}</td>${shotsA||shotsH?`<td>${shotsA||"—"}</td>`:""}</tr>
