@@ -2658,6 +2658,13 @@ async function openPlayer(pid, name){
     const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/overview",{cache:"no-store"});
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
+    let bio = d.athlete || {};
+    if(!bio.displayHeight){
+      try{
+        const bioRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid,{cache:"no-store"});
+        if(bioRes.ok){ const b=await bioRes.json(); bio=b.athlete||b; }
+      }catch(e){}
+    }
     let log = {}, splitsPack = {};
     try{
       const [logRes, splitRes] = await Promise.all([
@@ -2788,7 +2795,7 @@ async function openPlayer(pid, name){
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
-            <p>${[(d.athlete&&d.athlete.displayHeight)||"", (d.athlete&&d.athlete.displayWeight)||"", (d.athlete&&d.athlete.displayBirthPlace)||""].filter(Boolean).join(" · ")||""}</p>
+            <p>${[bio.displayHeight, bio.displayWeight, bio.age?bio.age+" yrs":"", bio.displayBirthPlace].filter(Boolean).join(" · ")}</p>
             ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:""}
           </div>
         </div>
