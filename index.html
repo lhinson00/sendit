@@ -318,7 +318,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .tile{background:#14110e;border:1px solid #2a241c;padding:10px 8px}
 .tile em{display:block;font-style:normal;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .tile b{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;line-height:1;margin-top:4px;color:#fff}
-.career{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 14px}
+.career{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 14px}.career span{display:block;text-align:center;font-size:11px;color:#9b9288;background:#14110e;border:1px solid #2a241c;padding:10px}
 .career span{font-size:11px;color:#c9c2b8;background:#14110e;border:1px solid #2a241c;padding:6px 8px}
 .career span b{color:var(--ember);font-family:"Bebas Neue",sans-serif;font-size:16px;margin-left:4px}
 .kitnote{padding:2px var(--pad) 0;color:var(--ember)!important;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
@@ -507,7 +507,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .spark i b{font-size:9px;line-height:1;margin-bottom:2px;color:#efe6d8}
 .spark i.hit b{color:var(--orange)}
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
-.seasonline{display:flex;flex-wrap:wrap;gap:14px;padding:12px var(--pad) 16px;margin:0;color:#cfc6b8;font-size:14px}
+.seasonline{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;margin:0}.seasonline span{background:#14110e;border:1px solid #2a241c;padding:10px;text-align:center}.seasonline i{display:block;font-style:normal;color:#9b9288;font-size:10px;letter-spacing:.12em}.seasonline b,.seasonline span{color:#f4efe6;font-family:"Bebas Neue",sans-serif;font-size:22px}
 .seasonline i{font-style:normal;color:var(--ember);font-size:10px;letter-spacing:.1em;margin-right:4px}
 .krow .ktop{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:start}
 .krow b{display:block;font-size:18px}
@@ -2768,7 +2768,7 @@ async function openPlayer(pid, name){
       const away=(prev.competitors||[]).find(x=>x.homeAway==="away")||prev.competitors[1]||{};
       const home=(prev.competitors||[]).find(x=>x.homeAway==="home")||prev.competitors[0]||{};
       const stt=(prev.fullStatus&&prev.fullStatus.type&&prev.fullStatus.type.shortDetail)||(prev.status||"Final");
-      return `<a class="gcard done" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
+      return `<a class="gcard done" style="text-decoration:none" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
     })():"";
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
