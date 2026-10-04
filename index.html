@@ -687,6 +687,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
     <button class="hubcard" data-lg="cfb"><img alt="" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2080%2080%22%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2210%22%20fill%3D%22%230033a0%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2248%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2216%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3ENCAA%3C/text%3E%3C/svg%3E"/><b>College</b><span>Saturday slate</span></button>
     <button class="hubcard" data-lg="mlb"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png"/><b>MLB</b><span>Tonight</span></button>
+    <button class="hubcard" data-lg="nhl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"/><b>NHL</b><span>Tonight</span></button>
     <button class="hubcard" data-lg="mls"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mls.png"/><b>MLS</b><span>Match night</span></button>
     <button class="hubcard" data-lg="ufc"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/><b>UFC</b><span>The card</span></button>
     <button class="hubcard tssaa" data-lg="tssaa"><img alt="" src="https://cms-files.tssaa.org/images/logos/tssaa-logo.png"/><b>TSSAA</b><span>Tennessee</span></button>
@@ -722,6 +723,11 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <button type="button" class="tabbtn" id="tabLeadM">Leaders</button>
       <button type="button" class="tabbtn" id="tabMlbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabEatM">Tracker</button>
+    </span>
+    <span class="tabs" id="nhlTabs" hidden>
+      <button type="button" class="tabbtn on" id="tabNhlSlate">Slate</button>
+      <button type="button" class="tabbtn" id="tabNhlStand">Standings</button>
+      <button type="button" class="tabbtn" id="tabNhlLead">Leaders</button>
     </span>
     <span class="tabs" id="mlsTabs" hidden>
       <button type="button" class="tabbtn on" id="tabMlsSlate">Slate</button>
@@ -785,6 +791,7 @@ const URLS = {
   nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
   cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=80",
   mlb: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
+  nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
   ufc: "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
   mls: "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
 };
@@ -792,6 +799,7 @@ const SUM = {
   nfl: id => "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+id,
   cfb: id => "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+id,
   mlb: id => "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event="+id,
+  nhl: id => "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event="+id,
   ufc: id => "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event="+id,
   mls: id => "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/summary?event="+id
 };
@@ -865,6 +873,7 @@ function face(comp, lg){
   if(t.logos && t.logos[0] && t.logos[0].href) return t.logos[0].href;
   const ab = (t.abbreviation||"").toLowerCase();
   if(lg==="mlb") return "https://a.espncdn.com/i/teamlogos/mlb/500/"+ab+".png";
+  if(lg==="nhl") return "https://a.espncdn.com/i/teamlogos/nhl/500/"+ab+".png";
   if(lg==="mls"){
     if(t.logo) return t.logo;
     const sid=t.id||(comp&&comp.id)||"";
@@ -1791,7 +1800,7 @@ async function loadLeague(lg){
   if(lg==="tssaa"){
     if($("nflTabs")) $("nflTabs").hidden=true;
     if($("cfbTabs")) $("cfbTabs").hidden=true;
-    if($("mlbTabs")) $("mlbTabs").hidden=true;
+    if($("mlbTabs")) $("mlbTabs").hidden=true; if($("nhlTabs")) $("nhlTabs").hidden=true;
     if($("mlsTabs")) $("mlsTabs").hidden=true;
     if($("kitPanel")) $("kitPanel").hidden=true;
     if($("eatPanel")) $("eatPanel").hidden=true;
@@ -1812,7 +1821,7 @@ async function loadLeague(lg){
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
     if($("nflTabs")) $("nflTabs").hidden = lg!=="nfl";
     if($("cfbTabs")) $("cfbTabs").hidden = lg!=="cfb";
-    if($("mlbTabs")) $("mlbTabs").hidden = lg!=="mlb";
+    if($("mlbTabs")) $("mlbTabs").hidden = lg!=="mlb"; if($("nhlTabs")) $("nhlTabs").hidden = lg!=="nhl";
     if($("mlsTabs")) $("mlsTabs").hidden = lg!=="mls";
     if($("tssaaTabs")) $("tssaaTabs").hidden = true;
     if($("tabEatAny")) $("tabEatAny").hidden = lg!=="ufc";
@@ -4246,7 +4255,8 @@ async function openMlbStandings(){
   host.hidden=false;
   host.innerHTML="<p class='hint'>Loading standings…</p>";
   try{
-    const res=await fetch("https://site.api.espn.com/apis/v2/sports/baseball/mlb/standings?level=3",{cache:"no-store"});
+    const sport=LEAGUE==="nhl"?"hockey/nhl":"baseball/mlb";
+    const res=await fetch("https://site.api.espn.com/apis/v2/sports/"+sport+"/standings?level=3",{cache:"no-store"});
     const d=await res.json();
     const leagues=d.children||[];
     const picture=leagues.map(lg=>{
@@ -4309,9 +4319,10 @@ function prettyLead(name, value, display){
 async function openMlbLeaders(){
   const host=$("boardPanel");
   host.hidden=false;
-  host.innerHTML="<p class='hint'>Loading MLB leaders…</p>";
+  host.innerHTML="<p class='hint'>Loading "+LEAGUE.toUpperCase()+" leaders…</p>";
   try{
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/seasons/2026/types/2/leaders?limit=15",{cache:"no-store"});
+    const sport=LEAGUE==="nhl"?"hockey/nhl":"baseball/mlb";
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/"+sport+"/seasons/2026/types/2/leaders?limit=15",{cache:"no-store"});
     if(!res.ok) throw new Error("ESPN "+res.status);
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -4828,6 +4839,17 @@ $("tabMlsStand") && ($("tabMlsStand").onclick=()=>mlsTab("stand"));
 $("tabMlsLead") && ($("tabMlsLead").onclick=()=>mlsTab("lead"));
 $("tabStand") && ($("tabStand").onclick=()=>mlbTab("stand"));
 $("tabLeadM") && ($("tabLeadM").onclick=()=>mlbTab("lead"));
+$("tabNhlSlate") && ($("tabNhlSlate").onclick=()=>nhlTab("slate"));
+$("tabNhlStand") && ($("tabNhlStand").onclick=()=>nhlTab("stand"));
+$("tabNhlLead") && ($("tabNhlLead").onclick=()=>nhlTab("lead"));
+function nhlTab(which){
+  window.BOARD=which;
+  if($("liveList")) $("liveList").hidden=which!=="slate";
+  if($("boardPanel")) $("boardPanel").hidden=which==="slate";
+  ["tabNhlSlate","tabNhlStand","tabNhlLead"].forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id==="tabNhlSlate"&&which==="slate")||(id==="tabNhlStand"&&which==="stand")||(id==="tabNhlLead"&&which==="lead")); });
+  if(which==="stand") openMlbStandings();
+  if(which==="lead") openMlbLeaders();
+}
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
