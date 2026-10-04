@@ -235,6 +235,12 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .vs{color:var(--muted);font-size:11px;font-weight:800}
 .linechip{margin-top:8px;color:var(--ember);font-size:13px}
 .hint{color:var(--muted);padding:0 var(--pad)}
+.rinkbug{display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;gap:8px;padding:8px 0}
+.rinkbug div{display:grid;justify-items:center;gap:4px}
+.rinkbug div:last-child{justify-items:center}
+.rinkbug em{font-family:"Bebas Neue",sans-serif;font-style:normal;font-size:42px}
+.rinkbug span{color:#c9c2b8;font-size:12px;text-align:center}
+.rinkbug b{font-size:12px}
 .scorebug{margin:0 var(--pad) 16px;padding:12px;background:#101218;border:1px solid #3a2a18}
 .mlb-bug{background:linear-gradient(180deg,#1a140c,#0c0d12);border-color:#ff7a18;padding:16px}
 .mlb-inning{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange);letter-spacing:.04em}
@@ -2185,10 +2191,12 @@ function renderHockey(g, sum){
   $("gameBody").innerHTML=`
     <div class="scorebug${live?" islive":""}">
       <div class="gstat"><span>${live?"LIVE · ":""}${st||"Pregame"}</span><span>${g.broadcast||""}</span></div>
-      <div class="bigline">
-        <div class="nm"><span class="logoplate"><img alt="" src="${g.awayImg}"/></span><span>${g.away}</span></div>
-        <div class="sc"><em>${as}</em><span>–</span><em>${hs}</em></div>
-        <div class="nm r"><span>${g.home}</span><span class="logoplate"><img alt="" src="${g.homeImg}"/></span></div>
+      <div class="rinkbug">
+        <div><span class="logoplate"><img alt="" src="${g.awayImg}"/></span><b>${g.awayAb||g.away}</b></div>
+        <em>${as}</em>
+        <span>${st||"Pregame"}</span>
+        <em>${hs}</em>
+        <div><span class="logoplate"><img alt="" src="${g.homeImg}"/></span><b>${g.homeAb||g.home}</b></div>
       </div>
       <table class="qtr">
         <tr><th></th>${heads.map(h=>`<th>${h}</th>`).join("")}<th>T</th>${shotsA||shotsH?"<th>SOG</th>":""}</tr>
