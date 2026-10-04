@@ -887,7 +887,7 @@ function face(comp, lg){
   if(t.logo) return t.logo;
   if(t.logos && t.logos[0] && t.logos[0].href) return t.logos[0].href;
   const ab = (t.abbreviation||"").toLowerCase();
-  if(lg==="mlb") return "https://a.espncdn.com/i/teamlogos/mlb/500/"+ab+".png";
+  if(lg==="mlb") return "https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+ab+".png";
   if(lg==="nhl") return "https://a.espncdn.com/i/teamlogos/nhl/500/"+ab+".png";
   if(lg==="mls"){
     if(t.logo) return t.logo;
@@ -4172,7 +4172,7 @@ function cfbTab(which){
 }
 
 function mlbLogo(ab){
-  return "https://a.espncdn.com/i/teamlogos/mlb/500/"+String(ab||"").toLowerCase()+".png";
+  return "https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+String(ab||"").toLowerCase()+".png";
 }
 function mlbFindGame(games, abs){
   const set=new Set((abs||[]).map(x=>String(x).toUpperCase()));
@@ -4209,7 +4209,7 @@ function paintMlbBracket(games){
       hits.sort((a,b)=>rank(a)-rank(b) || String(b.start||"").localeCompare(String(a.start||"")));
       return hits[0];
     };
-    const logo=ab=>"https://a.espncdn.com/i/teamlogos/mlb/500/"+mlbNormAb(ab).toLowerCase()+".png";
+    const logo=ab=>"https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+mlbNormAb(ab).toLowerCase()+".png";
     const when=g=>{
       if(!g) return "";
       if(g.state==="in") return "LIVE  "+(g.detail||"");
@@ -4369,7 +4369,7 @@ async function openMlbStandings(){
         const seed=stv(e.stats,"playoffSeed")||"—";
         const rec=stv(e.stats,"wins")+"-"+stv(e.stats,"losses");
         const cl=stv(e.stats,"clincher");
-        const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/mlb/500/"+(t.abbreviation||"").toLowerCase()+".png");
+        const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+(t.abbreviation||"").toLowerCase()+".png");
         return `<div class="srow" data-tid="${t.id||""}" data-tname="${String(t.displayName||"").replace(/"/g,"")}"><span class="seed">${seed}</span><img alt="" src="${logo}"/><b>${t.abbreviation||""}</b><span>${rec}</span><span class="clin">${cl&&cl!=="0"?cl:""}</span></div>`;
       }).join("");
       return `<div><h3>${lg.abbreviation||lg.name} field</h3>${rows||"<p class='hint'>Seeds post as the race firms up.</p>"}</div>`;
@@ -4379,7 +4379,7 @@ async function openMlbStandings(){
         const ents=((div.standings||{}).entries||[]).slice().sort((a,b)=>Number(stv(b.stats,"winPercent")||0)-Number(stv(a.stats,"winPercent")||0));
         const rows=ents.map((e,i)=>{
           const t=e.team||{};
-          const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/mlb/500/"+(t.abbreviation||"").toLowerCase()+".png");
+          const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+(t.abbreviation||"").toLowerCase()+".png");
           const rec=stv(e.stats,"wins")+"-"+stv(e.stats,"losses");
           const gb=stv(e.stats,"gamesBehind")||"-";
           const pct=stv(e.stats,"winPercent");
@@ -4393,7 +4393,7 @@ async function openMlbStandings(){
       return divs;
     }).join("");
     host.innerHTML=`<div class="standwrap"><p class="hint">Tap a logo for team stats · z clinched · y division · * playoff</p><div class="playoffbox">${picture}</div>${blocks}</div>`;
-    host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openMlbTeam(b.dataset.tid, b.dataset.tname||"Team"));
+    host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openLeagueTeam(b.dataset.tid, b.dataset.tname||"Team", LEAGUE==="nhl"?"nhl":"mlb"));
   }catch(e){
     host.innerHTML="<p class='hint'>Standings missed. "+(e.message||"")+"</p>";
   }
@@ -4426,7 +4426,7 @@ async function openMlbLeaders(){
       });
       return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
     });
-    await fillLeadNames("mlb", cats);
+    await fillLeadNames(LEAGUE==="nhl"?"nhl":"mlb", cats);
     window.LEAD_CATS=cats;
     window.LEAD_SIDE="off";
     window.LEAD_NOTE="2026 regular season";
@@ -4435,15 +4435,17 @@ async function openMlbLeaders(){
     host.innerHTML="<p class='hint'>Leaders missed. "+(e.message||"")+"</p>";
   }
 }
-async function openMlbTeam(tid, name){
+async function openMlbTeam(tid, name){ return openLeagueTeam(tid, name, "mlb"); }
+async function openLeagueTeam(tid, name, sport){
   if(!tid) return;
   window.FROMTEAM=true;
-  window.FROMMLB=true;
+  window.FROMMLB=sport!=="nhl";
+  window.FROMNHL=sport==="nhl";
   window.TEAM_CTX={id:tid,name:name||"Team"};
   if($("toGame")) $("toGame").textContent="← Standings";
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Opening "+name+"…</p>";
-  const base="https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/"+tid;
+  const base="https://site.api.espn.com/apis/site/v2/sports/"+(sport==="nhl"?"hockey/nhl":"baseball/mlb")+"/teams/"+tid;
   try{
     const [tRes,sRes,stRes,plRes,rRes]=await Promise.all([
       fetch(base,{cache:"no-store"}),
@@ -4458,7 +4460,7 @@ async function openMlbTeam(tid, name){
     const pl=plRes.ok?await plRes.json():{};
     const rost=rRes.ok?await rRes.json():{};
     const t=pack.team||{};
-    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/mlb/500/"+tid+".png");
+    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+(sport==="nhl"?"nhl":"mlb")+"/500/"+tid+".png");
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
     const cats=((((stat.results||{}).stats)||{}).categories)||[];
     const grab=(cat,names)=>{
@@ -4784,8 +4786,8 @@ function refId(ref){
 }
 async function fillLeadNames(sport, cats){
   const ids=[...new Set(cats.flatMap(c=>(c.leaders||[]).map(L=>L.athlete&&L.athlete.id).filter(Boolean)))];
-  const league = sport==="mlb"?"mlb":sport==="cfb"?"college-football":"nfl";
-  const path = sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
+  const league = sport==="nhl"?"nhl":sport==="mlb"?"mlb":sport==="cfb"?"college-football":"nfl";
+  const path = sport==="nhl"?"hockey/nhl":sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
   const book={};
   const chunk=ids.slice();
   await Promise.all(chunk.map(async id=>{
