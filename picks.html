@@ -13,7 +13,7 @@ body{max-width:760px;margin:0 auto;min-height:100dvh}
 .top{display:flex;align-items:flex-end;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
 .top b{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em}
 .top em{color:var(--orange);font-style:normal}
-.top button{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em}
+.top a,.top button{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .screen{display:none}.screen.on{display:block;padding-bottom:84px}
 .doors{display:grid;gap:12px;padding:18px}
 .door{border:0;border-radius:18px;padding:28px 18px;text-align:left;color:#fff;background:#120e0c linear-gradient(115deg,rgba(255,122,24,.35),transparent 42%);border:1px solid rgba(255,122,24,.4)}
@@ -64,7 +64,7 @@ body{max-width:760px;margin:0 auto;min-height:100dvh}
 </style>
 </head>
 <body>
-<header class="top"><b>SAUCE <em>PICK EM</em></b><button id="homeBtn" type="button">LEAGUES</button></header>
+<header class="top"><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></header>
 <section class="screen on" id="choose">
   <div class="doors">
     <button class="door" id="lgNfl" type="button"><b>NFL</b><span>Week slate</span></button>
@@ -184,7 +184,6 @@ async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,
 function setLg(lg){ state.lg=lg; loadLocal(); show("slate"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="slate")); load(); }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board") paintBoard(); });
 $("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb");
-$("homeBtn").onclick=()=>show("choose");
 $("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
   saveLocal();
