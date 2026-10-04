@@ -858,7 +858,8 @@ function savePlace(){
       : "home";
     sessionStorage.setItem("saucePlace", JSON.stringify({
       view, league:LEAGUE, tab:window.BOARD||"", open:OPEN||"", eat,
-      team:window.TEAM_CTX||null, teamSport:window.FROMNHL?"nhl":window.FROMMLB?"mlb":window.FROMNFL?"nfl":window.FROMMLS?"mls":""
+      team:window.TEAM_CTX||null, teamSport:window.FROMNHL?"nhl":window.FROMMLB?"mlb":window.FROMNFL?"nfl":window.FROMMLS?"mls":"",
+      player:window.PLAYER_CTX||null
     }));
   }catch(e){}
 }
@@ -878,7 +879,9 @@ async function restorePlace(){
     if(p.view==="game" && p.open && typeof openGame==="function"){
       openGame(p.open);
     }
-    if(p.view==="player" && p.team && p.team.id){
+    if(p.view==="player" && p.player && p.player.id){
+      openPlayer(p.player.id, p.player.name||"Player");
+    } else if(p.view==="player" && p.team && p.team.id){
       if(p.teamSport==="nhl") openLeagueTeam(p.team.id, p.team.name||"Team", "nhl");
       else if(p.teamSport==="mlb") openMlbTeam(p.team.id, p.team.name||"Team");
       else if(p.teamSport==="nfl") openNflTeam(p.team.id, p.team.name||"Team");
@@ -2634,6 +2637,7 @@ async function openFighter(pid, name){
   }
 }
 async function openPlayer(pid, name){
+  window.PLAYER_CTX={id:String(pid||""), name:name||"Player"};
   if(LEAGUE==="mls"){ return openMlsPlayer(pid, name); }
   window.FROMUFC = false;
   show("player");
@@ -4449,6 +4453,7 @@ async function openMlbLeaders(){
 async function openMlbTeam(tid, name){ return openLeagueTeam(tid, name, "mlb"); }
 async function openLeagueTeam(tid, name, sport){
   if(!tid) return;
+  window.PLAYER_CTX=null;
   window.FROMTEAM=true;
   window.FROMMLB=sport!=="nhl";
   window.FROMNHL=sport==="nhl";
