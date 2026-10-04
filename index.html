@@ -4523,7 +4523,7 @@ async function openLeagueTeam(tid, name, sport){
       const spec=cols[nm];
       const rows=(blk.leaders||[]).slice(0,18).map(L=>{
         const a=L.athlete||{};
-        const pack=((L.statistics||[]).find(p=>p.name===nm)||(L.statistics||[])[0]||{}).stats||[];
+        const pack=(L.statistics||[]).flatMap(p=>p.stats||[]);
         const pos=(a.position&&a.position.abbreviation)||"";
         return `<tr class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><td><span class="nm"><b>${a.displayName||""}</b><em>${pos}</em></span></td>${spec.map(c=>`<td>${sval(pack,c.slice(1))}</td>`).join("")}</tr>`;
       }).join("");
@@ -4908,7 +4908,7 @@ function paintLeaders(){
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
-    const folder = LEAGUE==="mlb" || mlb ? "mlb" : LEAGUE==="nfl" ? "nfl" : "college-football";
+    const folder = LEAGUE==="nhl" || nhl ? "nhl" : LEAGUE==="mlb" || mlb ? "mlb" : LEAGUE==="nfl" ? "nfl" : "college-football";
     return a.id ? ("https://a.espncdn.com/i/headshots/"+folder+"/players/full/"+a.id+".png") : "";
   };
   host.innerHTML = `<div class="ldhead">
