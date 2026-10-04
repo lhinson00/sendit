@@ -67,9 +67,17 @@ td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spaci
 .choose span{color:#9b9288}
 .lockbtn{display:none;margin:12px;width:calc(100% - 24px);border:0;background:#ff7a18;color:#140800;font-weight:800;padding:14px;border-radius:12px}
 .lockbtn.on{display:block}
-.mark{font-size:12px;font-weight:800}
-.mark.ok{color:#3ee0a0}
-.mark.bad{color:#ff5a3c}
+.result{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;margin:8px 12px;padding:12px 12px 12px 0;background:#12151c;border-radius:14px;overflow:hidden}
+.result i{height:46px;border-radius:0 6px 6px 0}
+.result.hit i{background:#3ee0a0;box-shadow:0 0 16px #3ee0a0}
+.result.miss i{background:#ff5a3c}
+.result.push i{background:#9b9288}
+.result.hit b{color:#f7f2ea}
+.result.miss b{color:#6f6a64;text-decoration:line-through}
+.result em{font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:28px}
+.result.hit em{color:#3ee0a0}
+.result.miss em{color:#ff5a3c}
+.result a{color:#ffc46b;font-size:12px;font-weight:800;text-decoration:none}
 .line{display:flex;justify-content:space-between;margin:8px 12px;padding:12px;background:#12151c;border-radius:12px}
 .ladder{margin:8px 12px;background:#12151c;border:1px solid #2c313d;border-radius:16px;overflow:hidden}
 .seat{width:100%;border:0;border-top:1px solid #242833;background:transparent;color:inherit;display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:14px;text-align:left}
@@ -238,12 +246,13 @@ function openCard(name){
   const rows=state.games.filter(g=>picks[g.id]).map(g=>{
     const tm=picks[g.id]===g.away.id?g.away:g.home;
     const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
-    let mark="";
+    let cls="open";
     if(g.state==="post"){
       const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
-      mark=winner&&picks[g.id]===winner?'<span class="mark ok">RIGHT</span>':winner?'<span class="mark bad">WRONG</span>':'<span class="mark">PUSH</span>';
+      cls=!winner?"push":picks[g.id]===winner?"hit":"miss";
     }
-    return `<article class="gcast"><div class="who"><em>${tm.name}</em> ${mark}</div><div class="sub"><span>${g.away.ab} ${g.away.score||""} at ${g.home.ab} ${g.home.score||""}</span><a href="${href}">Gamecast</a></div></article>`;
+    const score=g.state==="post"?(g.away.score+"-"+g.home.score):g.detail||"AT";
+    return `<article class="result ${cls}"><i></i><div><b>${tm.name}</b><div class="sub" style="padding:4px 0 0"><span>${g.away.ab} at ${g.home.ab}</span></div></div><div><em>${score}</em><div><a href="${href}">Gamecast</a></div></div></article>`;
   }).join("");
   $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div><div style="padding:12px 0 28px">${rows||"<p style='padding:16px'>No picks</p>"}</div>`;
   show("match");
