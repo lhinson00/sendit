@@ -292,16 +292,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .scorebug .gteam b{font-size:28px;color:var(--orange)}
 .hist{margin:0 var(--pad) 16px}
 .chipwin{color:#3ee0a0}.chiploss{color:#ff8a8a}
-.biofacts{display:grid;gap:6px;padding:4px 12px 10px}
-.biofacts div{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:baseline}
-.biofacts i{font-style:normal;font-size:10px;letter-spacing:.14em;color:#9b9288}
-.biofacts b{font-weight:700}
-.seasonbar{margin:0 12px 12px;background:#101218;border:1px solid #2a241c;border-radius:12px;overflow:hidden}
-.seasonbar>span{display:block;padding:8px 10px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#c9c2b8;background:#1b140e}
-.seasonbar .lead3{padding:0}
-.seasonbar .lead{background:transparent;border:0;border-right:1px solid #2a241c}
-.pshot{width:96px;height:112px;border-radius:18px;object-fit:cover;object-position:top;background:#1a120c;border:0}
-
+.pshot{width:84px;height:84px;border-radius:50%;object-fit:cover;background:#1a120c;border:2px solid #ff7a18}
 .phero{margin:0 var(--pad) 16px;border:1px solid #3a2a18;border-radius:4px;overflow:hidden;background:#0c0d10}
 .phero-top{display:grid;grid-template-columns:120px 1fr;min-height:150px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 55%)}
 .phero-top img{width:120px;height:168px;object-fit:cover;object-position:top center;background:#16120e}
@@ -2756,6 +2747,29 @@ async function openPlayer(pid, name){
       : (LEAGUE==="mlb")
       ? (isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]] : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]])
       : fbKeys;
+    let ranks={};
+    if(LEAGUE==="nhl"){
+      try{
+        const lr=await fetch("https://sports.core.api.espn.com/v2/sports/hockey/leagues/nhl/seasons/2027/types/2/leaders?limit=80",{cache:"no-store"});
+        if(lr.ok){
+          const ld=await lr.json();
+          const want={goals:"G",assists:"A",points:"PTS",plusMinus:"+/-"};
+          (ld.categories||[]).forEach(c=>{
+            const key=want[c.name]; if(!key) return;
+            const list=c.leaders||[];
+            const at=list.findIndex(L=>String((L.athlete&&L.athlete.$ref)||"").includes("/"+pid));
+            if(at>=0) ranks[key]="Tied-"+(at+1);
+          });
+        }
+      }catch(e){}
+    }
+    const prev=((d.nextGame&&d.nextGame.league&&d.nextGame.league.events)||[])[0]||null;
+    const scorebug=prev&&prev.competitors?(()=>{
+      const away=(prev.competitors||[]).find(x=>x.homeAway==="away")||prev.competitors[1]||{};
+      const home=(prev.competitors||[]).find(x=>x.homeAway==="home")||prev.competitors[0]||{};
+      const stt=(prev.fullStatus&&prev.fullStatus.type&&prev.fullStatus.type.shortDetail)||(prev.status||"Final");
+      return `<a class="gcard done" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
+    })():"";
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
         const w=splitAt(["W"]) || (idx(labels,["W"])>=0?season.stats[idx(labels,["W"])]:"");
@@ -2804,14 +2818,12 @@ async function openPlayer(pid, name){
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
             <h2>${name}</h2>
+            <p>${[bio.displayHeight, bio.displayWeight, bio.age?bio.age+" yrs":"", bio.displayBirthPlace].filter(Boolean).join(" · ")}</p>
             ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:""}
           </div>
         </div>
-        <div class="biofacts">
-          ${[["HT/WT", [bio.displayHeight, bio.displayWeight].filter(Boolean).join(", ")],["AGE", bio.age||""],["BORN", bio.displayBirthPlace||""],["DRAFT", bio.displayDraft||""]].filter(x=>x[1]).map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}
-        </div>
-        <div class="seasonbar"><span>${st.displayName||"Season"}</span><div class="lead3">${leads}</div></div>
-        ${roto?`<div class="wireblurb">${roto}</div>`:""}
+        <div class="lead3">${leads}</div>
+        ${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}
         ${last18}
         ${(()=>{
           const keep=/^(REC|TGTS|YDS|TD|AVG|LNG|CMP|ATT|INT|CAR|FUM|SOLO|TOT|SACK|TFL)$/i;
