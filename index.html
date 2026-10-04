@@ -508,6 +508,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .spark i.hit b{color:var(--orange)}
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
 .biorows{margin-top:6px}.biorows div{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:baseline;padding:1px 0}.biorows i{font-style:normal;color:#9b9288;font-size:10px;letter-spacing:.12em}.biorows b{font-weight:700;font-size:13px}
+.seasonpick{display:block;margin:12px 12px 0;color:#c9c2b8;font-size:12px}.seasonpick select{margin-left:8px;background:#14110e;color:#fff;border:1px solid #3a2a18;border-radius:8px;padding:8px 10px}.teamcell{display:inline-flex;align-items:center;gap:6px}.teamcell img{width:18px;height:18px;object-fit:contain}
 .ptabs{display:flex;gap:22px;padding:0 14px;border-bottom:1px solid #2a241c;position:sticky;top:0;background:#0c0a09;z-index:3}.ptabs button{background:none;border:0;color:#9b9288;font-weight:800;font-size:15px;padding:14px 0 10px;border-bottom:3px solid transparent}.ptabs button.on{color:#fff;border-bottom-color:#ff7a18}.ppane{padding-top:8px}
 .problock{margin:18px 12px 0}.problock h3{margin:0 0 8px;font-size:18px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a241c;border-radius:12px}
@@ -2678,12 +2679,15 @@ async function openPlayer(pid, name){
     }
     let log = {}, splitsPack = {};
     try{
-      const [logRes, splitRes] = await Promise.all([
+      const [logRes, splitRes, statsRes] = await Promise.all([
         fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/gamelog",{cache:"no-store"}),
-        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/splits",{cache:"no-store"})
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/splits",{cache:"no-store"}),
+        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/stats",{cache:"no-store"})
       ]);
       if(logRes.ok) log = await logRes.json();
       if(splitRes.ok) splitsPack = await splitRes.json();
+      if(statsRes.ok) window.CAREER_PACK = await statsRes.json();
+      window.PLAYER_PATH = path;
     }catch(e){}
     const st = d.statistics || {};
     const labels = st.labels || [];
@@ -2693,7 +2697,8 @@ async function openPlayer(pid, name){
     const meta = log.events || {};
     const gLabels = log.labels || [];
     const catEvents = ((((log.seasonTypes||[])[0]||{}).categories||[])[0]||{}).events || [];
-    const list = Array.isArray(catEvents) ? catEvents.slice(0,10) : [];
+    const fullList = Array.isArray(catEvents) ? catEvents : [];
+    const list = fullList.slice(0,10);
     const rows = list.map(ev=>{
       const info = (!Array.isArray(meta) && meta && ev.eventId) ? (meta[ev.eventId]||{}) : {};
       const opp = (info.opponent && (info.opponent.abbreviation || info.opponent.displayName)) || info.atVs || "";
@@ -2861,19 +2866,11 @@ async function openPlayer(pid, name){
             return `<section class="problock"><h3>${title}</h3><div class="scroll"><table class="protable"><thead><tr><th></th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
           }).join(""):"";
           const passN=Number((cats[0]||{}).count)||Math.min(8,(log.labels||[]).length||8);
-          const logHeads=(log.labels||gLabels||[]).slice(0, passN);
-          const logRows=list.map(ev=>{
-            const info=(!Array.isArray(meta)&&meta&&ev.eventId)?(meta[ev.eventId]||{}):{};
-            const dt=info.gameDate?new Date(info.gameDate).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):"";
-            const opp=(info.opponent&&(info.opponent.abbreviation||info.opponent.displayName))||"";
-            const mark=info.gameResult||"";
-            const cells=(ev.stats||[]).slice(0, passN);
-            return `<tr><td>${dt}</td><td>${info.atVs||""} ${opp}</td><td class="${mark}">${mark} ${info.score||""}</td>${cells.map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
-          }).join("");
-          const logTable=logRows?`<section class="problock"><h3>Recent games</h3><div class="scroll"><table class="protable"><thead><tr><th>Date</th><th>Opp</th><th>Result</th>${logHeads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${logRows}</tbody></table></div></section>`:"";
-          const over = `${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}${last18||""}`;
-          const stats = tables||`<div class="tiles">${tiles}</div>`;
-          const logPane = logTable||`<p class="hint">No game log posted.</p>`;
+          const logTable = paintGameLog(log);
+          const careerHtml = paintCareer(window.CAREER_PACK||{});
+          const over = `${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}${last18||""}${tables||""}`;
+          const stats = careerHtml || tables || `<div class="tiles">${tiles}</div>`;
+          const logPane = logTable || `<p class="hint">No game log posted.</p>`;
           return `<div class="ppane" data-ppane="over">${over}</div><div class="ppane" data-ppane="stats" hidden>${stats}</div><div class="ppane" data-ppane="log" hidden>${logPane}</div>`;
         })()}
       `;
@@ -2881,6 +2878,48 @@ async function openPlayer(pid, name){
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
+}
+
+function paintCareer(pack){
+  const folder=LEAGUE==="cfb"?"ncaa":LEAGUE==="nhl"?"nhl":LEAGUE==="mlb"?"mlb":LEAGUE==="mls"?"soccer":"nfl";
+  const teams=pack.teams||{};
+  const logo=slug=>{
+    const t=teams[slug]||{};
+    const ab=(t.abbreviation||"").toLowerCase();
+    const src=(t.logos&&t.logos[0]&&(t.logos[0].href||t.logos[0]))||(ab?("https://a.espncdn.com/i/teamlogos/"+folder+"/500/"+ab+".png"):"");
+    return src?`<span class="teamcell"><img alt="" src="${src}"/>${t.abbreviation||""}</span>`:(t.abbreviation||"");
+  };
+  return (pack.categories||[]).map(c=>{
+    const heads=c.labels||[];
+    const rows=(c.statistics||[]).slice().sort((a,b)=>((b.season&&b.season.year)||0)-((a.season&&a.season.year)||0)).map(r=>{
+      const yr=(r.season&&(r.season.displayName||r.season.year))||"";
+      return `<tr><th>${yr}</th><td>${logo(r.teamSlug)}</td>${(r.stats||[]).map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
+    }).join("");
+    if(!rows) return "";
+    return `<section class="problock"><h3>${c.displayName||"Career"}</h3><div class="scroll"><table class="protable"><thead><tr><th>Season</th><th>Team</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  }).join("");
+}
+function paintGameLog(log){
+  const seasons=(((log.filters||[]).find(f=>f.name==="season")||{}).options)||[];
+  const current=String(((log.filters||[]).find(f=>f.name==="season")||{}).value||"");
+  const pick=seasons.length?`<label class="seasonpick">Season <select id="logSeason">${seasons.map(o=>`<option value="${o.value}"${String(o.value)===current?" selected":""}>${o.displayValue||o.value}</option>`).join("")}</select></label>`:"";
+  const types=log.seasonTypes||[];
+  const blocks=types.flatMap(s=>(s.categories||[]).map(c=>({title:(s.displayName?s.displayName+" · ":"")+(c.displayName||"Games"), events:c.events||[]})));
+  const use=blocks.length?blocks:[{title:"Games", events:((((types[0]||{}).categories||[])[0]||{}).events)||[]}];
+  const meta=(!Array.isArray(log.events)&&log.events)||{};
+  const heads=log.labels||[];
+  const body=use.map(b=>{
+    const rows=(b.events||[]).map(ev=>{
+      const info=meta[ev.eventId]||{};
+      const dt=info.gameDate?new Date(info.gameDate).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):"";
+      const opp=(info.opponent&&(info.opponent.abbreviation||info.opponent.displayName))||"";
+      const mark=info.gameResult||"";
+      return `<tr><td>${dt}</td><td>${info.atVs||""} ${opp}</td><td class="${mark}">${mark} ${info.score||""}</td>${(ev.stats||[]).map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
+    }).join("");
+    if(!rows) return "";
+    return `<section class="problock"><h3>${b.title}</h3><div class="scroll"><table class="protable"><thead><tr><th>Date</th><th>Opp</th><th>Result</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
+  }).join("");
+  return pick+body;
 }
 function bindPlayerTabs(){
   const root=$("playerRoom");
@@ -2891,6 +2930,23 @@ function bindPlayerTabs(){
       root.querySelectorAll(".ppane").forEach(p=>{ p.hidden = p.dataset.ppane!==btn.dataset.psec; });
     };
   });
+  const sel=root.querySelector("#logSeason");
+  if(sel && !sel.dataset.bound){
+    sel.dataset.bound="1";
+    sel.onchange=async ()=>{
+      const pane=root.querySelector('[data-ppane="log"]');
+      if(!pane || !window.PLAYER_PATH) return;
+      pane.innerHTML="<p class='hint'>Loading "+sel.value+"…</p>";
+      try{
+        const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+window.PLAYER_PATH+"/athletes/"+((window.PLAYER_CTX||{}).id||"")+"/gamelog?season="+sel.value,{cache:"no-store"});
+        const next=res.ok?await res.json():{};
+        pane.innerHTML=paintGameLog(next)||"<p class='hint'>No games that season.</p>";
+        bindPlayerTabs();
+      }catch(e){
+        pane.innerHTML="<p class='hint'>Could not load that season.</p>";
+      }
+    };
+  }
 }
 const LOGS = {};
 const ROSTER = [];
