@@ -57,9 +57,19 @@ td:nth-child(2){text-align:center;color:var(--muted);font-size:11px;letter-spaci
 .split section{padding:0 0 10px}
 .split section+section{border-left:1px solid var(--line)}
 .item{display:flex;justify-content:space-between;gap:8px;padding:7px 14px;font-size:12px;border-top:1px solid #242833}
-.dock{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);width:min(720px,calc(100% - 16px));display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:#101218;border:1px solid #3a2a18;border-radius:12px;overflow:hidden}
-.dock button{border:0;background:transparent;color:var(--muted);padding:14px;font-weight:800}
-.dock button.on{background:var(--orange);color:#140800}
+.nav{position:sticky;bottom:0;display:none;grid-template-columns:1fr 1fr 1fr;background:#101218;border-top:2px solid #ff7a18}
+.nav.on{display:grid}
+.nav button{border:0;background:transparent;color:#9b9288;padding:16px 8px;font-weight:800}
+.nav button.on{color:#ff7a18}
+.choose{display:grid;gap:12px;padding:18px}
+.choose button{border:1px solid #3a2a18;background:#12151c;color:#fff;border-radius:16px;padding:28px 16px;text-align:left}
+.choose b{display:block;font-family:"Bebas Neue",sans-serif;font-size:42px;letter-spacing:.04em}
+.choose span{color:#9b9288}
+.lockbtn{display:none;margin:12px;width:calc(100% - 24px);border:0;background:#ff7a18;color:#140800;font-weight:800;padding:14px;border-radius:12px}
+.lockbtn.on{display:block}
+.mark{font-size:12px;font-weight:800}
+.mark.ok{color:#3ee0a0}
+.mark.bad{color:#ff5a3c}
 .line{display:flex;justify-content:space-between;margin:8px 12px;padding:12px;background:#12151c;border-radius:12px}
 .ladder{margin:8px 12px;background:#12151c;border:1px solid #2c313d;border-radius:16px;overflow:hidden}
 .seat{width:100%;border:0;border-top:1px solid #242833;background:transparent;color:inherit;display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:14px;text-align:left}
@@ -87,14 +97,13 @@ input{width:calc(100% - 24px);margin:8px 12px;background:#101218;border:1px soli
 </style>
 </head>
 <body>
-<header class="top"><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></header>
-<div class="tabs"><button id="lgNfl" class="on" type="button">NFL</button><button id="lgCfb" type="button">COLLEGE</button></div>
-<div class="strip"><span>PICKS <strong id="made">0</strong></span><span>RECORD <strong id="rec">0-0</strong></span><span>OPEN <strong id="open">0</strong></span></div>
-<section class="screen on" id="slate"><div id="games"></div></section>
+<header class="top"><b>SAUCE <em>PICK EM</em></b><button id="homeBtn" type="button">HOME</button></header>
+<section class="screen on" id="choose"><div class="choose"><button id="lgNfl" type="button"><b>NFL</b><span>This week's slate</span></button><button id="lgCfb" type="button"><b>COLLEGE</b><span>This week's slate</span></button></div></section>
+<section class="screen" id="slate"><div class="strip"><span>PICKS <strong id="made">0</strong></span><span>RECORD <strong id="rec">0-0</strong></span><span>OPEN <strong id="open">0</strong></span></div><div id="games"></div></section>
 <section class="screen" id="match"></section>
-<section class="screen" id="ticket"><input id="cardName" maxlength="24" placeholder="Name"/><div id="ticketList"></div></section>
+<section class="screen" id="ticket"><input id="cardName" maxlength="24" placeholder="Name"/><div id="ticketList"></div><button id="lock" class="lockbtn" type="button">Lock card</button></section>
 <section class="screen" id="board"><div id="boardList"></div></section>
-<div class="dock"><button class="on" data-view="slate" type="button">Picks</button><button data-view="ticket" type="button">Ticket</button><button data-view="board" type="button">Board</button><button id="lock" type="button">Lock</button></div>
+<nav class="nav" id="nav"><button class="on" data-view="slate" type="button">Slate</button><button data-view="ticket" type="button">My picks</button><button data-view="board" type="button">Board</button></nav>
 <div class="toast" id="toast"></div>
 <script>
 const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
@@ -102,7 +111,7 @@ const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const state={lg:"nfl",games:[],board:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
 const $ = id => document.getElementById(id);
 function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1200); }
-function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); const dock=document.querySelector(".dock"); if(dock) dock.style.display=id==="match"?"none":"grid"; }
+function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); const nav=$("nav"); if(nav) nav.style.display=id==="match"||id==="choose"?"none":""; }
 function weekKey(lg){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date()); const g=k=>parts.find(x=>x.type===k).value;
@@ -135,6 +144,11 @@ function started(g){ return g.state==="in"||g.state==="post"; }
 function saveLocal(){
   card().name=$("cardName").value.trim();
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
+  const lock=$("lock");
+  if(lock){
+    const ready=state.games.length&&Object.keys(card().picks).length===state.games.length;
+    lock.classList.toggle("on", !!ready);
+  }
   const picks=card().picks; let w=0,l=0,open=0;
   state.games.forEach(g=>{ if(!started(g)) open++; const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; });
   $("made").textContent=Object.keys(picks).length+"/"+state.games.length; $("rec").textContent=w+"-"+l; $("open").textContent=open;
@@ -223,18 +237,24 @@ function openCard(name){
   const picks=row.picks||{};
   const rows=state.games.filter(g=>picks[g.id]).map(g=>{
     const tm=picks[g.id]===g.away.id?g.away:g.home;
-    const opp=tm===g.away?g.home:g.away;
     const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
-    return `<article class="gcast"><div class="who"><em>${tm.name}</em></div><div class="sub"><span>${g.away.ab} at ${g.home.ab}</span><a href="${href}" target="_blank" rel="noopener">Gamecast</a></div></article>`;
+    let mark="";
+    if(g.state==="post"){
+      const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
+      mark=winner&&picks[g.id]===winner?'<span class="mark ok">RIGHT</span>':winner?'<span class="mark bad">WRONG</span>':'<span class="mark">PUSH</span>';
+    }
+    return `<article class="gcast"><div class="who"><em>${tm.name}</em> ${mark}</div><div class="sub"><span>${g.away.ab} ${g.away.score||""} at ${g.home.ab} ${g.home.score||""}</span><a href="${href}">Gamecast</a></div></article>`;
   }).join("");
   $("match").innerHTML=`<div class="backbar"><button id="backBoard" type="button">Back</button><b>${name}</b><span>${row.w}-${row.l}</span></div><div style="padding:12px 0 28px">${rows||"<p style='padding:16px'>No picks</p>"}</div>`;
   show("match");
   $("backBoard").onclick=()=>show("board");
 }
 async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick))); paint(); }
-function setLg(lg){ state.lg=lg; $("lgNfl").classList.toggle("on",lg==="nfl"); $("lgCfb").classList.toggle("on",lg==="cfb"); loadLocal(); show("slate"); load(); }
+function setLg(lg){ state.lg=lg; $("nav").classList.add("on"); loadLocal(); show("slate"); load(); }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board") paintBoard(); if(b.dataset.view==="ticket") paintTicket(); });
-$("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb"); $("cardName").oninput=saveLocal;
+$("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb");
+$("homeBtn").onclick=()=>{ $("nav").classList.remove("on"); show("choose"); };
+$("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
   saveLocal();
   if(!card().name){ show("ticket"); return toast("Name"); }
@@ -243,7 +263,7 @@ $("lock").onclick=async()=>{
   try{ await pushCard(); toast("Locked"); paintBoard(); show("board"); }
   catch(e){ toast("Not saved"); }
 };
-loadLocal(); load();
+loadLocal();
 </script>
 </body>
 </html>
