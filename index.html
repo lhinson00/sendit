@@ -4416,7 +4416,8 @@ async function openMlbLeaders(){
   host.innerHTML="<p class='hint'>Loading "+LEAGUE.toUpperCase()+" leaders…</p>";
   try{
     const sport=LEAGUE==="nhl"?"hockey/leagues/nhl":"baseball/leagues/mlb";
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/"+sport+"/seasons/2026/types/2/leaders?limit=15",{cache:"no-store"});
+    const year=LEAGUE==="nhl"?"2027":"2026";
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/"+sport+"/seasons/"+year+"/types/2/leaders?limit=15",{cache:"no-store"});
     if(!res.ok) throw new Error("ESPN "+res.status);
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -4502,21 +4503,22 @@ async function openLeagueTeam(tid, name, sport){
       }
       return "—";
     };
-    const cols={
+    const cols=sport==="nhl"?{team:[["GP","games"],["G","goals"],["A","assists"],["PTS","points"],["+/-","plusMinus"]],goalkeeping:[["GP","games"],["W","wins"],["SV%","savePct"],["GAA","avgGoalsAgainst"],["SO","shutouts"]]}:{
       batting:[["AVG","avg","AVG"],["AB","AB","atBats"],["H","H","hits"],["HR","HR","homeRuns"],["RBI","RBI","RBIs"],["R","R","runs"],["SB","SB","stolenBases"],["OPS","OPS","ops"],["OBP","OBP","onBasePct"],["SLG","SLG","slugAvg"]],
       pitching:[["ERA","ERA"],["W","W","wins"],["L","L","losses"],["IP","IP","innings"],["K","K","SO","strikeouts"],["BB","BB","walks"],["WHIP","WHIP"],["SV","SV","saves"],["QS","QS"]],
       fielding:[["PO","PO"],["A","A"],["E","E"],["DP","DP"],["FP","FP","FPCT"]]
     };
-    const shotOf=a=>(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/mlb/players/full/"+a.id+".png"):"");
+    const shotOf=a=>(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/"+(sport==="nhl"?"nhl":"mlb")+"/players/full/"+a.id+".png"):"");
     const pblocks=pl.results||[];
-    const leadHtml=`<div class="tlead">${["batting","pitching"].map(nm=>{
+    const groups=sport==="nhl"?["team","goalkeeping"]:["batting","pitching"];
+    const leadHtml=`<div class="tlead">${groups.map(nm=>{
       const blk=pblocks.find(x=>x.name===nm);
       const L=(blk&&blk.leaders&&blk.leaders[0])||{};
       const a=L.athlete||{};
       const line = nm==="batting" ? sval(((L.statistics||[])[0]||{}).stats||[],["AVG","avg"]) : sval(((L.statistics||[])[0]||{}).stats||[],["ERA"]);
       return `<div class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shotOf(a)}"/><div><i>${(blk&&blk.displayName)||nm}</i><b>${line||L.displayValue||"—"}</b><em>${a.displayName||""}</em></div></div>`;
     }).join("")}</div>`;
-    const tableHtml=["batting","pitching","fielding"].map(nm=>{
+    const tableHtml=(sport==="nhl"?["team","goalkeeping"]:["batting","pitching","fielding"]).map(nm=>{
       const blk=pblocks.find(x=>x.name===nm)||{};
       const spec=cols[nm];
       const rows=(blk.leaders||[]).slice(0,18).map(L=>{
@@ -4706,7 +4708,7 @@ async function openTeam(tid, name, sport){
     };
     const pblocks=plstat.results||[];
     const ptotals=plstat.teamTotals||[];
-    const cols={
+    const cols=sport==="nhl"?{team:[["GP","games"],["G","goals"],["A","assists"],["PTS","points"],["+/-","plusMinus"]],goalkeeping:[["GP","games"],["W","wins"],["SV%","savePct"],["GAA","avgGoalsAgainst"],["SO","shutouts"]]}:{
       passing:[["CMP","completions"],["ATT","passingAttempts"],["YDS","passingYards"],["CMP%","completionPct"],["AVG","yardsPerPassAttempt"],["LNG","longPassing"],["TD","passingTouchdowns"],["INT","interceptions"],["SACK","sacks"],["RTG","QBRating","quarterbackRating"]],
       rushing:[["CAR","rushingAttempts"],["YDS","rushingYards"],["AVG","yardsPerRushAttempt"],["LNG","longRushing"],["TD","rushingTouchdowns"]],
       receiving:[["REC","receptions"],["YDS","receivingYards"],["AVG","yardsPerReception"],["LNG","longReception"],["TD","receivingTouchdowns"]],
@@ -4897,9 +4899,10 @@ function paintLeaders(){
   const host=$("boardPanel");
   const cats=window.LEAD_CATS||[];
   const side=window.LEAD_SIDE||"off";
-  const mlb = /avg|homeRun|ERA|WHIP|OPS|stolen/i.test((cats[0]&&(cats[0].name||cats[0].displayName))||"") || /MLB/i.test(window.LEAD_NOTE||"");
-  const offTest = mlb ? /avg|homeRun|RBI|runs|OPS|onBase|slug|hits|stolen|WAR|gameScore|rating/i : OFF_CAT;
-  const defTest = mlb ? /ERA|wins|strikeout|saves|WHIP|quality|opponentAvg|holds/i : DEF_CAT;
+  const nhl = /goal|assist|savePct|plusMinus/i.test((cats[0]&&(cats[0].name||cats[0].displayName))||"");
+  const mlb = !nhl && (/avg|homeRun|ERA|WHIP|OPS|stolen/i.test((cats[0]&&(cats[0].name||cats[0].displayName))||"") || /MLB/i.test(window.LEAD_NOTE||""));
+  const offTest = nhl ? /goal|assist|point|plusMinus|penalty/i : mlb ? /avg|homeRun|RBI|runs|OPS|onBase|slug|hits|stolen|WAR|gameScore|rating/i : OFF_CAT;
+  const defTest = nhl ? /savePct|avgGoals|wins|shutout/i : mlb ? /ERA|wins|strikeout|saves|WHIP|quality|opponentAvg|holds/i : DEF_CAT;
   const conf=window.LEAD_CONF||"";
   const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||""));
   const shot = a => {
