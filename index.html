@@ -2719,7 +2719,9 @@ async function openPlayer(pid, name){
       : isRush || kitPos==="RB" ? [["YDS","YDS"],["TD","TD"],["CAR","CAR"]]
       : isDef ? [["TOT","TOT"],["SACK","SACK"],["TFL","TFL"]]
       : [["YDS","YDS"],["REC","REC"],["TD","TD"]];
-    const leadKeys = (LEAGUE==="mlb")
+    const leadKeys = (LEAGUE==="nhl")
+      ? [["G","G"],["A","A"],["PTS","PTS"]]
+      : (LEAGUE==="mlb")
       ? (isPitch ? [["ERA","ERA"],["W-L","W","L"],["K","K","SO"]] : [["AVG","AVG","BA"],["HR","HR"],["RBI","RBI"]])
       : fbKeys;
     const leads = leadKeys.map(pair=>{
