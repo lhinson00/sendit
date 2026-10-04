@@ -508,6 +508,7 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .spark i.hit b{color:var(--orange)}
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
 .biorows{margin-top:6px}.biorows div{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:baseline;padding:1px 0}.biorows i{font-style:normal;color:#9b9288;font-size:10px;letter-spacing:.12em}.biorows b{font-weight:700;font-size:13px}
+.ptabs{display:flex;gap:22px;padding:0 14px;border-bottom:1px solid #2a241c;position:sticky;top:0;background:#0c0a09;z-index:3}.ptabs button{background:none;border:0;color:#9b9288;font-weight:800;font-size:15px;padding:14px 0 10px;border-bottom:3px solid transparent}.ptabs button.on{color:#fff;border-bottom-color:#ff7a18}.ppane{padding-top:8px}
 .problock{margin:18px 12px 0}.problock h3{margin:0 0 8px;font-size:18px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a241c;border-radius:12px}
 .protable{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
@@ -2838,8 +2839,12 @@ async function openPlayer(pid, name){
           </div>
         </div>
         <div class="lead3">${leads}</div>
-        ${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}
-        ${last18}
+      </div>
+      <nav class="ptabs">
+        <button type="button" class="on" data-psec="over">Overview</button>
+        <button type="button" data-psec="stats">Stats</button>
+        <button type="button" data-psec="log">Game Log</button>
+      </nav>
         ${(()=>{
           const cats=st.categories||[];
           const splits=st.splits||[];
@@ -2866,13 +2871,26 @@ async function openPlayer(pid, name){
             return `<tr><td>${dt}</td><td>${info.atVs||""} ${opp}</td><td class="${mark}">${mark} ${info.score||""}</td>${cells.map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
           }).join("");
           const logTable=logRows?`<section class="problock"><h3>Recent games</h3><div class="scroll"><table class="protable"><thead><tr><th>Date</th><th>Opp</th><th>Result</th>${logHeads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${logRows}</tbody></table></div></section>`:"";
-          if(fromKit) return (tables||"")+"</div>";
-          return (tables||`<div class="tiles">${tiles}</div>`)+logTable+`</div>`;
+          const over = `${scorebug||""}${roto?`<div class="wireblurb">${roto}</div>`:""}${last18||""}`;
+          const stats = tables||`<div class="tiles">${tiles}</div>`;
+          const logPane = logTable||`<p class="hint">No game log posted.</p>`;
+          return `<div class="ppane" data-ppane="over">${over}</div><div class="ppane" data-ppane="stats" hidden>${stats}</div><div class="ppane" data-ppane="log" hidden>${logPane}</div>`;
         })()}
       `;
+    bindPlayerTabs();
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No breakout for "+name+". "+(e.message||"")+"</p>";
   }
+}
+function bindPlayerTabs(){
+  const root=$("playerRoom");
+  if(!root) return;
+  root.querySelectorAll(".ptabs button").forEach(btn=>{
+    btn.onclick=()=>{
+      root.querySelectorAll(".ptabs button").forEach(b=>b.classList.toggle("on", b===btn));
+      root.querySelectorAll(".ppane").forEach(p=>{ p.hidden = p.dataset.ppane!==btn.dataset.psec; });
+    };
+  });
 }
 const LOGS = {};
 const ROSTER = [];
@@ -3929,17 +3947,26 @@ async function openMlsPlayer(pid, name){
         </div>
         <div class="mlsnums">${big.map(x=>`<div class="n"><em>${x[0]}</em><b>${x[1]}</b></div>`).join("")}</div>
         <div class="mlsgrid">${grid.map(x=>`<div class="tile"><em>${x[0]}</em><b>${x[1]}</b></div>`).join("")}</div>
-        <div class="mlspane">
+        <nav class="ptabs">
+          <button type="button" class="on" data-psec="over">Overview</button>
+          <button type="button" data-psec="stats">Stats</button>
+          <button type="button" data-psec="log">Game Log</button>
+        </nav>
+        <div class="ppane" data-ppane="over"></div>
+        <div class="ppane mlspane" data-ppane="stats" hidden>
           <h3>By competition · 2026</h3>
           <div style="overflow:auto">
             <table class="mlstbl"><thead><tr><th class="l">Comp</th>${splitHead}</tr></thead><tbody>${splitRows||"<tr><td class='l'>No splits posted</td></tr>"}</tbody></table>
           </div>
-          <h3>MLS match log</h3>
+        </div>
+        <div class="ppane mlspane" data-ppane="log" hidden>
+          <h3>Match log</h3>
           <div style="overflow:auto">
             <table class="mlstbl"><thead><tr><th class="l">Date</th><th class="l">Opp</th><th></th><th>Score</th>${gLabels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead><tbody>${logRows||"<tr><td class='l'>No log posted</td></tr>"}</tbody></table>
           </div>
         </div>
       </div>`;
+    bindPlayerTabs();
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>No soccer book for "+name+". "+(e.message||"")+"</p>";
   }
