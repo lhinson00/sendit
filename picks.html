@@ -82,8 +82,8 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .scard .win{color:#3ee0a0}
 .scard .pick{box-shadow:inset 0 -2px 0 #ff7a18}
 .scard .sub{margin-top:6px;color:#c9c2b8;font-size:12px}
-.lockbar{display:none;gap:8px;margin:12px;padding:0}
-.lockbar.on{display:grid;grid-template-columns:1fr auto}
+#slate{padding-bottom:130px}.lockbar{display:none;gap:8px;margin:12px;padding:0}
+.lockbar.on{display:grid;grid-template-columns:1fr auto;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;margin:0;background:#0c0a09;padding:8px;box-sizing:border-box}
 .lockbar input{background:#101218;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:12px}
 .lockbar button{border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px;padding:0 16px}
 .toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;display:none}
@@ -146,7 +146,8 @@ function dayLabel(iso){ return new Date(iso).toLocaleDateString("en-US",{weekday
 function saveLocal(){
   card().name=$("cardName").value.trim();
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
-  const ready=state.games.length&&Object.keys(card().picks).length===state.games.length;
+  const need=state.games.filter(g=>!started(g));
+  const ready=need.length>0&&need.every(g=>card().picks[g.id]);
   $("lockbar").classList.toggle("on", ready);
   const picks=card().picks; let w=0,l=0,open=0;
   state.games.forEach(g=>{ if(!started(g)) open++; const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; });
