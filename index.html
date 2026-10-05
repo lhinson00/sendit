@@ -1329,7 +1329,7 @@ function paint(games){
   });
   $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+shown.length+(LEAGUE==="cfb"&&CFB_FILT!=="all"?" · "+(CONF.find(x=>x[0]===CFB_FILT)||[])[1]:"");
   paintCfbPills();
-  if(LEAGUE==="mlb"){
+  if(LEAGUE==="mlb" && !Number(slateOff("mlb"))){
     const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
     const todays=shown.filter(g=>g.state==="in" || chiDay(g.start||"")===today);
     if(todays.length) shown=todays;
@@ -1462,7 +1462,9 @@ function noteWeek(lg, d){
   return week;
 }
 function chiStamp(off){
-  return new Date(Date.now()-off*86400000).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date(Date.now()-Number(off||0)*86400000));
+  const g=t=>{ const p=parts.find(x=>x.type===t); return p?p.value:""; };
+  return g("year")+g("month")+g("day");
 }
 function dayTabLabel(off){
   if(!off) return "Today";
@@ -1498,8 +1500,16 @@ function paintDayTabs(lg){
 }
 async function pullDayBoard(lg){
   const base=URLS[lg];
-  const off=LEAGUE===lg?slateOff(lg):0;
-  const res=await fetch(base+"?dates="+chiStamp(off)+"&limit=100",{cache:"no-store"});
+  const off=LEAGUE===lg?Number(slateOff(lg))||0:0;
+  try{
+    const res=await fetch(base+"?dates="+chiStamp(off),{cache:"no-store"});
+    if(res.ok){
+      const evs=(await res.json()).events||[];
+      if(evs.length || off) return evs;
+    }
+  }catch(e){}
+  if(off) return [];
+  const res=await fetch(base,{cache:"no-store"});
   if(!res.ok) throw new Error("ESPN "+res.status);
   return (await res.json()).events||[];
 }
