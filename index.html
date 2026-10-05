@@ -779,6 +779,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     </span>
   </div>
   <div id="cfbPills" class="pills" hidden></div>
+  <div id="dayTabs" class="pills" hidden></div>
   <div id="liveList" class="list"></div>
   <div id="boardPanel" hidden></div>
   <div id="kitPanel" hidden>
@@ -1452,7 +1453,72 @@ function centralDow(){
   const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",weekday:"short"}).format(new Date());
   return {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[parts]??new Date().getDay();
 }
-async function pullNflEvents(){
+async function slateOff(lg){ return Number((window.SLATE_PICK||{})[lg]||0); }
+function noteWeek(lg, d){
+  const week=Number((d.week&&d.week.number)||(d.season&&d.season.week)||0);
+  if(!week) return 0;
+  window.WEEK_NOW=window.WEEK_NOW||{};
+  window.WEEK_NOW[lg]=week;
+  return week;
+}
+function chiStamp(off){
+  return new Date(Date.now()-off*86400000).toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
+}
+function dayTabLabel(off){
+  if(!off) return "Today";
+  const s=chiStamp(off);
+  const dt=new Date(s.slice(0,4)+"-"+s.slice(4,6)+"-"+s.slice(6,8)+"T18:00:00Z");
+  return dt.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric",timeZone:"America/Chicago"});
+}
+function paintDayTabs(lg){
+  const host=$("dayTabs");
+  if(!host) return;
+  const daily=lg==="mlb"||lg==="nhl";
+  const weekly=lg==="nfl"||lg==="cfb";
+  if(!daily && !weekly){ host.hidden=true; host.innerHTML=""; return; }
+  host.hidden=false;
+  const pick=slateOff(lg);
+  let html="";
+  if(daily){
+    for(let n=0;n<=5;n++) html+=`<button type="button" class="${pick===n?"on":""}" data-off="${n}">${dayTabLabel(n)}</button>`;
+  }else{
+    const now=Number((window.WEEK_NOW||{})[lg]||0);
+    const max=now?Math.min(5,now-1):5;
+    for(let n=0;n<=max;n++){
+      const label=now?("Week "+(now-n)):(n?"-"+n+" wk":"This week");
+      html+=`<button type="button" class="${pick===n?"on":""}" data-off="${n}">${label}</button>`;
+    }
+  }
+  host.innerHTML=html;
+  host.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    window.SLATE_PICK=window.SLATE_PICK||{};
+    window.SLATE_PICK[lg]=Number(b.dataset.off)||0;
+    loadLeague(lg);
+  });
+}
+async function pullDayBoard(lg){
+  const base=URLS[lg];
+  const off=LEAGUE===lg?slateOff(lg):0;
+  const res=await fetch(base+"?dates="+chiStamp(off)+"&limit=100",{cache:"no-store"});
+  if(!res.ok) throw new Error("ESPN "+res.status);
+  return (await res.json()).events||[];
+}
+async function pullCfbEvents(){
+  const base=URLS.cfb;
+  const res=await fetch(base,{cache:"no-store"});
+  if(!res.ok) throw new Error("ESPN "+res.status);
+  const d=await res.json();
+  const week=noteWeek("cfb", d);
+  const year=Number((d.season&&d.season.year)||2026);
+  const st=Number((d.season&&d.season.type)||2);
+  const off=LEAGUE==="cfb"?slateOff("cfb"):0;
+  if(off && week-off>=1){
+    const r2=await fetch(base+(base.includes("?")?"&":"?")+"year="+year+"&seasontype="+st+"&week="+(week-off),{cache:"no-store"});
+    if(r2.ok){ const d2=await r2.json(); if((d2.events||[]).length) return d2.events; }
+  }
+  return d.events||[];
+}
+function pullNflEvents(){
   const base=URLS.nfl;
   const res=await fetch(base,{cache:"no-store"});
   if(!res.ok) throw new Error("ESPN "+res.status);
@@ -1464,9 +1530,17 @@ async function pullNflEvents(){
     const st=((ev.status||{}).type||{}).state;
     return st==="pre"||st==="in";
   });
-  const week=Number((d.week&&d.week.number)||(d.season&&d.season.week)||0);
+  const week=noteWeek("nfl", d);
   const year=Number((d.season&&d.season.year)||2026);
   const st=Number((d.season&&d.season.type)||2);
+  const off=LEAGUE==="nfl"?slateOff("nfl"):0;
+  if(off && week-off>=1){
+    try{
+      const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+(week-off),{cache:"no-store"});
+      if(r2.ok){ const d2=await r2.json(); if((d2.events||[]).length) return d2.events; }
+    }catch(e){}
+    return evs;
+  }
   if(wantNext && week && !stillThisWeek){
     try{
       const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+(week+1),{cache:"no-store"});
@@ -1482,6 +1556,8 @@ async function pullNflEvents(){
 async function pullScoreboard(lg){
   const base=URLS[lg];
   if(lg==="nfl") return pullNflEvents();
+  if(lg==="cfb") return pullCfbEvents();
+  if(lg==="mlb" || lg==="nhl") return pullDayBoard(lg);
   if(lg!=="mlb" && lg!=="mls"){
     const res=await fetch(base,{cache:"no-store"});
     if(!res.ok) throw new Error("ESPN "+res.status);
@@ -1845,6 +1921,7 @@ async function loadLeague(lg){
   $("liveMeta").textContent = "Loading "+lg.toUpperCase();
   if(lg!=="tssaa") $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
   if($("tssaaTabs")) $("tssaaTabs").hidden = lg!=="tssaa";
+  if($("dayTabs") && lg==="tssaa") $("dayTabs").hidden=true;
   if($("tabEatAny")) $("tabEatAny").hidden = true;
   if(lg==="tssaa"){
     if($("nflTabs")) $("nflTabs").hidden=true;
@@ -1880,6 +1957,7 @@ async function loadLeague(lg){
     if($("eatPanel")) $("eatPanel").hidden = true;
     if($("liveList")) $("liveList").hidden = false;
     paint(GAMES);
+    paintDayTabs(lg);
     if(slateT) clearInterval(slateT);
     slateT = setInterval(async ()=>{
       if(!$("viewLive") || $("viewLive").hidden) return;
@@ -1888,6 +1966,7 @@ async function loadLeague(lg){
         const evs = await pullScoreboard(LEAGUE);
         GAMES = evs.flatMap(ev=>mapComp(ev,LEAGUE));
         paint(GAMES);
+        paintDayTabs(LEAGUE);
       }catch(e){}
     }, 20000);
   }catch(err){
