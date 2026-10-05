@@ -1941,7 +1941,7 @@ async function loadLeague(lg){
   if(window.trackUse) window.trackUse("league", lg);
   show("live");
   $("liveMeta").textContent = "Loading "+lg.toUpperCase();
-  if(lg!=="tssaa") $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
+  if(lg!=="tssaa") $("liveList").innerHTML = "";
   if($("tssaaTabs")) $("tssaaTabs").hidden = lg!=="tssaa";
   if($("dayTabs") && lg==="tssaa") $("dayTabs").hidden=true;
   if($("tabEatAny")) $("tabEatAny").hidden = true;
