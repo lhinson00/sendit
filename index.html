@@ -1511,9 +1511,9 @@ async function loadNews(lg){
   if(!path){ host.hidden=true; return; }
   if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; return; }
   try{
-    const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/news?limit=8",{cache:"no-store"});
+    const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/news?limit=40",{cache:"no-store"});
     const d=res.ok?await res.json():{};
-    window.NEWS=(d.articles||[]).map(a=>a.headline||"").filter(Boolean);
+    window.NEWS=(d.articles||[]).filter(a=>a.type==="HeadlineNews").map(a=>a.headline||"").filter(Boolean).slice(0,12);
     window.NEWS_LG=lg;
     if(!window.NEWS.length){ host.hidden=true; return; }
     host.hidden=false;
