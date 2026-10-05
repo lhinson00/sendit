@@ -157,11 +157,12 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .gcard.tncard .sc{font-size:34px;padding-top:2px;align-self:center}
 .regcut{margin:10px 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a8478}
 .rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
-.newstick{display:grid;grid-template-columns:auto 1fr;align-items:stretch;margin:22px var(--pad) 18px;background:#0c0a09;border:1px solid #3a2a18;border-radius:12px;overflow:hidden;min-height:46px}
-.newslabel{display:flex;align-items:center;padding:0 14px;background:#ff7a18;color:#140800;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.newstick{margin:22px var(--pad) 18px;overflow:hidden;border-top:1px solid #2c261f;border-bottom:1px solid #2c261f}
 .newsview{overflow:hidden}
-.newstrack{display:flex;width:max-content;animation:newstick 48s linear infinite}
-.newstrack span{display:inline-block;padding:13px 0;color:#f7f2ea;font-size:14px;letter-spacing:.02em;white-space:nowrap}
+.newstrack{display:flex;width:max-content;animation:newstick 60s linear infinite}
+.newsrun{display:flex;flex:none}
+.newsrun b{position:relative;font-weight:500;font-size:13px;color:#efe8dc;padding:12px 0 12px 26px;white-space:nowrap}
+.newsrun b:before{content:"";position:absolute;left:11px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:#ff7a18}
 @keyframes newstick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
@@ -798,7 +799,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   </div>
   <div id="cfbPills" class="pills" hidden></div>
   <div id="dayTabs" class="pills" hidden></div>
-  <div id="newsClick" class="newstick" hidden><div class="newslabel">Headlines</div><div class="newsview"><div class="newstrack" id="newsTrack"></div></div></div>
+  <div id="newsClick" class="newstick" hidden><div class="newsview"><div class="newstrack" id="newsTrack"></div></div></div>
   <div id="liveList" class="list"></div>
   <div id="boardPanel" hidden></div>
   <div id="kitPanel" hidden>
@@ -1503,8 +1504,8 @@ function paintNews(){
   const arts=window.NEWS||[];
   if(!host || !arts.length) return;
   const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&","<":"<",">":">"}[c]));
-  const line=arts.map(a=>esc(a)).join("    •    ")+"    •    ";
-  host.innerHTML="<span>"+line+line+"</span>";
+  const line=arts.map(a=>"<b>"+esc(a)+"</b>").join("");
+  host.innerHTML="<div class='newsrun'>"+line+"</div><div class='newsrun'>"+line+"</div>";
 }
 async function loadNews(lg){
   const host=$("newsClick");
