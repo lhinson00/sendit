@@ -208,6 +208,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .tbook{padding:16px var(--pad) 40px;max-width:640px}
 .tbook h2{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.02em;margin:2px 0 4px;line-height:1}
 .tlist{margin-top:12px}
+.thead{display:grid;grid-template-columns:96px 1fr;align-items:center;min-height:104px;background:linear-gradient(120deg,#2a1408 0%,#0a0b10 58%)}
+.thead .tmark{width:72px;height:72px;object-fit:contain;border:0;border-radius:0;background:transparent;justify-self:center}
+.tgame img{width:28px;height:28px;object-fit:contain}
+.cbro{display:grid;grid-template-columns:44px minmax(0,1fr) 28px;gap:12px;align-items:center;padding:11px 14px;border-bottom:1px solid #221e18}
+.cbro img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#1a120c}
+.cbro b{display:block;font-size:15px;font-weight:650;line-height:1.25}
+.cbro span{color:#c9c2b8;font-size:13px;text-align:right}
 .tgame{display:grid;grid-template-columns:76px 32px minmax(0,1fr) auto;gap:8px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #221e18}
 .tgame > span:first-child{font-size:11px;color:var(--muted);letter-spacing:.04em;line-height:1.25}
 .tgame div b{display:block;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
@@ -5412,7 +5419,7 @@ async function openCbbTeam(tid, name){
       const onm=(opp.team&&(opp.team.shortDisplayName||opp.team.abbreviation))||"";
       const when=stt.shortDetail||String(ev.date||"").slice(5,10);
       const line=stt.state==="pre"?when:(ms+"-"+os);
-      return `<button type="button" class="tgame ngame" data-gid="${ev.id||c.id||""}"><img alt="" src="${nbaLogo(opp.team||{})}"/><b>${ha} ${onm}</b><span>${line}</span></button>`;
+      return `<div class="tgame" data-gid="${ev.id||c.id||""}"><span>${String(ev.date||"").slice(5,10).replace("-","/")}</span><img alt="" src="${nbaLogo(opp.team||{})}"/><div><b>${ha} ${onm}</b><em>${(String(line||"").split(" - ")[1])||line||"TBD"}</em></div><b class="tscore"></b></div>`;
     };
     const next=(t.nextEvent||[])[0];
     const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
@@ -5430,11 +5437,11 @@ async function openCbbTeam(tid, name){
     const one=p=>{
       const shot="https://a.espncdn.com/i/headshots/mens-college-basketball/players/full/"+p.id+".png";
       const pos=(p.position&&p.position.abbreviation)||"";
-      return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><b>${p.jersey?("#"+p.jersey+" "):""}${p.displayName||""}</b><span>${pos}</span></div>`;
+      return `<div class="cbro prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${p.jersey?("#"+p.jersey+" "):""}${p.displayName||""}</b></div><span>${pos}</span></div>`;
     };
     const roster=["G","F","C"].map(k=>buckets[k].length?`<h3 class="kicker">${k==="G"?"Guards":k==="F"?"Forwards":"Centers"}</h3>${buckets[k].sort((a,b)=>Number(a.jersey||99)-Number(b.jersey||99)).map(one).join("")}`:"").join("");
     $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NCAAB"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||"2026-27"}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}${roster?`<h3 class="kicker">Roster</h3>${roster}`:"<p class='hint'>Roster not posted.</p>"}</div>`;
-    $("playerRoom").querySelectorAll(".ngame").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
+    $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>College basketball team did not load.</p>";
   }
@@ -5555,7 +5562,7 @@ async function openNbaTeam(tid, name){
       const ologo=nbaLogo(opp.team||{});
       const when=stt.shortDetail||String(ev.date||"").slice(5,10);
       const line=stt.state==="pre"?when:(ms+"-"+os);
-      return `<button type="button" class="tgame ngame" data-gid="${ev.id||c.id||""}"><img alt="" src="${ologo}"/><b>${ha} ${onm}</b><span>${line}</span></button>`;
+      return `<div class="tgame" data-gid="${ev.id||c.id||""}"><span>${String(ev.date||"").slice(5,10).replace("-","/")}</span><img alt="" src="${ologo}"/><div><b>${ha} ${onm}</b><em>${(String(line||"").split(" - ")[1])||line||"TBD"}</em></div><b class="tscore"></b></div>`;
     };
     const next=(t.nextEvent||[])[0];
     const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
@@ -5574,11 +5581,11 @@ async function openNbaTeam(tid, name){
     const one=p=>{
       const shot="https://a.espncdn.com/i/headshots/nba/players/full/"+p.id+".png";
       const pos=(p.position&&p.position.abbreviation)||"";
-      return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><b>${p.jersey?("#"+p.jersey+" "):""}${p.displayName||""}</b><span>${pos}</span></div>`;
+      return `<div class="cbro prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${p.jersey?("#"+p.jersey+" "):""}${p.displayName||""}</b></div><span>${pos}</span></div>`;
     };
     const roster=["G","F","C"].map(k=>buckets[k].length?`<h3 class="kicker">${k==="G"?"Guards":k==="F"?"Forwards":"Centers"}</h3>${buckets[k].sort((a,b)=>Number(a.jersey||99)-Number(b.jersey||99)).map(one).join("")}`:"").join("");
     $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Roster</h3>${roster||"<p class='hint'>Roster not posted.</p>"}</div>`;
-    $("playerRoom").querySelectorAll(".ngame").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
+    $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>NBA team did not load.</p>";
   }
