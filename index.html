@@ -5344,32 +5344,43 @@ async function openNbaTeam(tid, name){
       }
       return "—";
     };
-    const tiles=[["Record", rec.summary||"—"],["PPG", grab("offensive",["avgPoints"])],["RPG", grab("general",["avgRebounds"])],["APG", grab("offensive",["avgAssists"])],["FG%", grab("offensive",["fieldGoalPct"])]];
+    const useful=[["PPG", grab("offensive",["avgPoints"])],["OPP", grab("defensive",["avgPointsAgainst"])],["RPG", grab("general",["avgRebounds"])],["APG", grab("offensive",["avgAssists"])],["FG%", grab("offensive",["fieldGoalPct"])]].filter(([,v])=>v && v!=="—" && v!=="0" && v!=="0.0");
+    const gameLine=ev=>{
+      const c=(ev.competitions||[])[0]||{};
+      const comps=c.competitors||[];
+      const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(tid))||{};
+      const opp=comps.find(x=>x!==me)||{};
+      const stt=((c.status||{}).type)||{};
+      const ms=(me.score&&(me.score.displayValue||me.score.value))||me.score||"";
+      const os=(opp.score&&(opp.score.displayValue||opp.score.value))||opp.score||"";
+      const ha=me.homeAway==="home"?"vs":"@";
+      const onm=(opp.team&&(opp.team.shortDisplayName||opp.team.abbreviation))||"";
+      const ologo=nbaLogo(opp.team||{});
+      const when=stt.shortDetail||String(ev.date||"").slice(5,10);
+      const line=stt.state==="pre"?when:(ms+"-"+os);
+      return `<button type="button" class="srow ngame" data-gid="${ev.id||c.id||""}"><img alt="" src="${ologo}"/><b>${ha} ${onm}</b><span>${line}</span></button>`;
+    };
+    const next=(t.nextEvent||[])[0];
     const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
     const now=Date.now();
     const past=all.filter(ev=>new Date(ev.date||0).getTime()<now).slice(-5);
-    const upcoming=all.filter(ev=>!past.includes(ev)).slice(0,5);
-    const games=past.concat(upcoming).map(ev=>{
-      const c=(ev.competitions||[])[0]||{};
-      const comps=c.competitors||[];
-      const me=comps.find(x=>String(x.id)===String(tid))||{};
-      const opp=comps.find(x=>String(x.id)!==String(tid))||{};
-      const stt=((c.status||{}).type)||{};
-      const ms=(me.score&&(me.score.displayValue||me.score.value))||"";
-      const os=(opp.score&&(opp.score.displayValue||opp.score.value))||"";
-      const ha=me.homeAway==="home"?"vs":"@";
-      const onm=(opp.team&&(opp.team.abbreviation||opp.team.shortDisplayName))||"";
-      const line=stt.state==="pre"?"":(ms+"-"+os);
-      return `<div class="srow"><b>${ha} ${onm}</b><span>${String(ev.date||"").slice(5,10)}</span><span>${stt.shortDetail||line}</span></div>`;
-    }).join("");
-    const people=[];
-    (rost.athletes||[]).forEach(g=>(g.items||[]).forEach(p=>people.push(p)));
-    const roster=people.map(p=>{
-      const shot=(p.headshot&&(p.headshot.href||p.headshot))||("https://a.espncdn.com/i/headshots/nba/players/full/"+p.id+".png");
+    const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now).slice(0,5);
+    const games=past.concat(upcoming).map(gameLine).join("");
+    const people=(rost.athletes||[]).flatMap(a=>a&&a.items?a.items:[a]).filter(p=>p&&p.id);
+    const buckets={G:[],F:[],C:[]};
+    people.forEach(p=>{
+      const ab=(p.position&&p.position.abbreviation)||"";
+      const key=ab.indexOf("C")===0?"C":ab.indexOf("G")===0?"G":"F";
+      buckets[key].push(p);
+    });
+    const one=p=>{
+      const shot="https://a.espncdn.com/i/headshots/nba/players/full/"+p.id+".png";
       const pos=(p.position&&p.position.abbreviation)||"";
-      return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><b>${p.displayName||""}</b><span>${pos}</span></div>`;
-    }).join("");
-    $("playerRoom").innerHTML=`<div class="phero"><div class="phero-top"><img class="pshot" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||""}</p></div></div><div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div><h3 class="kicker">Last 5 · Next 5</h3>${games||"<p class='hint'>No schedule.</p>"}<h3 class="kicker">Roster</h3>${roster}</div>`;
+      return `<div class="lrow prow" data-pid="${p.id}" data-pname="${String(p.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><b>${p.jersey?("#"+p.jersey+" "):""}${p.displayName||""}</b><span>${pos}</span></div>`;
+    };
+    const roster=["G","F","C"].map(k=>buckets[k].length?`<h3 class="kicker">${k==="G"?"Guards":k==="F"?"Forwards":"Centers"}</h3>${buckets[k].sort((a,b)=>Number(a.jersey||99)-Number(b.jersey||99)).map(one).join("")}`:"").join("");
+    $("playerRoom").innerHTML=`<div class="phero"><div class="phero-top"><img class="pshot" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Roster</h3>${roster||"<p class='hint'>Roster not posted.</p>"}</div>`;
+    $("playerRoom").querySelectorAll(".ngame").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>NBA team did not load.</p>";
   }
