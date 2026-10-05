@@ -1495,7 +1495,7 @@ function dayTabLabel(off){
   return dt.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric",timeZone:"America/Chicago"});
 }
 
-const NEWS_PATH={nfl:"football/nfl",cfb:"football/college-football",mlb:"baseball/mlb",nhl:"hockey/nhl",nba:"basketball/nba",mls:"soccer/usa.1",ufc:"mma/ufc"};
+const NEWS_NOW={nfl:{sport:"football",section:"NFL"},cfb:{sport:"football",section:"College Football"},mlb:{sport:"baseball",section:"MLB"},nhl:{sport:"hockey",section:"NHL"},nba:{sport:"basketball",section:"NBA"},mls:{sport:"soccer",section:"Soccer"},ufc:{sport:"mma",section:"MMA"}};
 function paintNews(){
   const host=$("newsTrack");
   const arts=window.NEWS||[];
@@ -1507,13 +1507,13 @@ function paintNews(){
 async function loadNews(lg){
   const host=$("newsClick");
   if(!host) return;
-  const path=NEWS_PATH[lg];
-  if(!path){ host.hidden=true; return; }
+  const spec=NEWS_NOW[lg];
+  if(!spec){ host.hidden=true; return; }
   if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; return; }
   try{
-    const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/news?limit=40",{cache:"no-store"});
+    const res=await fetch("https://now.core.api.espn.com/v1/sports/"+spec.sport+"/news?limit=50",{cache:"no-store"});
     const d=res.ok?await res.json():{};
-    window.NEWS=(d.articles||[]).filter(a=>a.type==="HeadlineNews").map(a=>a.headline||"").filter(Boolean).slice(0,12);
+    window.NEWS=(d.headlines||[]).filter(a=>a.type==="HeadlineNews" && a.section===spec.section).map(a=>a.linkText||a.headline||"").filter(Boolean).slice(0,12);
     window.NEWS_LG=lg;
     if(!window.NEWS.length){ host.hidden=true; return; }
     host.hidden=false;
