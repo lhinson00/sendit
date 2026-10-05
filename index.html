@@ -157,10 +157,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .gcard.tncard .sc{font-size:34px;padding-top:2px;align-self:center}
 .regcut{margin:10px 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a8478}
 .rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
-.newstick{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;margin:8px var(--pad) 0;background:#101218;border:1px solid #2a241c;border-radius:10px}
-.newstick button{border:0;background:transparent;color:#ff7a18;font-size:20px;line-height:1}
-.newshead{color:#f4efe6;font-size:13px;text-align:left;padding:10px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.newscard{margin:6px var(--pad) 0;padding:12px 14px;background:#14110e;border-left:3px solid #ff7a18;border-radius:8px;color:#d9d0c4;font-size:13px;line-height:1.45}
+.newstick{margin:8px var(--pad) 0;overflow:hidden;background:#101218;border:1px solid #2a241c;border-radius:10px}
+.newstrack{display:flex;width:max-content;animation:newstick 36s linear infinite}
+.newstrack span{padding:9px 0;color:#f4efe6;font-size:13px;white-space:nowrap}
+@keyframes newstick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
 .pills button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
@@ -796,12 +796,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   </div>
   <div id="cfbPills" class="pills" hidden></div>
   <div id="dayTabs" class="pills" hidden></div>
-  <div id="newsClick" class="newstick" hidden>
-    <button type="button" id="newsPrev" aria-label="Previous">‹</button>
-    <button type="button" id="newsHead" class="newshead"></button>
-    <button type="button" id="newsNext" aria-label="Next">›</button>
-  </div>
-  <div id="newsCard" class="newscard" hidden></div>
+  <div id="newsClick" class="newstick" hidden><div class="newstrack" id="newsTrack"></div></div>
   <div id="liveList" class="list"></div>
   <div id="boardPanel" hidden></div>
   <div id="kitPanel" hidden>
@@ -1501,48 +1496,31 @@ function dayTabLabel(off){
 }
 
 const NEWS_PATH={nfl:"football/nfl",cfb:"football/college-football",mlb:"baseball/mlb",nhl:"hockey/nhl",nba:"basketball/nba",mls:"soccer/usa.1",ufc:"mma/ufc"};
-function stepNews(dir){
+function paintNews(){
+  const host=$("newsTrack");
   const arts=window.NEWS||[];
-  if(!arts.length) return;
-  window.NEWS_I=((window.NEWS_I||0)+dir+arts.length)%arts.length;
-  const a=arts[window.NEWS_I];
-  if($("newsHead")) $("newsHead").textContent=a.h;
-  if($("newsCard") && !$("newsCard").hidden) $("newsCard").textContent=a.d||a.h;
+  if(!host || !arts.length) return;
+  const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&","<":"<",">":">"}[c]));
+  const line=arts.map(a=>esc(a)).join("   ·   ")+"   ·   ";
+  host.innerHTML="<span>"+line+line+"</span>";
 }
 async function loadNews(lg){
   const host=$("newsClick");
   if(!host) return;
   const path=NEWS_PATH[lg];
-  if(!path){ host.hidden=true; if($("newsCard")) $("newsCard").hidden=true; return; }
-  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; stepNews(0); return; }
+  if(!path){ host.hidden=true; return; }
+  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; return; }
   try{
     const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/news?limit=8",{cache:"no-store"});
     const d=res.ok?await res.json():{};
-    window.NEWS=(d.articles||[]).map(a=>({h:a.headline||"", d:a.description||""})).filter(a=>a.h);
+    window.NEWS=(d.articles||[]).map(a=>a.headline||"").filter(Boolean);
     window.NEWS_LG=lg;
-    window.NEWS_I=0;
     if(!window.NEWS.length){ host.hidden=true; return; }
     host.hidden=false;
-    stepNews(0);
-    if(!window.NEWS_TIMER){
-      window.NEWS_TIMER=setInterval(()=>{ if($("newsCard") && !$("newsCard").hidden) return; if($("newsClick") && !$("newsClick").hidden) stepNews(1); }, 7000);
-    }
+    paintNews();
   }catch(e){ host.hidden=true; }
 }
-function bindNews(){
-  if(window.NEWS_BOUND) return;
-  window.NEWS_BOUND=true;
-  if($("newsPrev")) $("newsPrev").onclick=()=>stepNews(-1);
-  if($("newsNext")) $("newsNext").onclick=()=>stepNews(1);
-  if($("newsHead")) $("newsHead").onclick=()=>{
-    const a=(window.NEWS||[])[window.NEWS_I||0];
-    const card=$("newsCard");
-    if(!a || !card) return;
-    if(!card.hidden){ card.hidden=true; return; }
-    card.hidden=false;
-    card.textContent=a.d||a.h;
-  };
-}
+function bindNews(){}
 function paintDayTabs(lg){
   const host=$("dayTabs");
   if(!host) return;
