@@ -883,9 +883,11 @@ function viewPop(name){
 }
 async function show(name, opts){
   opts = opts||{};
+  const wasLive=$("viewLive") && !$("viewLive").hidden;
   viewPin();
   $("viewHome").hidden = name!=="home";
   $("viewLive").hidden = name!=="live";
+  if(name==="live" && !wasLive) newsClock(LEAGUE);
   $("viewGame").hidden = name!=="game";
   if($("viewPlayer")) $("viewPlayer").hidden = name!=="player";
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
@@ -1506,13 +1508,24 @@ function paintNews(){
   const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&","<":"<",">":">"}[c]));
   const line=arts.map(a=>"<b>"+esc(a)+"</b>").join("");
   host.innerHTML="<div class='newsrun'>"+line+"</div><div class='newsrun'>"+line+"</div>";
+  newsClock(window.NEWS_LG);
+}
+function newsClock(lg){
+  const track=$("newsTrack");
+  if(!track) return;
+  const key="sauceNewsClock."+(lg||"board");
+  let start=0;
+  try{ start=Number(localStorage.getItem(key)||0); }catch(e){}
+  if(!start){ start=Date.now(); try{ localStorage.setItem(key, String(start)); }catch(e){} }
+  const elapsed=((Date.now()-start)/1000)%60;
+  track.style.animationDelay="-"+elapsed.toFixed(2)+"s";
 }
 async function loadNews(lg){
   const host=$("newsClick");
   if(!host) return;
   const slug=NEWS_SLUG[lg];
   if(!slug){ host.hidden=true; return; }
-  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; return; }
+  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ const wake=host.hidden; host.hidden=false; if(wake) newsClock(lg); return; }
   try{
     const res=await fetch("https://cdn.espn.com/core/"+slug+"/?xhr=1",{cache:"no-store"});
     const d=res.ok?await res.json():{};
