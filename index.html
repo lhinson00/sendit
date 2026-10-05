@@ -1518,7 +1518,7 @@ async function pullCfbEvents(){
   }
   return d.events||[];
 }
-function pullNflEvents(){
+async function pullNflEvents(){
   const base=URLS.nfl;
   const res=await fetch(base,{cache:"no-store"});
   if(!res.ok) throw new Error("ESPN "+res.status);
