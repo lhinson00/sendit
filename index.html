@@ -5649,25 +5649,27 @@ function renderNba(g, sum){
     const col=((c.team||{}).color)||"";
     return col?("#"+String(col).replace("#","")):"#ff7a18";
   };
-  const dots=shots.slice(-16).map((p,i,arr)=>{
+  const dots=shots.slice(-12).map((p,i,arr)=>{
     const x=Number(p.coordinate.x), y=Number(p.coordinate.y);
-    const cx=Math.max(12,Math.min(488,x*10));
-    const cy=Math.max(16,Math.min(404,390-y*8));
+    const cx=Math.max(0.7,Math.min(49.3,x));
+    const cy=Math.max(0.8,Math.min(40.4,40-y));
     const make=/makes/i.test(p.text||"")||!!p.scoringPlay;
     const col=tint(p.team&&p.team.id);
     const on=i===arr.length-1;
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${on?8:4.5}" fill="${make?col:"none"}" stroke="${on?"#fff":col}" stroke-width="${on?2.5:1.6}"/>`;
+    return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${on?1.15:0.62}" fill="${make?col:"none"}" stroke="${on?"#fff":col}" stroke-width="${on?0.38:0.28}"/>`;
   }).join("");
   const latest=shots[shots.length-1];
-  const court=`<div class="court"><svg viewBox="0 0 500 420" aria-hidden="true">
-    <rect width="500" height="420" fill="#c4894a"/>
-    <rect x="6" y="6" width="488" height="408" fill="none" stroke="#f4e7d4" stroke-width="3"/>
-    <rect x="170" y="238" width="160" height="166" fill="rgba(180,96,42,.35)" stroke="#f4e7d4" stroke-width="2"/>
-    <circle cx="250" cy="238" r="60" fill="none" stroke="#f4e7d4" stroke-width="2"/>
-    <line x1="214" y1="408" x2="286" y2="408" stroke="#f4e7d4" stroke-width="4"/>
-    <circle cx="250" cy="390" r="8" fill="none" stroke="#f4e7d4" stroke-width="2"/>
-    <clipPath id="arcclip"><rect x="0" y="0" width="500" height="396"/></clipPath>
-    <circle cx="250" cy="390" r="190" fill="none" stroke="#f4e7d4" stroke-width="2" clip-path="url(#arcclip)"/>
+  const court=`<div class="court"><svg viewBox="0 0 50 42" aria-hidden="true">
+    <rect width="50" height="42" fill="#c4894a"/>
+    <rect x="0.35" y="0.35" width="49.3" height="41.3" fill="none" stroke="#f4e7d4" stroke-width="0.35"/>
+    <rect x="17" y="25" width="16" height="15.6" fill="rgba(160,84,36,.45)" stroke="#f4e7d4" stroke-width="0.28"/>
+    <circle cx="25" cy="25" r="6" fill="none" stroke="#f4e7d4" stroke-width="0.28"/>
+    <line x1="3" y1="40" x2="3" y2="31.1" stroke="#f4e7d4" stroke-width="0.28"/>
+    <line x1="47" y1="40" x2="47" y2="31.1" stroke="#f4e7d4" stroke-width="0.28"/>
+    <clipPath id="arcclip"><rect x="0" y="0" width="50" height="40.05"/></clipPath>
+    <circle cx="25" cy="40" r="23.75" fill="none" stroke="#f4e7d4" stroke-width="0.28" clip-path="url(#arcclip)"/>
+    <line x1="22" y1="41.2" x2="28" y2="41.2" stroke="#f4e7d4" stroke-width="0.45"/>
+    <circle cx="25" cy="40" r="0.85" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
     ${dots}
   </svg><p>${latest?(latest.text||""):"Shots show up here once they go up."}</p></div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
