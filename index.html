@@ -333,6 +333,9 @@ tr.prow{cursor:pointer}tr.prow:hover td{background:#1a140c}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2a241c;margin-left:3px}
 .dot.on{background:#3dbb5a}
 .dot.red.on{background:#ff4d4d}
+.zone{margin:10px 0 4px;padding:8px 8px 10px;border-radius:16px;background:radial-gradient(90% 80% at 50% 0%,#1b2836,#07080c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.zone svg{width:100%;max-width:260px;height:auto;display:block;margin:0 auto}
+.zone p{margin:8px 4px 0;text-align:center;color:#f7f2ea;font-size:14px;letter-spacing:.04em}
 .diamondmini{display:flex;flex-direction:column;align-items:center;gap:4px}
 .diamondmini span{display:flex;gap:10px}
 .wpbar{position:relative;height:7px;margin:14px 0 18px;background:#222;border-radius:99px}
@@ -2629,6 +2632,33 @@ function renderGame(g, sum){
   const aR=rheOf(away), hR=rheOf(home);
   const dots=(n,max,cls)=>Array.from({length:max},(_,i)=>`<i class="${cls}${i<n?" on":""}"></i>`).join("");
   const scoring=(sum.plays||[]).filter(p=>p.scoringPlay||(p.scoreValue>0)).slice(-8).reverse();
+  const pitchPlays=(sum.plays||[]).filter(p=>p.pitchCoordinate && p.pitchType && p.atBatId);
+  const abId=pitchPlays.length?pitchPlays[pitchPlays.length-1].atBatId:"";
+  const abPitches=pitchPlays.filter(p=>p.atBatId===abId).slice(-14);
+  const zoneHtml=(()=>{
+    if(LEAGUE!=="mlb" || !abPitches.length) return "";
+    const dots=abPitches.map((p,i)=>{
+      const x=Number(p.pitchCoordinate.x), y=Number(p.pitchCoordinate.y);
+      const t=((p.type||{}).text)||"";
+      const ball=/^ball/i.test(t);
+      const play=/single|double|triple|home run|in play|out|error|choice/i.test(t);
+      const col=ball?"#3ecf8e":play?"#f4efe6":"#ff7a18";
+      const on=i===abPitches.length-1;
+      return `<circle cx="${x}" cy="${y}" r="${on?7:4.2}" fill="${col}" stroke="${on?"#fff":"rgba(0,0,0,.45)"}" stroke-width="${on?1.8:0.8}"/>`;
+    }).join("");
+    const lp=abPitches[abPitches.length-1];
+    const velo=lp.pitchVelocity?lp.pitchVelocity+" MPH":"";
+    const name=((lp.pitchType||{}).text)||"";
+    const res=((lp.type||{}).text)||"";
+    const cap=[velo,name,res].filter(Boolean).join(" · ");
+    return `<div class="zone"><svg viewBox="40 95 180 165" aria-hidden="true">
+      <rect x="40" y="95" width="180" height="165" fill="#10161c"/>
+      <rect x="95" y="148" width="55" height="50" fill="rgba(255,255,255,.03)" stroke="#f4efe6" stroke-width="1.5"/>
+      <path d="M113.3 148 V198 M131.6 148 V198 M95 164.6 H150 M95 181.3 H150" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="0.8"/>
+      <path d="M104 206 H146 V218 L125 230 L104 218 Z" fill="none" stroke="#f4efe6" stroke-width="1.4"/>
+      ${dots}
+    </svg><p>${cap}</p></div>`;
+  })();
   const clips=videoClips(sum);
   const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
   if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
@@ -2650,10 +2680,11 @@ function renderGame(g, sum){
         <div class="countline"><span>B ${dots(Number(sit.balls)||0,4,"dot")}</span><span>S ${dots(Number(sit.strikes)||0,3,"dot red")}</span><span>O ${dots(Number(sit.outs)||0,3,"dot")}</span></div>
         <div class="abcard r">${bObj?`<div><em>Batter</em><b>${bObj.displayName||bObj.shortName}</b></div><img alt="" src="${shot(bObj)}"/>`:"<em>Batter</em>"}</div>
       </div>
+      ${zoneHtml}
       ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${g.awayAb||g.away} ${100-homePct}%</em><em>${g.homeAb||g.home} ${homePct}%</em></div>`:""}
     </div>
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
-    ${last.text?`<div class="lastbig"><span>Last play</span><p>${last.text}</p></div>`:""}
+    ${(last.text && !(LEAGUE==="mlb" && last.pitchType))?`<div class="lastbig"><span>Last play</span><p>${last.text}</p></div>`:""}
     ${note?`<p class="hint">${note}</p>`:""}
     ${scoring.length?scoring.map(p=>`<div class="play hot"><span>${(p.period&&p.period.displayValue)||""} · ${(p.team&&p.team.abbreviation)||""}</span><p>${p.text||""}</p></div>`).join(""):""}
     ${venue?`<p class="hint">${venue}</p>`:""}
