@@ -2166,14 +2166,14 @@ function boxHtml(sum){
         idx=want.map(w=>src.indexOf(w)).filter(i=>i>=0);
         labels=idx.map(i=>src[i]);
       }
-      const head = "<tr><th>"+(grp.label||grp.displayName||grp.name||team)+"</th>"+labels.map(l=>"<th>"+l+"</th>").join("")+"</tr>";
+      const head = "<tr><th>"+(grp.label||grp.displayName||grp.name||grp.type||team)+"</th>"+labels.map(l=>"<th>"+l+"</th>").join("")+"</tr>";
       const rows = (grp.athletes||[]).map(a=>{
         const n=(a.athlete&&a.athlete.displayName)||"";
         const st=idx?idx.map(i=>a.stats[i]):(a.stats||[]);
         const pid=a.athlete&&a.athlete.id||"";
         return "<tr class='prow' data-pid='"+pid+"' data-pname='"+String(n).replace(/"/g,"")+"'><td><span class='pname'>"+n+"</span></td>"+st.slice(0,8).map(v=>"<td>"+v+"</td>").join("")+"</tr>";
       }).join("");
-      return "<div class='box'><h3>"+team+" · "+(grp.label||grp.displayName||grp.name||"")+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
+      return "<div class='box'><h3>"+team+" · "+(grp.label||grp.displayName||grp.name||grp.type||"")+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
     }).join("");
   }).join("");
 }
@@ -2733,13 +2733,15 @@ function renderGame(g, sum){
 
     </div>
     ${zoneHtml}
-    ${LEAGUE==="mlb"?`<section class="problock"><h3>This at-bat</h3>${(sum._livePitches||[]).length?(sum._livePitches||[]).map((p,i)=>`<div class="play"><span>${i+1}${p.pitchVelocity?(" · "+p.pitchVelocity+" mph"):""}${(p.pitchType&&p.pitchType.text)?(" "+p.pitchType.text):""}</span><p>${(p.type&&p.type.text)||""}</p></div>`).join(""):"<p class='hint'>Waiting on the first pitch.</p>"}<h3>Plays</h3>${(sum._livePlays||[]).length?(sum._livePlays||[]).map(p=>`<div class="play"><span>${p.inn}</span><p>${p.text}</p></div>`).join(""):"<p class='hint'>Plays show up as they finish.</p>"}</section>`:""}
+    ${LEAGUE==="mlb"?`<section class="problock"><h3>This at-bat</h3>${(sum._livePitches||[]).length?(sum._livePitches||[]).map((p,i)=>`<div class="play"><span>${i+1}${p.pitchVelocity?(" · "+p.pitchVelocity+" mph"):""}${(p.pitchType&&p.pitchType.text)?(" "+p.pitchType.text):""}</span><p>${(p.type&&p.type.text)||""}</p></div>`).join(""):"<p class='hint'>Waiting on the first pitch.</p>"}<h3>Plays</h3>${(sum._livePlays||[]).length?(sum._livePlays||[]).map(p=>`<div class="play"><span>${p.inn}</span><p>${p.text}</p></div>`).join(""):"<p class='hint'>Plays show up as they finish.</p>"}</section>
+    <h3 class="sec">Box score</h3>
+    ${boxHtml(sum)}`:""}
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
     ${(last.text && LEAGUE!=="mlb")?`<div class="lastbig"><span>Last play</span><p>${last.text}</p></div>`:""}
     
     ${LEAGUE==="mlb"?"":(scoring.length?scoring.map(p=>`<div class="play hot"><span>${(p.period&&p.period.displayValue)||""} · ${(p.team&&p.team.abbreviation)||""}</span><p>${p.text||""}</p></div>`).join(""):"")}
     ${venue?`<p class="hint">${venue}</p>`:""}
-    ${boxHtml(sum)}`;
+    ${LEAGUE==="mlb"?"":boxHtml(sum)}`;
   if(!playing){
     $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"||LEAGUE==="mlb"?"":"<p class='hint'>Highlights post after ESPN cuts them.</p>");
   }
