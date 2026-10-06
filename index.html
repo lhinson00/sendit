@@ -281,10 +281,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .boxtable thead th{color:#9b9288;font-size:10px;letter-spacing:.08em}
 .boxsec th{text-align:left;color:#ff7a18;letter-spacing:.14em;font-size:11px;text-transform:uppercase;background:#101218}
 .boxtable tfoot th,.boxtable tfoot td{color:#fff;font-weight:800}
-.court{margin:12px 0 16px;padding:14px 10px 12px;border-radius:18px;background:radial-gradient(70% 140% at 50% 115%,rgba(255,122,24,.22),transparent 46%),radial-gradient(90% 80% at 50% 0%,#1b2838,#07080c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 36px rgba(0,0,0,.4)}
-.court svg{width:100%;height:auto;display:block;border-radius:4px;touch-action:manipulation}
-.shotpt{cursor:pointer}
-.court p{margin:10px 4px 0;min-height:2.7em;color:#f7f2ea;font-size:14px;line-height:1.35}
+.court{margin:12px 0 16px;padding:8px 8px 12px;border-radius:18px;background:radial-gradient(80% 60% at 50% 0%,#243246,#07080c 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 18px 40px rgba(0,0,0,.45)}
+.possbar{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 8px 6px}
+.possbar img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.possbar b{display:block;font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.14em;line-height:.85}
+.possbar span{display:block;margin-top:3px;color:#d5d0c8;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.court svg{width:100%;height:auto;display:block}
+.court p{margin:8px 8px 0;min-height:2.6em;color:#f7f2ea;font-size:14px;line-height:1.35}
 .rink{position:relative;margin:10px 0 14px;padding:10px;border-radius:22px;background:radial-gradient(120% 80% at 50% 0%,#1c3048,#0b121c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.35)}
 .rink svg{width:100%;height:auto;display:block}
 .rink img{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}
@@ -5676,47 +5679,86 @@ function renderNba(g, sum){
     return {cx:Math.max(49,Math.min(92.8,88.75-y)), cy:Math.max(1.2,Math.min(48.8,50-x))};
   };
   const shown=shots.slice(-1);
-  const dots=shown.map((p,i)=>{
-    const o=place(p);
-    const make=/makes/i.test(p.text||"")||!!p.scoringPlay;
-    const col=tint(p.team&&p.team.id);
-    const txt=String(p.text||"").replace(/"/g,"'");
-    return `<g class="shotpt" data-txt="${txt}"><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="2.4" fill="transparent"/><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="1.25" fill="${make?col:"rgba(8,8,10,.35)"}" stroke="${col}" stroke-width="0.28"/></g>`;
-  }).join("");
-  const lastShot=shown[shown.length-1];
-  const ring=lastShot?place(lastShot):{cx:47,cy:25};
-  const court=`<div class="court"><svg viewBox="0 0 94 50" aria-hidden="true">
-    <defs>
-      <pattern id="planks" width="2.6" height="50" patternUnits="userSpaceOnUse">
-        <rect width="2.6" height="50" fill="#d9a45c"/>
-        <rect width="2.6" height="50" fill="rgba(120,62,18,.18)"/>
-        <rect x="2.45" width="0.15" height="50" fill="rgba(70,32,8,.45)"/>
-      </pattern>
-    </defs>
-    <rect width="94" height="50" fill="url(#planks)"/>
-    <rect x="0.3" y="0.3" width="93.4" height="49.4" fill="none" stroke="#f6efe4" stroke-width="0.35"/>
-    <line x1="47" y1="0" x2="47" y2="50" stroke="#f6efe4" stroke-width="0.28"/>
-    <circle cx="47" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
-    <circle cx="47" cy="25" r="0.45" fill="#f6efe4"/>
-    <rect x="0" y="17" width="19" height="16" fill="${tint(away.id)}22" stroke="#f6efe4" stroke-width="0.28"/>
-    <rect x="75" y="17" width="19" height="16" fill="${tint(home.id)}22" stroke="#f6efe4" stroke-width="0.28"/>
-    <circle cx="19" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
-    <circle cx="75" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
-    <line x1="0" y1="3" x2="14.2" y2="3" stroke="#f6efe4" stroke-width="0.28"/>
-    <line x1="0" y1="47" x2="14.2" y2="47" stroke="#f6efe4" stroke-width="0.28"/>
-    <line x1="79.8" y1="3" x2="94" y2="3" stroke="#f6efe4" stroke-width="0.28"/>
-    <line x1="79.8" y1="47" x2="94" y2="47" stroke="#f6efe4" stroke-width="0.28"/>
-    <clipPath id="leftArc"><rect x="5.2" y="0" width="42" height="50"/></clipPath>
-    <clipPath id="rightArc"><rect x="46.8" y="0" width="42" height="50"/></clipPath>
-    <circle cx="5.25" cy="25" r="23.75" fill="none" stroke="#f6efe4" stroke-width="0.28" clip-path="url(#leftArc)"/>
-    <circle cx="88.75" cy="25" r="23.75" fill="none" stroke="#f6efe4" stroke-width="0.28" clip-path="url(#rightArc)"/>
-    <line x1="4" y1="22" x2="4" y2="28" stroke="#f6efe4" stroke-width="0.45"/>
-    <line x1="90" y1="22" x2="90" y2="28" stroke="#f6efe4" stroke-width="0.45"/>
-    <circle cx="5.25" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
-    <circle cx="88.75" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
-    ${dots}
-    <circle id="courtRing" cx="${ring.cx.toFixed(2)}" cy="${ring.cy.toFixed(2)}" r="2.15" fill="none" stroke="#fff" stroke-width="0.32" opacity="${lastShot?1:0}"/>
-  </svg><p id="courtCap">${lastShot?(lastShot.text||""):"Shots land on the floor once they go up. Tap one."}</p></div>`;
+  const lastShot=shown[0];
+  const sideOf=id=>String(id)===String(away.id)?away:home;
+  const otherOf=id=>String(id)===String(away.id)?home:away;
+  let poss=null;
+  for(let i=(plays||[]).length-1;i>=0 && !poss;i--){
+    const p=plays[i];
+    const ty=((p.type||{}).text||"")+" "+(p.text||"");
+    const tid=p.team&&p.team.id;
+    if(!tid) continue;
+    if(/timeout|substitution|jump ball|jumpball/i.test(ty)) continue;
+    if(p.scoringPlay || /makes /i.test(p.text||"")) poss=otherOf(tid);
+    else if(/rebound/i.test(ty)) poss=sideOf(tid);
+    else if(/steal/i.test(ty)) poss=sideOf(tid);
+    else if(/turnover/i.test(ty)) poss=otherOf(tid);
+  }
+  if(!poss) poss = away.possession ? away : home;
+  const P=(x,y)=>{
+    const z=Math.max(0,Math.min(1,y/50));
+    const s=0.5+z*0.78;
+    return [200+(x-47)*3.28*s, 38+z*168];
+  };
+  const seg=pts=>pts.map((pt,i)=>{const q=P(pt[0],pt[1]);return (i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1);}).join(" ");
+  const arc=(cx,cy,r,a0,a1)=>{
+    const pts=[];
+    for(let k=0;k<=20;k++){
+      const a=a0+(a1-a0)*k/20;
+      pts.push([cx+Math.cos(a)*r, cy+Math.sin(a)*r]);
+    }
+    return seg(pts);
+  };
+  const ink=d=>`<path d="${d}" fill="none" stroke="#f7f1e6" stroke-width="1.4" stroke-linejoin="round"/>`;
+  const floor=seg([[0,0],[94,0],[94,50],[0,50]])+"Z";
+  const lines=[
+    seg([[0,0],[94,0],[94,50],[0,50],[0,0]]),
+    seg([[47,0],[47,50]]),
+    arc(47,25,6,0,Math.PI*2),
+    seg([[0,17],[19,17],[19,33],[0,33],[0,17]]),
+    seg([[94,17],[75,17],[75,33],[94,33],[94,17]]),
+    arc(19,25,6,-Math.PI/2,Math.PI/2),
+    arc(75,25,6,Math.PI/2,Math.PI*3/2),
+    seg([[0,3],[14.2,3]]),
+    seg([[0,47],[14.2,47]]),
+    seg([[94,3],[79.8,3]]),
+    seg([[94,47],[79.8,47]]),
+    arc(5.25,25,23.75,-1.18,1.18),
+    arc(88.75,25,23.75,Math.PI-1.18,Math.PI+1.18),
+    seg([[4,22],[4,28]]),
+    seg([[90,22],[90,28]])
+  ].map(ink).join("");
+  const hoop=(x,y)=>{
+    const q=P(x,y);
+    const ry=2.6+(y/50)*2.4;
+    return `<ellipse cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" rx="8" ry="${ry.toFixed(1)}" fill="none" stroke="#ff7a18" stroke-width="2.2"/>`;
+  };
+  const badge=(x,y,src,w)=>{
+    const q=P(x,y);
+    const h=w*(0.7+(y/50)*0.5);
+    return `<image href="${src}" x="${(q[0]-w/2).toFixed(1)}" y="${(q[1]-h/2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/>`;
+  };
+  let shotMark="";
+  if(lastShot){
+    const o=place(lastShot);
+    const q=P(o.cx, o.cy);
+    const col=tint(lastShot.team&&lastShot.team.id);
+    const src=logo(sideOf(lastShot.team&&lastShot.team.id));
+    shotMark=`<g class="shotpt" data-txt="${String(lastShot.text||"").replace(/"/g,"'")}"><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="15" fill="${col}"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="17.5" fill="none" stroke="#fff" stroke-width="2"/><image href="${src}" x="${(q[0]-11).toFixed(1)}" y="${(q[1]-11).toFixed(1)}" width="22" height="22"/></g>`;
+  }
+  const court=`<div class="court">
+    <div class="possbar"><img alt="" src="${logo(poss)}"/><div><b>POSSESSION</b><span>${nm(poss)}</span></div></div>
+    <svg viewBox="0 0 400 230" aria-hidden="true">
+      <defs><linearGradient id="woodg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2ce96"/><stop offset="0.55" stop-color="#d4893c"/><stop offset="1" stop-color="#b56b2c"/></linearGradient></defs>
+      <path d="${floor}" fill="url(#woodg)"/>
+      ${lines}
+      ${hoop(5.25,25)}${hoop(88.75,25)}
+      ${badge(47,25,logo(home),46)}
+      ${badge(17,28,logo(away),34)}
+      ${shotMark}
+    </svg>
+    <p id="courtCap">${lastShot?(lastShot.text||""):"The last shot shows up on the floor."}</p>
+  </div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
   const statNum=(team,name)=>{
