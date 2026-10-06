@@ -239,9 +239,15 @@ body{background:#07080c}
 #tab-build .pcard,#tab-build .pcard-top,#tab-build .pcard-bot{display:none}
 \n
 #tab-build .fx{font-family:Manrope,sans-serif}
-#tab-build .fx-head{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:10px}
-#tab-build .fx-head input{background:#11141c;border:1px solid #2c3344;color:#f4efe8;border-radius:10px;padding:10px 12px;font-size:15px}
-#tab-build .fx-head button{background:#1b2030;color:#f4efe8;border:0;border-radius:10px;padding:10px 12px}
+#tab-build .fx-head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.whoami{margin:0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em;line-height:1}
+.whoami:empty{display:none}
+.nameask{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:80;display:none;align-items:flex-end;justify-content:center}
+.nameask.on{display:flex}
+.nameask form{width:min(520px,100%);background:#101218;border-top:1px solid #3a2a18;padding:18px 16px 28px;display:grid;gap:10px}
+.nameask p{margin:0;color:#9b9288;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.nameask input{background:#0c0d12;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:14px;font-size:16px}
+.nameask button{border:0;background:#ff7a18;color:#140800;font-weight:800;border-radius:10px;padding:14px}
 #tab-build .fx-bank{text-align:right;min-width:72px}
 #tab-build .fx-bank small{display:block;font-size:9px;letter-spacing:.12em;color:#8d93a3}
 #tab-build .fx-bank b{font-size:16px;color:#7CFFB2}
@@ -277,8 +283,7 @@ body{background:#07080c}
 <section class="panel" id="tab-build">
   <div class="fx">
     <header class="fx-head">
-      <input id="cardName" maxlength="24" placeholder="Lineup name"/>
-      <button type="button" id="newCardBtn">Clear</button>
+      <b class="whoami" id="whoLine"></b>
       <div class="fx-bank"><small>LEFT</small><b id="remain">$50,000</b><small id="spent">$0</small></div>
     </header>
     <h2 id="rosterTitle" hidden>Name your card</h2>
@@ -317,6 +322,11 @@ body{background:#07080c}
 </div>
 <div class="drawer" id="drawer"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
+<div class="nameask" id="nameAsk"><form onsubmit="return false">
+  <p>Name on the board</p>
+  <input id="nameAskInput" maxlength="24" placeholder="Your name" autocomplete="nickname"/>
+  <button id="nameAskGo" type="button">Lock it</button>
+</form></div>
 
 <script>
 const BUDGET = 50000;
@@ -404,10 +414,7 @@ function paintBudget(){
   $("remain").parentElement.className = "bcell "+(r<0?"over":"ok");
     $("btnLock").textContent = STATE.locked ? "Locked" : "Lock card";
   $("btnLock").disabled = STATE.locked || !filled() || r<0;
-  $("cardName").disabled = SLOTS.some(k=>slotFrozen(k));
-  const rt=$("rosterTitle");
-  if(rt) rt.textContent = (STATE.name||$("cardName").value||"").trim() || "Name your card";
-  $("newCardBtn").disabled = true;
+  const who=$("whoLine"); if(who) who.textContent=STATE.name||"";
   const un=$("btnUnlock");
   if(un){ un.disabled = !STATE.locked; }
 }
@@ -643,7 +650,7 @@ function paintFilters(){
 }
 
 function paintAll(){
-  $("cardName").value = STATE.name||"";
+  const who=$("whoLine"); if(who) who.textContent=STATE.name||"";
   paintBudget(); paintSlots(); paintFilters(); paintPool(); paintLive(); paintStand();
 }
 
@@ -1386,7 +1393,7 @@ async function deleteCard(name){
       return toast(/policy|42501|permission/i.test(msg)?"Run DELETE policy in Supabase SQL":("Delete failed "+r.status));
     }
     STATE.cards=STATE.cards.filter(c=>!(c.week===STATE.week && c.name===name));
-    if(STATE.name===name){ STATE.locked=false; STATE.sealName=""; STATE.lineup={}; $("cardName").value=""; saveStore(); }
+    if(STATE.name===name){ STATE.locked=false; STATE.sealName=""; STATE.lineup={}; STATE.name=""; saveStore(); }
     await pullBoard();
     toast("Removed "+name);
     paintStand();
@@ -1448,22 +1455,35 @@ function nameTaken(name){
 function lockCard(){
   if(STATE.locked && STATE.week) return toast("Already locked — rename is open until a game starts");
   if(!filled() || remain()<0) return toast("Fill 9 and stay under $50,000");
-  const name=($("cardName").value||"").trim();
-  if(!name || /^sunday card$/i.test(name)) return toast("Give the card a name — “Sunday card” is not unique");
-  if(nameTaken(name)) return toast("That name is taken this week — pick another");
-  STATE.name = name;
-  STATE.sealName = name;
-  STATE.locked = true;
-  upsertCard();
-  snapshotIfFinal();
-  saveStore();
-  paintAll();
-  pushCard(true).then(()=>{
-    return pullBoard();
-  }).then(()=>{
-    toast(STATE.boardErr ? "Locked on this phone — board save failed" : "Locked · on the shared board");
-    tabTo("stand"); paintStand();
-  });
+  const finish=name=>{
+    if(!name || /^sunday card$/i.test(name)) return toast("Give the card a name");
+    if(nameTaken(name)) return toast("That name is taken this week — pick another");
+    STATE.name = name;
+    STATE.sealName = name;
+    STATE.locked = true;
+    upsertCard();
+    snapshotIfFinal();
+    saveStore();
+    paintAll();
+    pushCard(true).then(()=>{
+      return pullBoard();
+    }).then(()=>{
+      toast(STATE.boardErr ? "Locked on this phone — board save failed" : "Locked · on the shared board");
+      tabTo("stand"); paintStand();
+    });
+  };
+  const have=(STATE.name||"").trim();
+  if(have) return finish(have);
+  const box=$("nameAsk"), input=$("nameAskInput");
+  box.classList.add("on");
+  input.value="";
+  input.focus();
+  $("nameAskGo").onclick=()=>{
+    const name=input.value.trim().slice(0,24);
+    if(!name) return;
+    box.classList.remove("on");
+    finish(name);
+  };
 }
 
 function snapshotIfFinal(){
@@ -1620,24 +1640,6 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.datas
 $("posFilt").onchange=paintPool;
 $("gameFilt").onchange=paintPool;
 $("qFilt").oninput=paintPool;
-$("cardName").oninput=e=>{
-  const next=(e.target.value||"").trim();
-  const prev=STATE.name;
-  STATE.name=next;
-  saveStore();
-  const rt=$("rosterTitle"); if(rt) rt.textContent=next||"Name your card";
-};
-$("cardName").onchange=()=>{
-  if(!STATE.locked || SLOTS.some(k=>slotFrozen(k))) return;
-  const name=($("cardName").value||"").trim();
-  if(!name || /^sunday card$/i.test(name)) return toast("Need a unique card name");
-  if(nameTaken(name) && name!==STATE.sealName) return toast("That name is taken");
-  const old=STATE.sealName;
-  STATE.name=name; STATE.sealName=name;
-  saveStore(); upsertCard();
-  if(old && old!==name) deleteCard(old);
-  pushCard(true);
-};
 $("btnLock").onclick=lockCard;
 $("btnClear").onclick=()=>{
   const keep={};
@@ -1651,10 +1653,6 @@ $("btnUnlock").onclick=()=>{
   STATE.locked=false;
   saveStore(); paintAll();
   toast("Unlocked. Started games stay on the card.");
-};
-$("newCardBtn").onclick=()=>{
-  if(STATE.locked) return toast("One card per phone this week");
-  STATE.lineup={}; STATE.name=""; $("cardName").value=""; saveStore(); paintAll();
 };
 
 loadStore();
