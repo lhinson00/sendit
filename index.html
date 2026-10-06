@@ -2687,12 +2687,14 @@ function renderGame(g, sum){
       if(/strike|foul|missed bunt/.test(n)) return "strike";
       return "play";
     };
-    const paint={ball:["#1d4e89","#7eb8ff"], strike:["#8d1d1d","#ff6b6b"], play:["#12161e","#f4efe6"]};
+    const paint={ball:["#2f7bff","#d7e8ff"], strike:["#ff2d2d","#ffd0d0"], play:["#f4efe6","#1a140c"]};
     const pin=(p,n)=>{
       const q=spot(p);
       const x=q[0].toFixed(1), y=q[1].toFixed(1);
-      const col=paint[kind((p.type||{}).text)];
-      return `<g><circle cx="${x}" cy="${y}" r="9" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text x="${x}" y="${(q[1]+3.5).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
+      const tone=kind((p.type||{}).text);
+      const col=paint[tone];
+      const ink=tone==="play"?"#140c08":"#fff";
+      return `<g><circle cx="${x}" cy="${y}" r="11" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text x="${x}" y="${(q[1]+4).toFixed(1)}" text-anchor="middle" fill="${ink}" font-size="12" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
     };
     const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
     const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
@@ -2713,14 +2715,15 @@ function renderGame(g, sum){
     const tone=kind(call);
     const velo=lp.pitchVelocity?String(lp.pitchVelocity):"";
     const name=((lp.pitchType||{}).text)||"Pitch";
-    const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||lp.sequenceNumber||"");
-    window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
+    const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||"");
+    window.PITCH_ANIM=String(lp.id||"");
     const ex=end[0], ey=end[1];
     const ox=ex+(160-ex)*0.12, oy=ey-22;
     const nLast=abPitches.length;
     const col=paint[tone];
+    const ink=tone==="play"?"#140c08":"#fff";
     const flight=fresh
-      ? `<g><animateTransform attributeName="transform" type="translate" from="${ox.toFixed(1)} ${oy.toFixed(1)}" to="${ex.toFixed(1)} ${ey.toFixed(1)}" dur="0.4s" fill="freeze"/><circle r="9" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text y="3.5" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${nLast}</text></g>`
+      ? `<g><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="11" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"><animate attributeName="cx" from="${ox.toFixed(1)}" to="${ex.toFixed(1)}" dur="0.35s" fill="freeze"/><animate attributeName="cy" from="${oy.toFixed(1)}" to="${ey.toFixed(1)}" dur="0.35s" fill="freeze"/></circle><text x="${ex.toFixed(1)}" y="${(ey+4).toFixed(1)}" text-anchor="middle" fill="${ink}" font-size="12" font-family="Bebas Neue,sans-serif">${nLast}</text></g>`
       : pin(lp, nLast);
     return `<div class="zone">
       <div class="zonecall"><b>${velo?velo+"<i>mph</i>":""}</b><span>${name}</span><em class="${tone}">${call}</em></div>
@@ -2948,16 +2951,23 @@ async function mlbLive(g){
   if(!res.ok) return null;
   const data=await res.json();
   const cur=(((data.liveData||{}).plays)||{}).currentPlay||{};
-  const events=(cur.playEvents||[]).filter(e=>e.isPitch && e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX!=null);
+  const events=(cur.playEvents||[]).filter(e=>{
+    const c=e.pitchData&&e.pitchData.coordinates;
+    if(!c || e.isPitch===false) return false;
+    return c.pX!=null || c.x!=null;
+  });
   const pitches=events.map((e,i)=>{
     const c=e.pitchData.coordinates||{};
     const det=e.details||{};
-    const call=(det.call&&det.call.description)||"";
+    const call=(det.call&&det.call.description)||det.description||"";
     const type=(det.type&&det.type.description)||"Pitch";
+    let px=c.pX, pz=c.pZ;
+    if(px==null && c.x!=null) px=(125-Number(c.x))/38;
+    if(pz==null && c.y!=null) pz=3.6-((Number(c.y)-140)/48);
     return {
       id:e.playId||e.endTime||("p"+i),
       atBatId:"now",
-      pitchCoordinate:{px:Number(c.pX), pz:Number(c.pZ)},
+      pitchCoordinate:{px:Number(px), pz:Number(pz)},
       zoneTop:e.pitchData.strikeZoneTop,
       zoneBot:e.pitchData.strikeZoneBottom,
       zoneWide:e.pitchData.strikeZoneWidth,
