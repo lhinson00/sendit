@@ -267,6 +267,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .rinkbug em{font-family:"Bebas Neue",sans-serif;font-style:normal;font-size:42px}
 .rinkbug span{color:#c9c2b8;font-size:12px;text-align:center}
 .rinkbug b{font-size:12px}
+.court{margin:8px 0 14px;padding:12px 12px 8px;border-radius:18px;background:radial-gradient(120% 90% at 50% 0%,#3a2414,#0c0d10);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.court svg{width:100%;height:auto;display:block;border-radius:10px}
+.court p{margin:8px 2px 0;color:#efe8dc;font-size:13px;line-height:1.35}
 .rink{position:relative;margin:10px 0 14px;padding:10px;border-radius:22px;background:radial-gradient(120% 80% at 50% 0%,#1c3048,#0b121c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.35)}
 .rink svg{width:100%;height:auto;display:block}
 .rink img{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}
@@ -5635,6 +5638,38 @@ function renderNba(g, sum){
   };
   const trail=plays.slice(-18).reverse().map(row).join("");
   const lastHtml=last?`<div class="lastplay"><i>Last play</i>${last.text}</div>`:"";
+  const shots=(plays||[]).filter(p=>{
+    const c=p.coordinate||{};
+    const x=Number(c.x), y=Number(c.y);
+    if(!(x>=0&&x<=50&&y>=-4&&y<=47)) return false;
+    return /shot|layup|dunk|jumper|tip/i.test(((p.type||{}).text)||"");
+  });
+  const tint=id=>{
+    const c=(id===away.id?away:home);
+    const col=((c.team||{}).color)||"";
+    return col?("#"+String(col).replace("#","")):"#ff7a18";
+  };
+  const dots=shots.slice(-16).map((p,i,arr)=>{
+    const x=Number(p.coordinate.x), y=Number(p.coordinate.y);
+    const cx=Math.max(12,Math.min(488,x*10));
+    const cy=Math.max(16,Math.min(404,390-y*8));
+    const make=/makes/i.test(p.text||"")||!!p.scoringPlay;
+    const col=tint(p.team&&p.team.id);
+    const on=i===arr.length-1;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${on?8:4.5}" fill="${make?col:"none"}" stroke="${on?"#fff":col}" stroke-width="${on?2.5:1.6}"/>`;
+  }).join("");
+  const latest=shots[shots.length-1];
+  const court=`<div class="court"><svg viewBox="0 0 500 420" aria-hidden="true">
+    <rect width="500" height="420" fill="#c4894a"/>
+    <rect x="6" y="6" width="488" height="408" fill="none" stroke="#f4e7d4" stroke-width="3"/>
+    <rect x="170" y="238" width="160" height="166" fill="rgba(180,96,42,.35)" stroke="#f4e7d4" stroke-width="2"/>
+    <circle cx="250" cy="238" r="60" fill="none" stroke="#f4e7d4" stroke-width="2"/>
+    <line x1="214" y1="408" x2="286" y2="408" stroke="#f4e7d4" stroke-width="4"/>
+    <circle cx="250" cy="390" r="8" fill="none" stroke="#f4e7d4" stroke-width="2"/>
+    <clipPath id="arcclip"><rect x="0" y="0" width="500" height="396"/></clipPath>
+    <circle cx="250" cy="390" r="190" fill="none" stroke="#f4e7d4" stroke-width="2" clip-path="url(#arcclip)"/>
+    ${dots}
+  </svg><p>${latest?(latest.text||""):"Shots show up here once they go up."}</p></div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
   const statNum=(team,name)=>{
@@ -5679,6 +5714,7 @@ function renderNba(g, sum){
   $("gameBody").innerHTML=`<div class="cast">
     <div class="scorestrip"><img alt="" src="${logo(away)}"/><div><b>${sc(away)}</b><span>${nm(away)}</span><em>${rec(away)}</em></div><div class="clock">${st.shortDetail||st.detail||""}</div><div><b>${sc(home)}</b><span>${nm(home)}</span><em>${rec(home)}</em></div><img alt="" src="${logo(home)}"/></div>
     ${line}
+    ${court}
     ${lastHtml}
     <section class="problock"><h3>Team stats</h3>${cmp}</section>
     ${leaders}
