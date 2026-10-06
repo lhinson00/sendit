@@ -303,13 +303,26 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .boxtable thead th{color:#9b9288;font-size:10px;letter-spacing:.08em}
 .boxsec th{text-align:left;color:#ff7a18;letter-spacing:.14em;font-size:11px;text-transform:uppercase;background:#101218}
 .boxtable tfoot th,.boxtable tfoot td{color:#fff;font-weight:800}
-.court{margin:12px 0 16px;padding:8px 8px 12px;border-radius:18px;background:radial-gradient(80% 60% at 50% 0%,#243246,#07080c 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 18px 40px rgba(0,0,0,.45)}
+.court{position:relative;margin:12px 0 16px;padding:8px 8px 12px;border-radius:18px;background:radial-gradient(80% 60% at 50% 0%,#243246,#07080c 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 18px 40px rgba(0,0,0,.45)}
 .possbar{display:flex;align-items:center;justify-content:center;gap:12px;padding:8px 8px 6px}
 .possbar img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
 .possbar b{display:block;font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.14em;line-height:.85}
 .possbar span{display:block;margin-top:3px;color:#d5d0c8;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
 .court svg{width:100%;height:auto;display:block}
-.court p{margin:8px 8px 0;min-height:2.6em;color:#f7f2ea;font-size:14px;line-height:1.35}
+.nbacap{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;margin:8px 8px 0;padding:10px 12px;background:#0c0e14;border-radius:14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.nbacap img.face{width:62px;height:62px;border-radius:50%;object-fit:cover;background:#16120e;border:2px solid #3a2a18}
+.nbacap.make img.face{border-color:#ff7a18}
+.nbacap b{display:block;font-family:"Bebas Neue",sans-serif;font-size:30px;letter-spacing:.03em;line-height:.9;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nbacap em{display:block;margin-top:4px;font-style:normal;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18}
+.nbacap.miss em{color:#b7aea4}
+.nbacap span{display:block;margin-top:3px;color:#b7aea4;font-size:12px;line-height:1.3}
+.nbacap .meta{text-align:right}
+.nbacap .meta strong{display:block;font-family:"Bebas Neue",sans-serif;font-size:34px;font-weight:400;color:#fff;line-height:.85}
+.nbacap .meta small{display:block;margin-top:4px;color:#9b9288;letter-spacing:.08em;font-size:11px}
+.nbacap.livein{animation:capin .4s ease}
+.scorestrip b.bump{display:inline-block;animation:bump .45s ease;color:#ff7a18}
+@keyframes capin{from{transform:translateY(10px);opacity:.2}to{transform:none;opacity:1}}
+@keyframes bump{40%{transform:scale(1.16)}}
 .rink{position:relative;margin:10px 0 14px;padding:10px;border-radius:22px;background:radial-gradient(120% 80% at 50% 0%,#1c3048,#0b121c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.35)}
 .rink svg{width:100%;height:auto;display:block}
 .rink img{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}
@@ -5987,7 +6000,6 @@ function renderNba(g, sum){
     return "";
   };
   const plays=(sum.plays||[]).filter(p=>p.text && !/^(End of|Start of)/i.test(p.text));
-  const last=plays[plays.length-1];
   const row=p=>{
     const team=byId[String((p.team||{}).id)]||{};
     const clock=((p.clock||{}).displayValue)||"";
@@ -5996,7 +6008,6 @@ function renderNba(g, sum){
     return `<li class="${p.scoringPlay?"score":""}"><em>${clock}<br>${q.replace(" Quarter","")}</em><img alt="" src="${logo(team)}"/><div><i>${mark}</i><span>${p.text}</span></div>${p.scoringPlay?`<b>${p.awayScore}-${p.homeScore}</b>`:`<b></b>`}</li>`;
   };
   const trail=plays.slice(-18).reverse().map(row).join("");
-  const lastHtml=last?`<div class="lastplay"><i>Last play</i>${last.text}</div>`:"";
   const shots=(plays||[]).filter(p=>{
     const c=p.coordinate||{};
     const x=Number(c.x), y=Number(c.y);
@@ -6021,6 +6032,73 @@ function renderNba(g, sum){
   };
   const shown=shots.slice(-1);
   const lastShot=shown[0];
+  const nbaCall=p=>{
+    if(!p) return null;
+    const text=String(p.text||"").trim();
+    if(!text || /enters the game|timeout|jump ball|jumpball/i.test(text)) return null;
+    const type=String((p.type||{}).text||"");
+    const blob=text+" "+type;
+    const three=Number(p.pointsAttempted)===3 || /three/i.test(blob);
+    const dunk=/dunk/i.test(blob);
+    const ft=/free throw/i.test(blob);
+    const made=/\bmakes\b/i.test(text);
+    const miss=/\bmiss/i.test(text);
+    let player="", event="", detail="";
+    const cut=verb=>{
+      const i=text.toLowerCase().indexOf(verb);
+      if(i<0) return null;
+      return [text.slice(0,i).trim(), text.slice(i+verb.length).trim()];
+    };
+    if(made){
+      const parts=cut("makes ");
+      player=parts?parts[0]:"";
+      detail=parts?parts[1]:"";
+      event=dunk?"DUNK":ft?"FREE THROW":three?"MAKES 3":"MAKES 2";
+    }else if(miss){
+      const parts=cut("misses ");
+      player=parts?parts[0]:"";
+      detail=parts?parts[1]:"";
+      event=ft?"MISS FT":three?"MISSES 3":"MISS";
+    }else if(/rebound/i.test(text)){
+      player=text.replace(/\s+(offensive|defensive)\s+rebound.*/i,"").replace(/\s+rebound.*/i,"");
+      event=/offensive/i.test(text)?"OFF REBOUND":"REBOUND";
+    }else if(/\bsteal/i.test(text)){
+      player=text.replace(/\s+steal.*/i,"");
+      event="STEAL";
+    }else if(/\bblocks?\b/i.test(text)){
+      const m=text.match(/^(.*?)\s+blocks?\s+(.*)$/i);
+      player=m?m[1]:"";
+      detail=m?m[2]:"";
+      event="BLOCK";
+    }else if(/turnover/i.test(text)){
+      player=text.split(/\s+(bad pass|lost ball|traveling|out of bounds|offensive|shot clock|turnover)/i)[0];
+      detail=text.slice(player.length).trim();
+      event="TURNOVER";
+    }else if(/foul/i.test(text)){
+      player=text.split(/\s+(personal|shooting|offensive|loose ball|technical|flagrant|foul)/i)[0];
+      detail=text.slice(player.length).trim();
+      event="FOUL";
+    }else return null;
+    const assist=String(detail||"").match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    if(assist) detail=((assist[1]||"").trim()+(assist[2]?(" · "+assist[2]):"")).trim();
+    const aid=(((p.participants||[])[0]||{}).athlete)||{};
+    return {
+      player:player||"Play",
+      event,
+      detail:detail||"",
+      made:!!p.scoringPlay,
+      miss,
+      id:String(p.id||text),
+      points:Number(p.scoreValue)||0,
+      clock:((p.clock||{}).displayValue)||"",
+      q:((p.period||{}).displayValue)||"",
+      pid:aid.id||"",
+      teamId:(p.team||{}).id
+    };
+  };
+  const callPlay=[...plays].reverse().map(nbaCall).find(Boolean)||null;
+  const fresh=!!(callPlay && String(window.NBA_CAP||"")!==callPlay.id);
+  if(callPlay) window.NBA_CAP=callPlay.id;
   const sideOf=id=>String(id)===String(away.id)?away:home;
   const otherOf=id=>String(id)===String(away.id)?home:away;
   let poss=null;
@@ -6084,9 +6162,28 @@ function renderNba(g, sum){
   if(lastShot){
     const o=place(lastShot);
     const q=P(o.cx, o.cy);
-    const col=tint(lastShot.team&&lastShot.team.id);
-    shotMark=`<g class="shotpt" data-txt="${String(lastShot.text||"").replace(/"/g,"'")}"><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4.2" fill="${col}"/></g>`;
+    const x=q[0].toFixed(1), y=q[1].toFixed(1);
+    const made=!!lastShot.scoringPlay;
+    const shotFresh=String(window.NBA_SHOT||"")!==String(lastShot.id||"");
+    window.NBA_SHOT=String(lastShot.id||"");
+    if(made){
+      const col=tint(lastShot.team&&lastShot.team.id);
+      const ping=shotFresh?`<circle cx="${x}" cy="${y}" r="8" fill="none" stroke="#fff" stroke-width="2"><animate attributeName="r" from="8" to="30" dur="0.7s" fill="freeze"/><animate attributeName="opacity" from="0.9" to="0" dur="0.7s" fill="freeze"/></circle>`:"";
+      shotMark=`<g class="shotpt"><circle cx="${x}" cy="${y}" r="7.5" fill="${col}" stroke="#fff" stroke-width="2.2"/>${ping}</g>`;
+    }else{
+      const x1=(q[0]-6).toFixed(1), x2=(q[0]+6).toFixed(1), y1=(q[1]-6).toFixed(1), y2=(q[1]+6).toFixed(1);
+      shotMark=`<g class="shotpt"><circle cx="${x}" cy="${y}" r="9" fill="rgba(8,8,10,.35)" stroke="#ff5a5a" stroke-width="2"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ff5a5a" stroke-width="2"/><line x1="${x2}" y1="${y1}" x2="${x1}" y2="${y2}" stroke="#ff5a5a" stroke-width="2"/></g>`;
+    }
   }
+  const sport=LEAGUE==="cbb"?"mens-college-basketball":"nba";
+  const callTeam=callPlay?sideOf(callPlay.teamId):null;
+  const face=callPlay&&callPlay.pid?("https://a.espncdn.com/i/headshots/"+sport+"/players/full/"+callPlay.pid+".png"):(callTeam?logo(callTeam):"");
+  const qshort=callPlay?String(callPlay.q||"").replace(" Quarter",""):"";
+  const cap=callPlay?`<div class="nbacap ${callPlay.made?"make":callPlay.miss?"miss":""}${fresh?" livein":""}">
+      <img class="face" alt="" src="${face}" onerror="this.onerror=null;this.src='${callTeam?logo(callTeam):""}'"/>
+      <div><b>${callPlay.player}</b><em>${callPlay.event}</em>${callPlay.detail?`<span>${callPlay.detail}</span>`:""}</div>
+      <div class="meta">${callPlay.made?`<strong>+${callPlay.points}</strong>`:"<strong></strong>"}<small>${qshort}${callPlay.clock?(" · "+callPlay.clock):""}</small></div>
+    </div>`:"";
   const court=`<div class="court">
     <div class="possbar"><img alt="" src="${logo(poss)}"/><div><b>POSSESSION</b><span>${nm(poss)}</span></div></div>
     <svg viewBox="0 0 400 230" aria-hidden="true">
@@ -6097,6 +6194,7 @@ function renderNba(g, sum){
       ${badge(47,25,logo(home),42)}
       ${shotMark}
     </svg>
+    ${cap}
   </div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
@@ -6180,8 +6278,10 @@ function renderNba(g, sum){
     return `<button type="button" data-side="${i}" class="${String(i)===sideOn?"on":""}"><img alt="" src="${(t.logo)||logo(i?home:away)}"/>${t.abbreviation||""}</button>`;
   }).join("");
   const pane=window.GAME_PANE||"cast";
+  const awayPop=!!(fresh && callPlay && callPlay.made && String(callPlay.teamId)===String(away.id));
+  const homePop=!!(fresh && callPlay && callPlay.made && String(callPlay.teamId)===String(home.id));
   $("gameBody").innerHTML=`<div class="cast">
-    <div class="scorestrip"><img alt="" src="${logo(away)}"/><div><b>${sc(away)}</b><span>${nm(away)}</span><em>${rec(away)}</em></div><div class="clock">${st.shortDetail||st.detail||""}</div><div><b>${sc(home)}</b><span>${nm(home)}</span><em>${rec(home)}</em></div><img alt="" src="${logo(home)}"/></div>
+    <div class="scorestrip"><img alt="" src="${logo(away)}"/><div><b class="${awayPop?"bump":""}">${sc(away)}</b><span>${nm(away)}</span><em>${rec(away)}</em></div><div class="clock">${st.shortDetail||st.detail||""}</div><div><b class="${homePop?"bump":""}">${sc(home)}</b><span>${nm(home)}</span><em>${rec(home)}</em></div><img alt="" src="${logo(home)}"/></div>
     ${line}
     <div class="casttabs">
       <button type="button" data-pane="cast" class="${pane==="cast"?"on":""}">Gamecast</button>
@@ -6189,7 +6289,6 @@ function renderNba(g, sum){
     </div>
     <div id="castPane" ${pane==="box"?"hidden":""}>
       ${court}
-      ${lastHtml}
       <section class="problock"><h3>Team stats</h3>${cmp}</section>
       ${leaders}
       <section class="problock"><h3>Play-by-play</h3><ol class="espnplays">${trail||"<li><span>No plays posted yet.</span></li>"}</ol></section>
