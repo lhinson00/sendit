@@ -267,24 +267,57 @@ body{background:#07080c}
 #tab-build .pick .sal{font-size:13px;color:#f4efe8}
 #tab-build .pick .addbtn{width:32px;height:32px;border:0;border-radius:8px;background:#7CFFB2;color:#07140c;font-weight:800}
 #tab-build .desk,#tab-build .pcard{display:none}
-\n</style>
+
+.top{display:flex;align-items:flex-end;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
+.top b{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em;font-weight:400}
+.top em{color:var(--orange);font-style:normal}
+.top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
+.weekline{margin:0;padding:10px 16px 0;color:#9b9288;font-size:12px;letter-spacing:.04em}
+body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
+.tabs{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0;background:#101218;border-top:2px solid var(--orange);z-index:25}
+.tabs button{border:0;border-radius:0;background:transparent;color:#9b9288;padding:16px;font-weight:800;letter-spacing:.08em;font-size:13px}
+.tabs button.on{border-color:transparent;background:var(--orange);color:#140800}
+.lockbar{display:none;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;background:#0c0a09;padding:8px;box-sizing:border-box}
+.lockbar.on{display:block}
+.lockbar .go{width:100%;height:48px;border:0;border-radius:10px;background:var(--orange);color:#140800;font-weight:800}
+.lockbar .go:disabled{opacity:1}
+.quiet{border:0;background:none;color:#9b9288;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:0}
+#tab-build .fx-head{align-items:center}
+#tab-build .fx-bank b{color:#ff7a18;background:none}
+#tab-build .fx-pos button.on,#tab-build .fx-games button.on{background:#ff7a18;color:#140800}
+#tab-build .pick .pos{color:#ff7a18}
+#tab-build .pick .addbtn{background:#ff7a18;color:#140800}
+#tab-build .slot{background:#101218 !important;border-color:#2a241c !important}
+.seat{width:100%;border:0;background:#101218;color:inherit;display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:14px;text-align:left;border-bottom:1px solid #221e18}
+.seat .rk{font-family:"Bebas Neue",sans-serif;font-size:32px;color:var(--orange)}
+.seat b{font-size:18px}
+.seat span{display:block;color:#9b9288;font-size:12px;font-weight:600}
+.meter{height:6px;border-radius:99px;background:#241e18;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,#3ee0a0,#ff7a18)}
+.rec{font-family:"Bebas Neue",sans-serif;font-size:28px;color:#fff}
+#tab-live{padding-top:8px}
+.backbar{display:flex;align-items:center;gap:12px;padding:12px;background:#1b140e;border-bottom:2px solid var(--orange);border-radius:12px;margin:0 0 12px}
+.backbar button{border:0;background:var(--orange);color:#140800;font-weight:800;padding:10px 14px;border-radius:999px}
+.backbar b{font-family:"Bebas Neue",sans-serif;font-size:30px}
+</style>
 </head>
 <body>
-<header class="top">
-  <div class="brand"><b>SAUCE <em>CAP</em></b><a href="/" class="pill" id="capHome" style="text-decoration:none;margin-left:auto">Home</a><span class="pill">Week 3</span></div>
-  <p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
-</header>
+<header class="top"><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
+<p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
 <nav class="tabs">
-  <button type="button" class="on" data-tab="build">Build</button>
-  <button type="button" data-tab="live">Live</button>
-  <button type="button" data-tab="stand">Standings</button>
+  <button type="button" class="on" data-tab="build">LINEUP</button>
+  <button type="button" data-tab="stand">BOARD</button>
 </nav>
 
 <section class="panel" id="tab-build">
   <div class="fx">
     <header class="fx-head">
-      <b class="whoami" id="whoLine"></b>
+      <div>
+        <b class="whoami" id="whoLine"></b>
+        <button type="button" id="btnUnlock" class="quiet" hidden>Unlock</button>
+      </div>
       <div class="fx-bank"><small>LEFT</small><b id="remain">$50,000</b><small id="spent">$0</small></div>
+      <button type="button" id="btnClear" class="quiet">Clear</button>
     </header>
     <h2 id="rosterTitle" hidden>Name your card</h2>
     <ol class="fx-line" id="slots"></ol>
@@ -307,18 +340,12 @@ body{background:#07080c}
 </section>
 
 <section class="panel" id="tab-stand" hidden>
-  <p class="hint">Shared board for this test. Totals move live. Picks stay hidden until that player’s game starts. <button type="button" id="adminBtnTop" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">Manage</button></p>
   <div class="stand" id="standNow"></div>
-  <p class="hint" style="margin-top:18px">Results log</p>
   <div class="stand" id="standLog"></div>
 </section>
 
-<div class="lockbar">
-  <div class="inner">
-    <button type="button" class="sec" id="btnClear">Clear</button>
-    <button type="button" class="sec" id="btnUnlock">Unlock</button>
-    <button type="button" class="go" id="btnLock">Lock card</button>
-  </div>
+<div class="lockbar" id="lockbar">
+  <button type="button" class="go" id="btnLock">Lock</button>
 </div>
 <div class="drawer" id="drawer"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
@@ -411,12 +438,17 @@ function paintBudget(){
   const r = remain(), s = spent();
   $("remain").textContent = "$"+r.toLocaleString();
   $("spent").textContent = "$"+s.toLocaleString();
-  $("remain").parentElement.className = "bcell "+(r<0?"over":"ok");
-    $("btnLock").textContent = STATE.locked ? "Locked" : "Lock card";
-  $("btnLock").disabled = STATE.locked || !filled() || r<0;
+  $("remain").style.color = r<0 ? "#ff3b3b" : "#ff7a18";
+  $("btnLock").textContent = "Lock";
+  const ready = !STATE.locked && filled() && r>=0;
+  const bar=$("lockbar");
+  const onLineup = $("tab-build") && !$("tab-build").hidden;
+  if(bar) bar.classList.toggle("on", !!(onLineup && ready));
   const who=$("whoLine"); if(who) who.textContent=STATE.name||"";
   const un=$("btnUnlock");
-  if(un){ un.disabled = !STATE.locked; }
+  if(un) un.hidden = !STATE.locked;
+  const clr=$("btnClear");
+  if(clr) clr.hidden = STATE.locked || !SLOTS.some(k=>STATE.lineup[k]);
 }
 
 function nflLogo(ab){ return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png"; }
@@ -655,15 +687,17 @@ function paintAll(){
 }
 
 function tabTo(name){
+  if(name==="live") name="stand";
+  STATE.viewCard=null;
   STATE.tab=name;
   try{ sessionStorage.setItem("sauceCap.tab", name); }catch(e){}
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===name));
+  const nav=document.querySelector(".tabs"); if(nav) nav.style.display="";
   $("tab-build").hidden = name!=="build";
-  $("tab-live").hidden = name!=="live";
+  $("tab-live").hidden = true;
   $("tab-stand").hidden = name!=="stand";
-  const bar=document.querySelector(".lockbar");
-  if(bar) bar.style.display = name==="build" ? "" : "none";
-  if(name==="live"||name==="stand") refreshLive();
+  paintBudget();
+  if(name==="stand") refreshLive();
 }
 
 function capWeekId(year, espnWeek){
@@ -1165,7 +1199,11 @@ function openCardLive(name){
   const c=(STATE.cards||[]).find(x=>x.week===STATE.week && x.name===name);
   if(!c) return toast("Card not on the board");
   STATE.viewCard=c;
-  tabTo("live");
+  $("tab-build").hidden=true;
+  $("tab-stand").hidden=true;
+  $("tab-live").hidden=false;
+  const nav=document.querySelector(".tabs"); if(nav) nav.style.display="none";
+  const bar=$("lockbar"); if(bar) bar.classList.remove("on");
   paintLive();
 }
 
@@ -1307,15 +1345,13 @@ function paintLive(){
   const tot=cardTotal(lu);
   $("liveTotal").textContent=tot.toFixed(1);
   const watching=STATE.viewCard;
-  $("liveSub").textContent= watching
-    ? ("Viewing "+watching.name+" · tap a name for gamecast")
-    : ((STATE.name||"Your card")+(STATE.locked?" · locked":" · lock to track")+" · tap gamecast");
+  $("liveSub").textContent = watching ? (watching.name+" · tap a player") : "";
   if(watching){
-    const bar=document.createElement("p");
-    bar.className="hint";
-    bar.innerHTML='<button type="button" id="backMine" class="ghost" style="border:0;background:none;color:var(--orange);font-weight:800">← Your card</button>';
+    const bar=document.createElement("div");
+    bar.className="backbar";
+    bar.innerHTML='<button type="button" id="backBoard">Board</button><b>'+watching.name+'</b>';
     $("liveGrid").prepend(bar);
-    $("backMine").onclick=()=>{ STATE.viewCard=null; paintLive(); };
+    $("backBoard").onclick=()=>{ STATE.viewCard=null; tabTo("stand"); };
   }
 }
 
@@ -1416,13 +1452,13 @@ function lineupLine(c){
 function paintStand(){
   const admin=sessionStorage.getItem("sauceCap.admin")==="1";
   const ranked=STATE.cards.filter(c=>c.week===STATE.week).map(c=>({...c, pts:cardTotal(c.lineup)})).sort((a,b)=>b.pts-a.pts);
-  const note=STATE.boardErr?`<p class="hint">Board: ${STATE.boardErr.slice(0,120)}</p>`:`<p class="hint">This week only. Prior week clears when the slate resets. <button type="button" id="adminBtn" class="ghost" style="border:0;background:none;color:var(--muted);text-decoration:underline">${admin?"Admin on":"Manage board"}</button></p>`;
-  $("standNow").innerHTML = note+(ranked.length ? ranked.map((c,i)=>`
-    <div class="lrow" data-open="${c.name}" style="cursor:pointer">
-      <div class="topr"><b>#${i+1} ${c.name}</b><div class="pts">${STATE.liveReady?c.pts.toFixed(1):"…"}</div></div>
-      <div class="sub">Locked · ${SLOTS.filter(k=>c.lineup[k]).length}/9${admin?` · <button type="button" data-del="${c.name}">Remove</button>`:""}</div>
-      <p class="hint cover">${lineupLine(c)}</p>
-    </div>`).join("") : `<p class="hint">No locked lineups this week.</p>`);
+  const top=ranked.length?Math.max(ranked[0].pts,1):1;
+  $("standNow").innerHTML = ranked.length ? ranked.map((c,i)=>{
+    const pct=Math.max(6, Math.round(c.pts/top*100));
+    const mine=String(c.name||"").trim().toLowerCase()===String(STATE.name||"").trim().toLowerCase();
+    return `<button class="seat" type="button" data-open="${c.name}"><div class="rk">${i+1}</div><div><b>${c.name}${mine?" · you":""}</b><span>9 of 9</span><div class="meter"><i style="width:${pct}%"></i></div></div><div class="rec">${STATE.liveReady?c.pts.toFixed(1):"—"}</div></button>${admin?`<button type="button" class="quiet" data-del="${c.name}">Remove</button>`:""}`;
+  }).join("") : `<p class="hint">No locked lineups this week.</p>`;
+  $("standNow").insertAdjacentHTML("beforeend", `<p style="text-align:right;padding:10px 16px 0"><button type="button" id="adminBtn" class="quiet">${admin?"Admin on":"Manage"}</button></p>`);
   const ab=$("adminBtn");
   if(ab) ab.onclick=()=>{
     if(sessionStorage.getItem("sauceCap.admin")==="1"){ sessionStorage.removeItem("sauceCap.admin"); paintStand(); return; }
@@ -1438,7 +1474,7 @@ function paintStand(){
   };
   $("standLog").innerHTML = (STATE.log||[]).length ? STATE.log.slice(0,16).map(r=>`
     <div class="lrow"><div class="topr"><b>${r.name}</b><div class="pts">${Number(r.pts||0).toFixed(1)}</div></div>
-    <div class="sub">${r.week} · final</div></div>`).join("") : `<p class="hint">Finals land here after a week is put to bed.</p>`;
+    <div class="sub">${r.week} · final</div></div>`).join("") : "";
 }
 
 function nameTaken(name){
@@ -1664,13 +1700,13 @@ loadStore();
     await loadPool();
     await pullBoard();
     await refreshLive();
-    const stay=sessionStorage.getItem("sauceCap.tab")||"build";
+    const stay=sessionStorage.getItem("sauceCap.tab")==="stand"?"stand":"build";
     tabTo(stay);
     startInjuryClock();
     setInterval(()=>{
       const live=STATE.games.some(g=>g.state==="in");
-      const onStandOrLive=["live","stand"].includes((document.querySelector(".tabs button.on")||{}).dataset.tab);
-      if(live || onStandOrLive) refreshLive();
+      const watching=!$("tab-stand").hidden || !$("tab-live").hidden;
+      if(live || watching) refreshLive();
     }, 20000);
   }catch(e){
     $("weekLine").textContent="Could not load the slate";
