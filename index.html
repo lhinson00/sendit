@@ -2115,6 +2115,7 @@ async function loadLeague(lg){
     if($("eatPanel")) $("eatPanel").hidden=true;
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
+    if($("newsClick")) $("newsClick").hidden=true;
     $("liveMeta").textContent = "TSSAA · Football";
     if(typeof keepTnLive==="function") window.TNFB=keepTnLive(window.TNFB||{games:[]});
     const today=fridaySelDate();
