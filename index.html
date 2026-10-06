@@ -178,7 +178,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
 .newstick{margin:22px var(--pad) 18px;overflow:hidden;background:#16130f;border-radius:8px;box-shadow:inset 0 0 0 1px #3a2a18, inset 0 -2px 0 #ff7a18}
 .newsview{overflow:hidden}
-.newstrack{display:flex;width:max-content;animation:newstick 60s linear infinite}
+.newstrack{display:flex;width:max-content;animation:newstick var(--news-dur,60s) linear infinite;animation-delay:var(--news-delay,0ms)}
 .newsrun{display:flex;flex:none}
 .newsrun b{position:relative;font-family:"Barlow Condensed",sans-serif;font-weight:500;font-size:18px;letter-spacing:.03em;color:#f7f2ea;padding:8px 0 8px 28px;white-space:nowrap}
 .newsrun b:before{content:"";position:absolute;left:12px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:#ff7a18}
@@ -1560,6 +1560,18 @@ function dayTabLabel(off){
 }
 
 const NEWS_SLUG={nfl:"nfl",cfb:"college-football",mlb:"mlb",nhl:"nhl",nba:"nba",cbb:"mens-college-basketball",mls:"soccer",ufc:"mma"};
+function syncNewsClock(el){
+  if(!el) return;
+  const dur=60000;
+  let epoch=Number(localStorage.getItem("sauceNewsEpoch")||0);
+  if(!epoch){
+    epoch=Date.now();
+    try{ localStorage.setItem("sauceNewsEpoch", String(epoch)); }catch(e){}
+  }
+  const into=(Date.now()-epoch)%dur;
+  el.style.setProperty("--news-dur","60s");
+  el.style.setProperty("--news-delay", (-into)+"ms");
+}
 function paintNews(){
   const host=$("newsTrack");
   const arts=window.NEWS||[];
@@ -1567,13 +1579,14 @@ function paintNews(){
   const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&","<":"<",">":">"}[c]));
   const line=arts.map(a=>"<b>"+esc(a)+"</b>").join("");
   host.innerHTML="<div class='newsrun'>"+line+"</div><div class='newsrun'>"+line+"</div>";
+  syncNewsClock(host);
 }
 async function loadNews(lg){
   const host=$("newsClick");
   if(!host) return;
   const slug=NEWS_SLUG[lg];
   if(!slug){ host.hidden=true; return; }
-  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; return; }
+  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ syncNewsClock($("newsTrack")); host.hidden=false; return; }
   try{
     const res=await fetch("https://cdn.espn.com/core/"+slug+"/?xhr=1",{cache:"no-store"});
     const d=res.ok?await res.json():{};
