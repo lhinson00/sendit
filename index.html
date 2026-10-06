@@ -2432,16 +2432,17 @@ function renderFootball(g, sum){
   const los=`<path d="${fseg([[sx,1],[sx,52.3]])}" fill="none" stroke="#ffe14a" stroke-width="2"/>`;
   const fd=fdYard==null?"":`<path d="${fseg([[10+Math.max(0,Math.min(100,fdYard)),1],[10+Math.max(0,Math.min(100,fdYard)),52.3]])}" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="3 2"/>`;
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
-  const chipX=Math.max(36, Math.min(360, b[0]-26));
-  const chipY=Math.max(16, b[1]-28);
+  const chipW=tag.length>8?112:90;
+  const chipX=Math.max(34, Math.min(400-chipW, b[0]-chipW/2));
+  const chipY=Math.max(6, b[1]-42);
   const gridiron=`<div class="gridiron">
     <div class="possbar"><img alt="" src="${possLogo}"/><div><b>POSSESSION</b><span>${poss||"BALL"}${spotNow.shortDownDistanceText?(" · "+spotNow.shortDownDistanceText):""}${spotNow.possessionText?(" · "+spotNow.possessionText):""}</span></div></div>
-    <svg viewBox="0 0 440 186" aria-hidden="true">
+    <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
       ${fd}${los}
       <path d="${arc}" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="2.4 2.6"/>
-      <g class="playtag"><rect x="${chipX.toFixed(1)}" y="${chipY.toFixed(1)}" width="58" height="16" rx="4" fill="#10140f" stroke="rgba(255,255,255,.35)"/><text x="${(chipX+29).toFixed(1)}" y="${(chipY+12).toFixed(1)}" fill="#fff" font-size="9" text-anchor="middle" font-family="Bebas Neue,sans-serif">${tag}</text></g>
+      <g class="playtag"><rect x="${chipX.toFixed(1)}" y="${chipY.toFixed(1)}" width="${chipW}" height="26" rx="6" fill="#10140f" stroke="rgba(255,255,255,.45)"/><text x="${(chipX+chipW/2).toFixed(1)}" y="${(chipY+18).toFixed(1)}" fill="#fff" font-size="15" text-anchor="middle" font-family="Bebas Neue,sans-serif">${tag}</text></g>
       ${ball}
     </svg>
   </div>`;
