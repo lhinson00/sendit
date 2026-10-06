@@ -2665,16 +2665,12 @@ function renderGame(g, sum){
       return "#f4efe6";
     };
     const lp=abPitches[abPitches.length-1];
-    const mark=(p,r)=>{
+    const pin=(p,n)=>{
       const q=spot(p);
-      const t=((p.type||{}).text)||"";
-      const isBall=/^ball/i.test(t);
-      const live=/single|double|triple|home run|in play|out|error|choice|fly|ground|line|pop/i.test(t);
-      const ring=isBall?"#3ecf8e":live?"#fff":"#ff7a18";
-      const fill=ink((p.pitchType||{}).text);
-      return `<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="1.4"/><circle cx="${(q[0]-r*0.28).toFixed(1)}" cy="${(q[1]-r*0.32).toFixed(1)}" r="${(r*0.28).toFixed(1)}" fill="rgba(255,255,255,.55)"/></g>`;
+      const x=q[0].toFixed(1), y=q[1].toFixed(1);
+      return `<g><circle cx="${x}" cy="${y}" r="9" fill="#12161e" stroke="#f4efe6" stroke-width="1.4"/><text x="${x}" y="${(q[1]+3.5).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
     };
-    const dots=abPitches.slice(0,-1).map(p=>mark(p,4.5)).join("");
+    const dots=abPitches.slice(0,-1).map((p,i)=>pin(p,i+1)).join("");
     const end=spot(lp);
     const t=((lp.type||{}).text)||"";
     const ball=/^ball/i.test(t);
@@ -2688,9 +2684,10 @@ function renderGame(g, sum){
     window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
     const ex=end[0], ey=end[1];
     const ox=ex+(160-ex)*0.12, oy=ey-22;
+    const nLast=abPitches.length;
     const flight=fresh
-      ? `<g><circle fill="${fill}" stroke="${ring}" stroke-width="1.6"><animate attributeName="cx" from="${ox.toFixed(1)}" to="${ex.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="cy" from="${oy.toFixed(1)}" to="${ey.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="r" from="3" to="8" dur="0.55s" fill="freeze"/></circle></g>`
-      : `<g><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="8" fill="${fill}" stroke="${ring}" stroke-width="1.6"/><circle cx="${(ex-2.2).toFixed(1)}" cy="${(ey-2.4).toFixed(1)}" r="2.2" fill="rgba(255,255,255,.55)"/></g>`;
+      ? `<g><animateTransform attributeName="transform" type="translate" from="${ox.toFixed(1)} ${oy.toFixed(1)}" to="${ex.toFixed(1)} ${ey.toFixed(1)}" dur="0.4s" fill="freeze"/><circle r="9" fill="#12161e" stroke="#f4efe6" stroke-width="1.4"/><text y="3.5" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${nLast}</text></g>`
+      : pin(lp, nLast);
     const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
     const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
     const plateTop=Z.y+Z.h+10;
@@ -2705,7 +2702,6 @@ function renderGame(g, sum){
         <line x1="${Z.x}" y1="${gy1}" x2="${Z.x+Z.w}" y2="${gy1}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${Z.x}" y1="${gy2}" x2="${Z.x+Z.w}" y2="${gy2}" stroke="rgba(255,255,255,.22)"/>
         <polygon points="160,${plateTop} 141,${plateTop+16} 141,${plateTop+30} 179,${plateTop+30} 179,${plateTop+16}" fill="#f4efe6"/>
-        <path d="M ${ox.toFixed(1)} ${oy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${fill}" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
         ${dots}
         ${flight}
       </svg>
