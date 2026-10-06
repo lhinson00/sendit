@@ -341,15 +341,16 @@ tr.prow{cursor:pointer}tr.prow:hover td{background:#1a140c}
 .countline{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2a241c;margin-left:3px}
 .dot.on{background:#3dbb5a}
-.dot.red.on{background:#ff4d4d}
+.dot.blue.on{background:#2f6fe0}
+.dot.red.on{background:#e23b3b}
 .zone{margin:12px 0 8px;padding:10px 10px 12px;border-radius:18px;background:radial-gradient(80% 50% at 50% 0%,#1c3148,#07090e 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 36px rgba(0,0,0,.45)}
 .zonecall{display:flex;align-items:baseline;justify-content:center;gap:10px;padding:2px 4px 8px}
 .zonecall b{font-family:"Bebas Neue",sans-serif;font-size:42px;font-weight:400;letter-spacing:.04em;line-height:.85}
 .zonecall b i{font-style:normal;font-size:16px;margin-left:3px;color:#c9c2b8}
 .zonecall span{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#f7f2ea}
 .zonecall em{font-style:normal;font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;border-radius:99px}
-.zonecall em.ball{background:#143226;color:#3ecf8e}
-.zonecall em.strike{background:#3a2212;color:#ff7a18}
+.zonecall em.ball{background:#10233f;color:#7eb8ff}
+.zonecall em.strike{background:#3a1414;color:#ff6b6b}
 .zonecall em.play{background:#2a261c;color:#fff}
 .zone svg{width:100%;height:auto;display:block}
 .diamondmini{display:flex;flex-direction:column;align-items:center;gap:4px}
@@ -2667,7 +2668,7 @@ function renderGame(g, sum){
   const abId=pitchPlays.length?pitchPlays[pitchPlays.length-1].atBatId:"";
   const abPitches=pitchPlays.filter(p=>p.atBatId===abId).slice(-14);
   const zoneHtml=(()=>{
-    if(LEAGUE!=="mlb" || !abPitches.length) return "";
+    if(LEAGUE!=="mlb") return "";
     const Z={x:96,y:28,w:128,h:142};
     const spot=p=>{
       const c=p.pitchCoordinate||{};
@@ -2680,49 +2681,51 @@ function renderGame(g, sum){
       const sy=Math.max(Z.y-16, Math.min(Z.y+Z.h*1.28, Z.y+ny*Z.h));
       return [sx, sy];
     };
-    const ink=name=>{
-      const n=String(name||"").toLowerCase();
-      if(/curve|slider|sweep|knuckle/.test(n)) return "#7ec8ff";
-      if(/change|split|screw/.test(n)) return "#3ecf8e";
-      if(/cutter|sink/.test(n)) return "#ffb25a";
-      return "#f4efe6";
+    const kind=t=>{
+      const n=String(t||"").toLowerCase();
+      if(/ball|intentional|pitchout|hit by pitch/.test(n)) return "ball";
+      if(/strike|foul|missed bunt/.test(n)) return "strike";
+      return "play";
     };
-    const lp=abPitches[abPitches.length-1];
+    const paint={ball:["#1d4e89","#7eb8ff"], strike:["#8d1d1d","#ff6b6b"], play:["#12161e","#f4efe6"]};
     const pin=(p,n)=>{
       const q=spot(p);
       const x=q[0].toFixed(1), y=q[1].toFixed(1);
-      return `<g><circle cx="${x}" cy="${y}" r="9" fill="#12161e" stroke="#f4efe6" stroke-width="1.4"/><text x="${x}" y="${(q[1]+3.5).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
+      const col=paint[kind((p.type||{}).text)];
+      return `<g><circle cx="${x}" cy="${y}" r="9" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text x="${x}" y="${(q[1]+3.5).toFixed(1)}" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
     };
-    const dots=abPitches.slice(0,-1).map((p,i)=>pin(p,i+1)).join("");
-    const end=spot(lp);
-    const t=((lp.type||{}).text)||"";
-    const ball=/^ball/i.test(t);
-    const live=/single|double|triple|home run|in play|out|error|choice|fly|ground|line|pop/i.test(t);
-    const ring=ball?"#3ecf8e":live?"#fff":"#ff7a18";
-    const fill=ink((lp.pitchType||{}).text);
-    const velo=lp.pitchVelocity?String(lp.pitchVelocity):"";
-    const name=((lp.pitchType||{}).text)||"Pitch";
-    const res=((lp.type||{}).text)||"";
-    const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||lp.sequenceNumber||"");
-    window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
-    const ex=end[0], ey=end[1];
-    const ox=ex+(160-ex)*0.12, oy=ey-22;
-    const nLast=abPitches.length;
-    const flight=fresh
-      ? `<g><animateTransform attributeName="transform" type="translate" from="${ox.toFixed(1)} ${oy.toFixed(1)}" to="${ex.toFixed(1)} ${ey.toFixed(1)}" dur="0.4s" fill="freeze"/><circle r="9" fill="#12161e" stroke="#f4efe6" stroke-width="1.4"/><text y="3.5" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${nLast}</text></g>`
-      : pin(lp, nLast);
     const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
     const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
-    return `<div class="zone">
-      <div class="zonecall"><b>${velo?velo+"<i>mph</i>":""}</b><span>${name}</span><em class="${ball?"ball":live?"play":"strike"}">${res}</em></div>
-      <svg viewBox="0 0 320 196" aria-hidden="true">
-        <rect width="320" height="196" fill="#070a10"/>
+    const grid=`<rect width="320" height="196" fill="#070a10"/>
         <rect x="${Z.x-6}" y="${Z.y-6}" width="${Z.w+12}" height="${Z.h+12}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
         <rect x="${Z.x}" y="${Z.y}" width="${Z.w}" height="${Z.h}" fill="rgba(255,255,255,.03)" stroke="#f4efe6" stroke-width="2"/>
         <line x1="${gx1}" y1="${Z.y}" x2="${gx1}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${gx2}" y1="${Z.y}" x2="${gx2}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${Z.x}" y1="${gy1}" x2="${Z.x+Z.w}" y2="${gy1}" stroke="rgba(255,255,255,.22)"/>
-        <line x1="${Z.x}" y1="${gy2}" x2="${Z.x+Z.w}" y2="${gy2}" stroke="rgba(255,255,255,.22)"/>
+        <line x1="${Z.x}" y1="${gy2}" x2="${Z.x+Z.w}" y2="${gy2}" stroke="rgba(255,255,255,.22)"/>`;
+    if(!abPitches.length){
+      return `<div class="zone"><div class="zonecall"><span>Next pitch</span></div><svg viewBox="0 0 320 196" aria-hidden="true">${grid}</svg></div>`;
+    }
+    const lp=abPitches[abPitches.length-1];
+    const dots=abPitches.slice(0,-1).map((p,i)=>pin(p,i+1)).join("");
+    const end=spot(lp);
+    const call=((lp.type||{}).text)||"";
+    const tone=kind(call);
+    const velo=lp.pitchVelocity?String(lp.pitchVelocity):"";
+    const name=((lp.pitchType||{}).text)||"Pitch";
+    const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||lp.sequenceNumber||"");
+    window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
+    const ex=end[0], ey=end[1];
+    const ox=ex+(160-ex)*0.12, oy=ey-22;
+    const nLast=abPitches.length;
+    const col=paint[tone];
+    const flight=fresh
+      ? `<g><animateTransform attributeName="transform" type="translate" from="${ox.toFixed(1)} ${oy.toFixed(1)}" to="${ex.toFixed(1)} ${ey.toFixed(1)}" dur="0.4s" fill="freeze"/><circle r="9" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text y="3.5" text-anchor="middle" fill="#fff" font-size="11" font-family="Bebas Neue,sans-serif">${nLast}</text></g>`
+      : pin(lp, nLast);
+    return `<div class="zone">
+      <div class="zonecall"><b>${velo?velo+"<i>mph</i>":""}</b><span>${name}</span><em class="${tone}">${call}</em></div>
+      <svg viewBox="0 0 320 196" aria-hidden="true">
+        ${grid}
         ${dots}
         ${flight}
       </svg>
@@ -2746,7 +2749,7 @@ function renderGame(g, sum){
       </table>
       <div class="abline">
         <div class="abcard">${pObj?`<img alt="" src="${shot(pObj)}"/><div><em>Pitcher</em><b>${pObj.displayName||pObj.shortName}</b></div>`:"<em>Pitcher</em>"}</div>
-        <div class="countline"><span>B ${dots(Number(sit.balls)||0,4,"dot")}</span><span>S ${dots(Number(sit.strikes)||0,3,"dot red")}</span><span>O ${dots(Number(sit.outs)||0,3,"dot")}</span></div>
+        <div class="countline"><span>B ${dots(Number(sit.balls)||0,4,"dot blue")}</span><span>S ${dots(Number(sit.strikes)||0,3,"dot red")}</span><span>O ${dots(Number(sit.outs)||0,3,"dot")}</span></div>
         <div class="abcard r">${bObj?`<div><em>Batter</em><b>${bObj.displayName||bObj.shortName}</b></div><img alt="" src="${shot(bObj)}"/>`:"<em>Batter</em>"}</div>
       </div>
 
@@ -2940,7 +2943,7 @@ async function mlbLive(g){
     if(pk) window.MLB_PK[id]=pk;
   }
   if(!pk) return null;
-  const fields="liveData,linescore,innings,num,home,away,runs,hits,errors,teams,currentInning,inningState,plays,currentPlay,count,balls,strikes,outs,matchup,batter,pitcher,id,fullName,playEvents,isPitch,endTime,playId,details,call,description,type,pitchData,startSpeed,strikeZoneTop,strikeZoneBottom,strikeZoneWidth,coordinates,pX,pZ";
+  const fields="liveData,linescore,innings,num,home,away,runs,hits,errors,teams,currentInning,inningState,plays,currentPlay,count,balls,strikes,outs,matchup,batter,pitcher,id,fullName,playEvents,isPitch,endTime,playId,details,call,description,type,pitchData,startSpeed,strikeZoneTop,strikeZoneBottom,strikeZoneWidth,coordinates,pX,pZ,offense,first,second,third";
   const res=await fetch("https://statsapi.mlb.com/api/v1.1/game/"+pk+"/feed/live?fields="+fields,{cache:"no-store"});
   if(!res.ok) return null;
   const data=await res.json();
@@ -2977,8 +2980,13 @@ async function mlbLive(g){
       text:x.result.description
     }));
   }catch(e){}
+  const off=ls.offense||{};
+  const onBag=k=>!!(off[k]&&(off[k].id||off[k].fullName));
+  const balls=ls.balls!=null?ls.balls:count.balls;
+  const strikes=ls.strikes!=null?ls.strikes:count.strikes;
+  const outs=ls.outs!=null?ls.outs:count.outs;
   const half=ls.inningState==="Top"?"Top":ls.inningState==="Bottom"?"Bottom":(ls.inningState||"");
-  return {pitches, balls:count.balls, strikes:count.strikes, outs:count.outs, pitcher:guy(match.pitcher), batter:guy(match.batter), line:{innings:ls.innings||[], teams:ls.teams||{}, currentInning:ls.currentInning, half:ls.inningState||""}, label:(()=>{ if(!half||!ls.currentInning) return ""; const n=Number(ls.currentInning); const suf=n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"; return half+" "+n+suf; })() , plays};
+  return {pitches, balls, strikes, outs, onFirst:onBag("first"), onSecond:onBag("second"), onThird:onBag("third"), pitcher:guy(match.pitcher), batter:guy(match.batter), line:{innings:ls.innings||[], teams:ls.teams||{}, currentInning:ls.currentInning, half:ls.inningState||""}, label:(()=>{ if(!half||!ls.currentInning) return ""; const n=Number(ls.currentInning); const suf=n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"; return half+" "+n+suf; })() , plays};
 }
 async function openGame(id, fid){
   OPEN = String(fid||id||"");
@@ -3028,6 +3036,9 @@ async function openGame(id, fid){
             if(live.balls!=null) sum.situation.balls=live.balls;
             if(live.strikes!=null) sum.situation.strikes=live.strikes;
             if(live.outs!=null) sum.situation.outs=live.outs;
+            sum.situation.onFirst=!!live.onFirst;
+            sum.situation.onSecond=!!live.onSecond;
+            sum.situation.onThird=!!live.onThird;
             if(live.pitcher) sum.situation.pitcher=live.pitcher;
             if(live.batter) sum.situation.batter=live.batter;
             const hdr=(((sum.header||{}).competitions)||[])[0];
