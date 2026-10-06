@@ -2677,37 +2677,52 @@ function renderGame(g, sum){
   if(home.errors!=null) hR.e=home.errors;
   const dots=(n,max,cls)=>Array.from({length:max},(_,i)=>`<i class="${cls}${i<n?" on":""}"></i>`).join("");
   const scoring=(sum.plays||[]).filter(p=>p.scoringPlay||(p.scoreValue>0)).slice(-8).reverse();
-  const pitchPlays=(LEAGUE==="mlb" && Array.isArray(sum._livePitches))?sum._livePitches:(sum.plays||[]).filter(p=>p.pitchCoordinate && p.pitchType && p.atBatId);
-  const abId=pitchPlays.length?pitchPlays[pitchPlays.length-1].atBatId:"";
-  const abPitches=pitchPlays.filter(p=>p.atBatId===abId).slice(-14);
+  const espnPitches=(sum.plays||[]).filter(p=>{
+    const c=p.pitchCoordinate||{};
+    if(c.x==null && c.px==null) return false;
+    const t=String(((p.type||{}).text)||"")+" "+String(p.text||"");
+    if(/end batter|play result|pickoff|mound visit|step off/i.test(t)) return false;
+    return /pitch|strike|ball|foul|in play|hit by pitch|swing/i.test(t);
+  });
+  const liveP=(Array.isArray(sum._livePitches) && sum._livePitches.length)?sum._livePitches:espnPitches;
+  const abId=liveP.length?liveP[liveP.length-1].atBatId:"";
+  const abPitches=liveP.filter(p=>!abId || p.atBatId===abId).slice(-14);
   const zoneHtml=(()=>{
     if(LEAGUE!=="mlb") return "";
     const Z={x:96,y:28,w:128,h:142};
     const spot=p=>{
       const c=p.pitchCoordinate||{};
-      const top=Number(p.zoneTop)||3.5;
-      const bot=Number(p.zoneBot)||1.5;
-      const half=((Number(p.zoneWide)||17)/12)/2;
-      const nx=(Number(c.px)+half)/(half*2);
-      const ny=(top-Number(c.pz))/Math.max(0.4, top-bot);
+      if(c.px!=null && c.pz!=null){
+        const top=Number(p.zoneTop)||3.5;
+        const bot=Number(p.zoneBot)||1.5;
+        const half=((Number(p.zoneWide)||17)/12)/2;
+        const nx=(Number(c.px)+half)/(half*2);
+        const ny=(top-Number(c.pz))/Math.max(0.4, top-bot);
+        const sx=Math.max(Z.x-Z.w*0.42, Math.min(Z.x+Z.w*1.42, Z.x+nx*Z.w));
+        const sy=Math.max(Z.y-16, Math.min(Z.y+Z.h*1.28, Z.y+ny*Z.h));
+        return [sx, sy];
+      }
+      const nx=(85.3-Number(c.x))/-63.2;
+      const ny=(Number(c.y)-144)/54;
       const sx=Math.max(Z.x-Z.w*0.42, Math.min(Z.x+Z.w*1.42, Z.x+nx*Z.w));
       const sy=Math.max(Z.y-16, Math.min(Z.y+Z.h*1.28, Z.y+ny*Z.h));
       return [sx, sy];
     };
     const kind=t=>{
       const n=String(t||"").toLowerCase();
-      if(/ball|intentional|pitchout|hit by pitch/.test(n)) return "ball";
-      if(/strike|foul|missed bunt/.test(n)) return "strike";
+      if(/foul|strike|missed bunt/.test(n)) return "strike";
+      if(/\bball\b|intentional|pitchout|hit by pitch/.test(n)) return "ball";
       return "play";
     };
     const paint={ball:["#2f7bff","#d7e8ff"], strike:["#ff2d2d","#ffd0d0"], play:["#f4efe6","#1a140c"]};
     const pin=(p,n)=>{
       const q=spot(p);
-      const x=q[0].toFixed(1), y=q[1].toFixed(1);
+      const x=Number.isFinite(q[0])?q[0].toFixed(1):"160";
+      const y=Number.isFinite(q[1])?q[1].toFixed(1):"100";
       const tone=kind((p.type||{}).text);
       const col=paint[tone];
       const ink=tone==="play"?"#140c08":"#fff";
-      return `<g><circle cx="${x}" cy="${y}" r="11" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text x="${x}" y="${(q[1]+4).toFixed(1)}" text-anchor="middle" fill="${ink}" font-size="12" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
+      return `<g><circle cx="${x}" cy="${y}" r="11" fill="${col[0]}" stroke="${col[1]}" stroke-width="1.6"/><text x="${x}" y="${(Number(y)+4).toFixed(1)}" text-anchor="middle" fill="${ink}" font-size="12" font-family="Bebas Neue,sans-serif">${n}</text></g>`;
     };
     const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
     const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
@@ -2768,10 +2783,9 @@ function renderGame(g, sum){
         <div class="countline"><span>B ${dots(Number(sit.balls)||0,4,"dot blue")}</span><span>S ${dots(Number(sit.strikes)||0,3,"dot red")}</span><span>O ${dots(Number(sit.outs)||0,3,"dot")}</span></div>
         <div class="abcard r">${bObj?`<div><em>Batter</em><b>${bObj.displayName||bObj.shortName}</b></div><img alt="" src="${shot(bObj)}"/>`:"<em>Batter</em>"}</div>
       </div>
-
+      ${zoneHtml}
     </div>
-    ${zoneHtml}
-    ${LEAGUE==="mlb"?`<section class="problock"><h3>This at-bat</h3>${(sum._livePitches||[]).length?(sum._livePitches||[]).map((p,i)=>`<div class="play"><span>${i+1}${p.pitchVelocity?(" · "+p.pitchVelocity+" mph"):""}${(p.pitchType&&p.pitchType.text)?(" "+p.pitchType.text):""}</span><p>${(p.type&&p.type.text)||""}</p></div>`).join(""):"<p class='hint'>Waiting on the first pitch.</p>"}<h3>Plays</h3>${(sum._livePlays||[]).length?(sum._livePlays||[]).map(p=>`<div class="play"><span>${p.inn}</span><p>${p.text}</p></div>`).join(""):"<p class='hint'>Plays show up as they finish.</p>"}</section>
+    ${LEAGUE==="mlb"?`<section class="problock"><h3>This at-bat</h3>${abPitches.length?abPitches.map((p,i)=>`<div class="play"><span>${i+1}${p.pitchVelocity?(" · "+p.pitchVelocity+" mph"):""}${((p.pitchType&&p.pitchType.text)||((p.type||{}).text))?(" "+((p.pitchType&&p.pitchType.text)||(p.type||{}).text)):""}</span><p>${p.text||((p.type||{}).text)||""}</p></div>`).join(""):"<p class='hint'>Waiting on the first pitch.</p>"}<h3>Plays</h3>${(sum._livePlays||[]).length?(sum._livePlays||[]).map(p=>`<div class="play"><span>${p.inn}</span><p>${p.text}</p></div>`).join(""):"<p class='hint'>Plays show up as they finish.</p>"}</section>
     <h3 class="sec">Box score</h3>
     ${boxHtml(sum)}`:""}
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
