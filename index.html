@@ -267,9 +267,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .rinkbug em{font-family:"Bebas Neue",sans-serif;font-style:normal;font-size:42px}
 .rinkbug span{color:#c9c2b8;font-size:12px;text-align:center}
 .rinkbug b{font-size:12px}
-.court{margin:8px 0 14px;padding:12px 12px 8px;border-radius:18px;background:radial-gradient(120% 90% at 50% 0%,#3a2414,#0c0d10);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.court svg{width:100%;height:auto;display:block;border-radius:10px}
-.court p{margin:8px 2px 0;color:#efe8dc;font-size:13px;line-height:1.35}
+.court{margin:12px 0 16px;padding:14px 10px 12px;border-radius:18px;background:radial-gradient(70% 140% at 50% 115%,rgba(255,122,24,.22),transparent 46%),radial-gradient(90% 80% at 50% 0%,#1b2838,#07080c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 36px rgba(0,0,0,.4)}
+.court svg{width:100%;height:auto;display:block;border-radius:4px;touch-action:manipulation}
+.shotpt{cursor:pointer}
+.court p{margin:10px 4px 0;min-height:2.7em;color:#f7f2ea;font-size:14px;line-height:1.35}
 .rink{position:relative;margin:10px 0 14px;padding:10px;border-radius:22px;background:radial-gradient(120% 80% at 50% 0%,#1c3048,#0b121c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 16px 40px rgba(0,0,0,.35)}
 .rink svg{width:100%;height:auto;display:block}
 .rink img{position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}
@@ -5641,37 +5642,67 @@ function renderNba(g, sum){
   const shots=(plays||[]).filter(p=>{
     const c=p.coordinate||{};
     const x=Number(c.x), y=Number(c.y);
-    if(!(x>=0&&x<=50&&y>=-4&&y<=47)) return false;
-    return /shot|layup|dunk|jumper|tip/i.test(((p.type||{}).text)||"");
+    if(!(x>=0 && x<=50 && y>=-2 && y<=47)) return false;
+    if(p.shootingPlay) return true;
+    return /shot|layup|dunk|jumper/i.test(((p.type||{}).text)||"");
   });
   const tint=id=>{
-    const c=(id===away.id?away:home);
+    const c=(String(id)===String(away.id)?away:home);
     const col=((c.team||{}).color)||"";
     return col?("#"+String(col).replace("#","")):"#ff7a18";
   };
-  const dots=shots.slice(-12).map((p,i,arr)=>{
+  const endLeft=p=>{
+    const q=Number((p.period&&p.period.number)||1);
+    const awayShot=String((p.team||{}).id)===String(away.id);
+    return awayShot ? q<3 : q>=3;
+  };
+  const place=p=>{
     const x=Number(p.coordinate.x), y=Number(p.coordinate.y);
-    const cx=Math.max(0.7,Math.min(49.3,x));
-    const cy=Math.max(0.8,Math.min(40.4,40-y));
+    if(endLeft(p)) return {cx:Math.max(1.2,Math.min(45,5.25+y)), cy:Math.max(1.2,Math.min(48.8,x))};
+    return {cx:Math.max(49,Math.min(92.8,88.75-y)), cy:Math.max(1.2,Math.min(48.8,50-x))};
+  };
+  const shown=shots.slice(-18);
+  const dots=shown.map((p,i)=>{
+    const o=place(p);
     const make=/makes/i.test(p.text||"")||!!p.scoringPlay;
     const col=tint(p.team&&p.team.id);
-    const on=i===arr.length-1;
-    return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${on?1.15:0.62}" fill="${make?col:"none"}" stroke="${on?"#fff":col}" stroke-width="${on?0.38:0.28}"/>`;
+    const txt=String(p.text||"").replace(/"/g,"'");
+    return `<g class="shotpt" data-txt="${txt}"><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="2.4" fill="transparent"/><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="0.72" fill="${make?col:"rgba(8,8,10,.35)"}" stroke="${col}" stroke-width="0.28"/></g>`;
   }).join("");
-  const latest=shots[shots.length-1];
-  const court=`<div class="court"><svg viewBox="0 0 50 42" aria-hidden="true">
-    <rect width="50" height="42" fill="#c4894a"/>
-    <rect x="0.35" y="0.35" width="49.3" height="41.3" fill="none" stroke="#f4e7d4" stroke-width="0.35"/>
-    <rect x="17" y="25" width="16" height="15.6" fill="rgba(160,84,36,.45)" stroke="#f4e7d4" stroke-width="0.28"/>
-    <circle cx="25" cy="25" r="6" fill="none" stroke="#f4e7d4" stroke-width="0.28"/>
-    <line x1="3" y1="40" x2="3" y2="31.1" stroke="#f4e7d4" stroke-width="0.28"/>
-    <line x1="47" y1="40" x2="47" y2="31.1" stroke="#f4e7d4" stroke-width="0.28"/>
-    <clipPath id="arcclip"><rect x="0" y="0" width="50" height="40.05"/></clipPath>
-    <circle cx="25" cy="40" r="23.75" fill="none" stroke="#f4e7d4" stroke-width="0.28" clip-path="url(#arcclip)"/>
-    <line x1="22" y1="41.2" x2="28" y2="41.2" stroke="#f4e7d4" stroke-width="0.45"/>
-    <circle cx="25" cy="40" r="0.85" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
+  const lastShot=shown[shown.length-1];
+  const ring=lastShot?place(lastShot):{cx:47,cy:25};
+  const court=`<div class="court"><svg viewBox="0 0 94 50" aria-hidden="true">
+    <defs>
+      <pattern id="planks" width="2.6" height="50" patternUnits="userSpaceOnUse">
+        <rect width="2.6" height="50" fill="#d9a45c"/>
+        <rect width="2.6" height="50" fill="rgba(120,62,18,.18)"/>
+        <rect x="2.45" width="0.15" height="50" fill="rgba(70,32,8,.45)"/>
+      </pattern>
+    </defs>
+    <rect width="94" height="50" fill="url(#planks)"/>
+    <rect x="0.3" y="0.3" width="93.4" height="49.4" fill="none" stroke="#f6efe4" stroke-width="0.35"/>
+    <line x1="47" y1="0" x2="47" y2="50" stroke="#f6efe4" stroke-width="0.28"/>
+    <circle cx="47" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
+    <circle cx="47" cy="25" r="0.45" fill="#f6efe4"/>
+    <rect x="0" y="17" width="19" height="16" fill="${tint(away.id)}22" stroke="#f6efe4" stroke-width="0.28"/>
+    <rect x="75" y="17" width="19" height="16" fill="${tint(home.id)}22" stroke="#f6efe4" stroke-width="0.28"/>
+    <circle cx="19" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
+    <circle cx="75" cy="25" r="6" fill="none" stroke="#f6efe4" stroke-width="0.28"/>
+    <line x1="0" y1="3" x2="14.2" y2="3" stroke="#f6efe4" stroke-width="0.28"/>
+    <line x1="0" y1="47" x2="14.2" y2="47" stroke="#f6efe4" stroke-width="0.28"/>
+    <line x1="79.8" y1="3" x2="94" y2="3" stroke="#f6efe4" stroke-width="0.28"/>
+    <line x1="79.8" y1="47" x2="94" y2="47" stroke="#f6efe4" stroke-width="0.28"/>
+    <clipPath id="leftArc"><rect x="5.2" y="0" width="42" height="50"/></clipPath>
+    <clipPath id="rightArc"><rect x="46.8" y="0" width="42" height="50"/></clipPath>
+    <circle cx="5.25" cy="25" r="23.75" fill="none" stroke="#f6efe4" stroke-width="0.28" clip-path="url(#leftArc)"/>
+    <circle cx="88.75" cy="25" r="23.75" fill="none" stroke="#f6efe4" stroke-width="0.28" clip-path="url(#rightArc)"/>
+    <line x1="4" y1="22" x2="4" y2="28" stroke="#f6efe4" stroke-width="0.45"/>
+    <line x1="90" y1="22" x2="90" y2="28" stroke="#f6efe4" stroke-width="0.45"/>
+    <circle cx="5.25" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
+    <circle cx="88.75" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
     ${dots}
-  </svg><p>${latest?(latest.text||""):"Shots show up here once they go up."}</p></div>`;
+    <circle id="courtRing" cx="${ring.cx.toFixed(2)}" cy="${ring.cy.toFixed(2)}" r="1.55" fill="none" stroke="#fff" stroke-width="0.32" opacity="${lastShot?1:0}"/>
+  </svg><p id="courtCap">${lastShot?(lastShot.text||""):"Shots land on the floor once they go up. Tap one."}</p></div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
   const statNum=(team,name)=>{
@@ -5722,6 +5753,20 @@ function renderNba(g, sum){
     ${leaders}
     <section class="problock"><h3>Play-by-play</h3><ol class="espnplays">${trail||"<li><span>No plays posted yet.</span></li>"}</ol></section>
   </div>`;
+  $("gameBody").querySelectorAll(".shotpt").forEach(node=>{
+    node.onclick=ev=>{
+      ev.stopPropagation();
+      const cap=$("courtCap");
+      if(cap) cap.textContent=node.getAttribute("data-txt")||"";
+      const ring=$("courtRing");
+      const dot=node.querySelector("circle:last-child");
+      if(ring && dot){
+        ring.setAttribute("cx", dot.getAttribute("cx"));
+        ring.setAttribute("cy", dot.getAttribute("cy"));
+        ring.setAttribute("opacity","1");
+      }
+    };
+  });
 }
 
 
