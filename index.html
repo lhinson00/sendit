@@ -2694,18 +2694,16 @@ function renderGame(g, sum){
       : pin(lp, nLast);
     const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
     const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
-    const plateTop=Z.y+Z.h+10;
     return `<div class="zone">
       <div class="zonecall"><b>${velo?velo+"<i>mph</i>":""}</b><span>${name}</span><em class="${ball?"ball":live?"play":"strike"}">${res}</em></div>
-      <svg viewBox="0 0 320 250" aria-hidden="true">
-        <rect width="320" height="250" fill="#070a10"/>
+      <svg viewBox="0 0 320 196" aria-hidden="true">
+        <rect width="320" height="196" fill="#070a10"/>
         <rect x="${Z.x-6}" y="${Z.y-6}" width="${Z.w+12}" height="${Z.h+12}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
         <rect x="${Z.x}" y="${Z.y}" width="${Z.w}" height="${Z.h}" fill="rgba(255,255,255,.03)" stroke="#f4efe6" stroke-width="2"/>
         <line x1="${gx1}" y1="${Z.y}" x2="${gx1}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${gx2}" y1="${Z.y}" x2="${gx2}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${Z.x}" y1="${gy1}" x2="${Z.x+Z.w}" y2="${gy1}" stroke="rgba(255,255,255,.22)"/>
         <line x1="${Z.x}" y1="${gy2}" x2="${Z.x+Z.w}" y2="${gy2}" stroke="rgba(255,255,255,.22)"/>
-        <polygon points="160,${plateTop} 141,${plateTop+16} 141,${plateTop+30} 179,${plateTop+30} 179,${plateTop+16}" fill="#f4efe6"/>
         ${dots}
         ${flight}
       </svg>
@@ -2992,8 +2990,18 @@ async function openGame(id, fid){
         try{
           const live=await mlbLive(g);
           if(live){
-            if(live.pitches && live.pitches.length) sum._livePitches=live.pitches;
-            else sum._livePitches=[];
+            window.MLB_AB=window.MLB_AB||{};
+            const held=window.MLB_AB[String(g.eventId)]||{batter:null, pitches:[]};
+            const bid=live.batter&&live.batter.playerId;
+            if(live.pitches && live.pitches.length){
+              held.batter=bid;
+              held.pitches=live.pitches;
+            } else if(bid && held.batter && String(bid)!==String(held.batter)){
+              held.batter=bid;
+              held.pitches=[];
+            }
+            window.MLB_AB[String(g.eventId)]=held;
+            sum._livePitches=held.pitches||[];
             sum._livePlays=live.plays||[];
             sum.situation=Object.assign({}, sum.situation||{});
             if(live.balls!=null) sum.situation.balls=live.balls;
