@@ -126,23 +126,46 @@ const state={lg:"nfl",games:[],board:[],cards:{nfl:{picks:{},name:"",locked:fals
 const $ = id => document.getElementById(id);
 function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1400); }
 function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); $("nav").classList.toggle("on", id==="slate"||id==="board"); }
-function weekKey(lg){
+function weekAnchor(){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date()); const g=k=>parts.find(x=>x.type===k).value;
   const map={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}; const dow=map[g("weekday")];
-  const dt=new Date(Date.UTC(+g("year"),+g("month")-1,+g("day"))); dt.setUTCDate(dt.getUTCDate()-(dow>=3?dow-3:dow+4));
-  return "pem-"+lg+"-"+dt.toISOString().slice(0,10);
+  const dt=new Date(Date.UTC(+g("year"),+g("month")-1,+g("day")));
+  dt.setUTCDate(dt.getUTCDate()-(dow>=3?dow-3:dow+4));
+  return dt;
+}
+function weekKey(lg){
+  return "pem-"+lg+"-"+weekAnchor().toISOString().slice(0,10);
+}
+function slateStamps(){
+  const wed=weekAnchor();
+  const out=[];
+  for(let i=1;i<=5;i++){
+    const dt=new Date(wed);
+    dt.setUTCDate(wed.getUTCDate()+i);
+    const m=String(dt.getUTCMonth()+1).padStart(2,"0"), d=String(dt.getUTCDate()).padStart(2,"0");
+    out.push(dt.getUTCFullYear()+m+d);
+  }
+  return out;
 }
 function card(){ return state.cards[state.lg]; }
 function loadLocal(){ ["nfl","cfb"].forEach(lg=>{ try{ state.cards[lg]=Object.assign({picks:{},name:"",locked:false}, JSON.parse(localStorage.getItem("saucePick."+weekKey(lg))||"{}")); }catch(e){ state.cards[lg]={picks:{},name:"",locked:false}; } }); const who=$("whoLine"); if(who) who.textContent=card().name||""; }
 function headers(extra){ return Object.assign({apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY,"Content-Type":"application/json"}, extra||{}); }
 function rankOf(comp){ const r=comp.curatedRank&&comp.curatedRank.current?comp.curatedRank.current:comp.curatedRank; const n=Number(r); return n>0&&n<90?n:99; }
 function isSec(comp){ return String((comp.team||{}).conferenceId)==="8"; }
-function dates(){ const out=[]; for(let i=0;i<=3;i++){ const d=new Date(Date.now()+i*86400000); out.push(d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"")); } return out; }
+function onSlateDay(ev){
+  const iso=ev.date||(((ev.competitions||[])[0]||{}).date)||"";
+  if(!iso) return false;
+  const ymd=new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"}).replace(/-/g,"");
+  return slateStamps().indexOf(ymd)>=0;
+}
 async function eventsFor(lg){
   const base=lg==="nfl"?"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard":"https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard";
-  const seen=new Set(), evs=[]; const days=lg==="nfl"?[""]:dates();
-  for(const day of days){ const d=await (await fetch(base+(day?"?dates="+day+"&limit=200":""),{cache:"no-store"})).json(); (d.events||[]).forEach(ev=>{ if(!seen.has(ev.id)){ seen.add(ev.id); evs.push(ev); } }); }
+  const seen=new Set(), evs=[];
+  for(const day of slateStamps()){
+    const d=await (await fetch(base+"?dates="+day+"&limit=300",{cache:"no-store"})).json();
+    (d.events||[]).forEach(ev=>{ if(!seen.has(ev.id) && onSlateDay(ev)){ seen.add(ev.id); evs.push(ev); } });
+  }
   if(lg==="cfb") return evs.filter(ev=>((ev.competitions||[])[0].competitors||[]).some(c=>isSec(c)||rankOf(c)<=25));
   return evs;
 }
@@ -168,9 +191,13 @@ function saveLocal(){
 }
 function paint(){
   const picks=card().picks;
+  let last="";
   $("games").innerHTML=`<div class="list">`+state.games.map(g=>{
+    const day=dayLabel(g.kick);
+    const head=day!==last?`<div class="day">${day}</div>`:"";
+    last=day;
     const when=g.detail||"";
-    return `<article class="gcard">
+    return head+`<article class="gcard">
       <div class="gstat"><span>${when}</span><span>${g.tv||""}</span></div>
       <div class="bigline">
         <button class="nm pickside" data-g="${g.id}" data-t="${g.away.id}" type="button"><span class="star">${picks[g.id]===g.away.id?"★":"☆"}</span><span class="logoplate"><img alt="" src="${g.away.logo}"/></span><span class="who">${g.away.name}</span></button>
