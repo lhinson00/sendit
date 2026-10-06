@@ -82,10 +82,17 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .scard .win{color:#3ee0a0}
 .scard .pick{box-shadow:inset 0 -2px 0 #ff7a18}
 .scard .sub{margin-top:6px;color:#c9c2b8;font-size:12px}
-#slate{padding-bottom:130px}.lockbar{display:none;gap:8px;margin:12px;padding:0}
-.lockbar.on{display:grid;grid-template-columns:1fr auto;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;margin:0;background:#0c0a09;padding:8px;box-sizing:border-box}
-.lockbar input{background:#101218;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:12px}
-.lockbar button{border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px;padding:0 16px}
+#slate{padding-bottom:130px}.lockbar{display:none;margin:0;padding:0}
+.lockbar.on{display:block;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;background:#0c0a09;padding:8px;box-sizing:border-box}
+.lockbar button{width:100%;height:48px;border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px}
+.whoami{margin:10px 16px 0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em}
+.whoami:empty{display:none}
+.nameask{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:80;display:none;align-items:flex-end;justify-content:center}
+.nameask.on{display:flex}
+.nameask form{width:min(520px,100%);background:#101218;border-top:1px solid #3a2a18;padding:18px 16px 28px;display:grid;gap:10px}
+.nameask p{margin:0;color:#9b9288;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.nameask input{background:#0c0d12;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:14px;font-size:16px}
+.nameask button{border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px;padding:14px}
 .toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;display:none}
 </style>
 </head>
@@ -99,13 +106,19 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 </section>
 <section class="screen" id="slate">
   <div class="strip"><span>PICKS<strong id="made">0</strong></span><span>RECORD<strong id="rec">0-0</strong></span><span>OPEN<strong id="open">0</strong></span></div>
+  <p class="whoami" id="whoLine"></p>
   <div id="games"></div>
-  <div class="lockbar" id="lockbar"><input id="cardName" maxlength="24" placeholder="Name on the board"/><button id="lock" type="button">Lock</button></div>
+  <div class="lockbar" id="lockbar"><button id="lock" type="button">Lock</button></div>
 </section>
 <section class="screen" id="board"><div id="boardList"></div></section>
 <section class="screen" id="match"></section>
 <nav class="nav" id="nav"><button class="on" data-view="slate" type="button">SLATE</button><button data-view="board" type="button">BOARD</button></nav>
 <div class="toast" id="toast"></div>
+<div class="nameask" id="nameAsk"><form onsubmit="return false">
+  <p>Name on the board</p>
+  <input id="nameAskInput" maxlength="24" placeholder="Your name" autocomplete="nickname"/>
+  <button id="nameAskGo" type="button">Lock it</button>
+</form></div>
 <script>
 const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNneGd5eHp5dW5va2lxZmVkdHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzQ2OTMsImV4cCI6MjEwNTc1MDY5M30.LBhCjY33GLZZ3BbpLVqoyx8ND20Egow0yH_rkui09pU";
@@ -121,7 +134,7 @@ function weekKey(lg){
   return "pem-"+lg+"-"+dt.toISOString().slice(0,10);
 }
 function card(){ return state.cards[state.lg]; }
-function loadLocal(){ ["nfl","cfb"].forEach(lg=>{ try{ state.cards[lg]=Object.assign({picks:{},name:"",locked:false}, JSON.parse(localStorage.getItem("saucePick."+weekKey(lg))||"{}")); }catch(e){ state.cards[lg]={picks:{},name:"",locked:false}; } }); $("cardName").value=card().name||""; }
+function loadLocal(){ ["nfl","cfb"].forEach(lg=>{ try{ state.cards[lg]=Object.assign({picks:{},name:"",locked:false}, JSON.parse(localStorage.getItem("saucePick."+weekKey(lg))||"{}")); }catch(e){ state.cards[lg]={picks:{},name:"",locked:false}; } }); const who=$("whoLine"); if(who) who.textContent=card().name||""; }
 function headers(extra){ return Object.assign({apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY,"Content-Type":"application/json"}, extra||{}); }
 function rankOf(comp){ const r=comp.curatedRank&&comp.curatedRank.current?comp.curatedRank.current:comp.curatedRank; const n=Number(r); return n>0&&n<90?n:99; }
 function isSec(comp){ return String((comp.team||{}).conferenceId)==="8"; }
@@ -144,8 +157,8 @@ function mapEv(ev,lg){
 function started(g){ return g.state==="in"||g.state==="post"; }
 function dayLabel(iso){ return new Date(iso).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric",timeZone:"America/Chicago"}); }
 function saveLocal(){
-  card().name=$("cardName").value.trim();
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
+  const who=$("whoLine"); if(who) who.textContent=card().name||"";
   const need=state.games.filter(g=>!started(g));
   const ready=need.length>0&&need.every(g=>card().picks[g.id]);
   $("lockbar").classList.toggle("on", ready);
@@ -225,13 +238,29 @@ async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,
 function setLg(lg){ state.lg=lg; loadLocal(); show("slate"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="slate")); load(); }
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board"){ load().then(paintBoard); } });
 setInterval(()=>{ if($("board").classList.contains("on")||$("match").classList.contains("on")) load().then(()=>{ if($("board").classList.contains("on")) paintBoard(); if($("match").classList.contains("on")&&state.openName) openCard(state.openName); }); }, 30000);
+function askName(){
+  return new Promise(resolve=>{
+    const box=$("nameAsk"), input=$("nameAskInput");
+    box.classList.add("on");
+    input.value="";
+    input.focus();
+    $("nameAskGo").onclick=()=>{
+      const name=input.value.trim().slice(0,24);
+      if(!name) return;
+      box.classList.remove("on");
+      resolve(name);
+    };
+  });
+}
 $("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb");
-$("cardName").oninput=saveLocal;
 $("lock").onclick=async()=>{
-  saveLocal();
-  if(!card().name) return toast("Name");
   const need=state.games.filter(g=>!started(g));
   if(!need.length || need.some(g=>!card().picks[g.id])) return toast("Finish the open games");
+  if(!card().name){
+    const name=await askName();
+    if(!name) return;
+    card().name=name;
+  }
   card().locked=true; saveLocal();
   try{ await pushCard(); toast("On the board"); paintBoard(); show("board"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="board")); }
   catch(e){ card().locked=false; saveLocal(); toast("Not saved"); }
