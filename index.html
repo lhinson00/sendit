@@ -2644,27 +2644,32 @@ function renderGame(g, sum){
   const abPitches=pitchPlays.filter(p=>p.atBatId===abId).slice(-14);
   const zoneHtml=(()=>{
     if(LEAGUE!=="mlb" || !abPitches.length) return "";
+    const Z={x:96,y:28,w:128,h:142};
     const spot=(px,py)=>{
-      const nx=(Number(px)-95)/55;
-      const ny=(Number(py)-148)/50;
-      return [118+nx*84, 86+ny*96];
+      let sx=Z.x+((Number(px)-95)/55)*Z.w;
+      let sy=Z.y+((Number(py)-148)/50)*Z.h;
+      sx=Math.max(22, Math.min(298, sx));
+      sy=Math.max(16, Math.min(236, sy));
+      return [sx, sy];
     };
     const ink=name=>{
       const n=String(name||"").toLowerCase();
       if(/curve|slider|sweep|knuckle/.test(n)) return "#7ec8ff";
       if(/change|split|screw/.test(n)) return "#3ecf8e";
       if(/cutter|sink/.test(n)) return "#ffb25a";
-      return "#f7f2ea";
+      return "#f4efe6";
     };
     const lp=abPitches[abPitches.length-1];
-    const dots=abPitches.slice(0,-1).map(p=>{
+    const mark=(p,r)=>{
       const q=spot(p.pitchCoordinate.x, p.pitchCoordinate.y);
       const t=((p.type||{}).text)||"";
-      const ball=/^ball/i.test(t);
+      const isBall=/^ball/i.test(t);
       const live=/single|double|triple|home run|in play|out|error|choice|fly|ground|line|pop/i.test(t);
-      const ring=ball?"#3ecf8e":live?"#fff":"#ff7a18";
-      return `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4.2" fill="${ink((p.pitchType||{}).text)}" stroke="${ring}" stroke-width="1.2" opacity="0.85"/>`;
-    }).join("");
+      const ring=isBall?"#3ecf8e":live?"#fff":"#ff7a18";
+      const fill=ink((p.pitchType||{}).text);
+      return `<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="1.4"/><circle cx="${(q[0]-r*0.28).toFixed(1)}" cy="${(q[1]-r*0.32).toFixed(1)}" r="${(r*0.28).toFixed(1)}" fill="rgba(255,255,255,.55)"/></g>`;
+    };
+    const dots=abPitches.slice(0,-1).map(p=>mark(p,4.5)).join("");
     const end=spot(lp.pitchCoordinate.x, lp.pitchCoordinate.y);
     const t=((lp.type||{}).text)||"";
     const ball=/^ball/i.test(t);
@@ -2676,24 +2681,27 @@ function renderGame(g, sum){
     const res=((lp.type||{}).text)||"";
     const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||lp.sequenceNumber||"");
     window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
-    const ex=end[0].toFixed(1), ey=end[1].toFixed(1);
+    const ex=end[0], ey=end[1];
+    const ox=ex+(160-ex)*0.45, oy=Math.max(14, ey-64);
     const flight=fresh
-      ? `<circle fill="${fill}" stroke="${ring}" stroke-width="2"><animate attributeName="cx" from="160" to="${ex}" dur="0.72s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.15 0.75 0.25 1"/><animate attributeName="cy" from="42" to="${ey}" dur="0.72s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.15 0.75 0.25 1"/><animate attributeName="r" from="2.4" to="11" dur="0.72s" fill="freeze"/></circle>`
-      : `<circle cx="${ex}" cy="${ey}" r="11" fill="${fill}" stroke="${ring}" stroke-width="2"/>`;
+      ? `<g><circle fill="${fill}" stroke="${ring}" stroke-width="1.6"><animate attributeName="cx" from="${ox.toFixed(1)}" to="${ex.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="cy" from="${oy.toFixed(1)}" to="${ey.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="r" from="3" to="8" dur="0.55s" fill="freeze"/></circle></g>`
+      : `<g><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="8" fill="${fill}" stroke="${ring}" stroke-width="1.6"/><circle cx="${(ex-2.2).toFixed(1)}" cy="${(ey-2.4).toFixed(1)}" r="2.2" fill="rgba(255,255,255,.55)"/></g>`;
+    const gx1=(Z.x+Z.w/3).toFixed(1), gx2=(Z.x+2*Z.w/3).toFixed(1);
+    const gy1=(Z.y+Z.h/3).toFixed(1), gy2=(Z.y+2*Z.h/3).toFixed(1);
+    const plateTop=Z.y+Z.h+10;
     return `<div class="zone">
       <div class="zonecall"><b>${velo?velo+"<i>mph</i>":""}</b><span>${name}</span><em class="${ball?"ball":live?"play":"strike"}">${res}</em></div>
-      <svg viewBox="0 0 320 300" aria-hidden="true">
-        <rect width="320" height="300" fill="#070a10"/>
-        <polygon points="150,36 170,36 214,268 106,268" fill="#3d2818" opacity="0.55"/>
-        <ellipse cx="160" cy="34" rx="16" ry="5" fill="#6a4630"/>
-        <rect x="118" y="86" width="84" height="96" fill="rgba(8,12,18,.35)" stroke="#f4efe6" stroke-width="1.8"/>
-        <line x1="146" y1="86" x2="146" y2="182" stroke="rgba(255,255,255,.28)" stroke-width="0.8"/>
-        <line x1="174" y1="86" x2="174" y2="182" stroke="rgba(255,255,255,.28)" stroke-width="0.8"/>
-        <line x1="118" y1="118" x2="202" y2="118" stroke="rgba(255,255,255,.28)" stroke-width="0.8"/>
-        <line x1="118" y1="150" x2="202" y2="150" stroke="rgba(255,255,255,.28)" stroke-width="0.8"/>
-        <polygon points="160,192 136,208 136,226 184,226 184,208" fill="#f4efe6"/>
+      <svg viewBox="0 0 320 250" aria-hidden="true">
+        <rect width="320" height="250" fill="#070a10"/>
+        <rect x="${Z.x-6}" y="${Z.y-6}" width="${Z.w+12}" height="${Z.h+12}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="8"/>
+        <rect x="${Z.x}" y="${Z.y}" width="${Z.w}" height="${Z.h}" fill="rgba(255,255,255,.03)" stroke="#f4efe6" stroke-width="2"/>
+        <line x1="${gx1}" y1="${Z.y}" x2="${gx1}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
+        <line x1="${gx2}" y1="${Z.y}" x2="${gx2}" y2="${Z.y+Z.h}" stroke="rgba(255,255,255,.22)"/>
+        <line x1="${Z.x}" y1="${gy1}" x2="${Z.x+Z.w}" y2="${gy1}" stroke="rgba(255,255,255,.22)"/>
+        <line x1="${Z.x}" y1="${gy2}" x2="${Z.x+Z.w}" y2="${gy2}" stroke="rgba(255,255,255,.22)"/>
+        <polygon points="160,${plateTop} 141,${plateTop+16} 141,${plateTop+30} 179,${plateTop+30} 179,${plateTop+16}" fill="#f4efe6"/>
+        <path d="M ${ox.toFixed(1)} ${oy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}" fill="none" stroke="${fill}" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
         ${dots}
-        <path d="M 160 42 Q 160 ${((42+end[1])/2).toFixed(1)} ${ex} ${ey}" fill="none" stroke="${fill}" stroke-width="1.2" opacity="0.45"/>
         ${flight}
       </svg>
     </div>`;
