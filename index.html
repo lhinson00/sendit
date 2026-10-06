@@ -2645,11 +2645,15 @@ function renderGame(g, sum){
   const zoneHtml=(()=>{
     if(LEAGUE!=="mlb" || !abPitches.length) return "";
     const Z={x:96,y:28,w:128,h:142};
-    const spot=(px,py)=>{
-      let sx=Z.x+((Number(px)-95)/55)*Z.w;
-      let sy=Z.y+((Number(py)-148)/50)*Z.h;
-      sx=Math.max(22, Math.min(298, sx));
-      sy=Math.max(16, Math.min(236, sy));
+    const spot=p=>{
+      const c=p.pitchCoordinate||{};
+      const top=Number(p.zoneTop)||3.5;
+      const bot=Number(p.zoneBot)||1.5;
+      const half=((Number(p.zoneWide)||17)/12)/2;
+      const nx=(Number(c.px)+half)/(half*2);
+      const ny=(top-Number(c.pz))/Math.max(0.4, top-bot);
+      const sx=Math.max(Z.x-Z.w*0.42, Math.min(Z.x+Z.w*1.42, Z.x+nx*Z.w));
+      const sy=Math.max(Z.y-16, Math.min(Z.y+Z.h*1.28, Z.y+ny*Z.h));
       return [sx, sy];
     };
     const ink=name=>{
@@ -2661,7 +2665,7 @@ function renderGame(g, sum){
     };
     const lp=abPitches[abPitches.length-1];
     const mark=(p,r)=>{
-      const q=spot(p.pitchCoordinate.x, p.pitchCoordinate.y);
+      const q=spot(p);
       const t=((p.type||{}).text)||"";
       const isBall=/^ball/i.test(t);
       const live=/single|double|triple|home run|in play|out|error|choice|fly|ground|line|pop/i.test(t);
@@ -2670,7 +2674,7 @@ function renderGame(g, sum){
       return `<g><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="1.4"/><circle cx="${(q[0]-r*0.28).toFixed(1)}" cy="${(q[1]-r*0.32).toFixed(1)}" r="${(r*0.28).toFixed(1)}" fill="rgba(255,255,255,.55)"/></g>`;
     };
     const dots=abPitches.slice(0,-1).map(p=>mark(p,4.5)).join("");
-    const end=spot(lp.pitchCoordinate.x, lp.pitchCoordinate.y);
+    const end=spot(lp);
     const t=((lp.type||{}).text)||"";
     const ball=/^ball/i.test(t);
     const live=/single|double|triple|home run|in play|out|error|choice|fly|ground|line|pop/i.test(t);
@@ -2682,7 +2686,7 @@ function renderGame(g, sum){
     const fresh=String(window.PITCH_ANIM||"")!==String(lp.id||lp.sequenceNumber||"");
     window.PITCH_ANIM=String(lp.id||lp.sequenceNumber||"");
     const ex=end[0], ey=end[1];
-    const ox=ex+(160-ex)*0.45, oy=Math.max(14, ey-64);
+    const ox=ex+(160-ex)*0.12, oy=ey-22;
     const flight=fresh
       ? `<g><circle fill="${fill}" stroke="${ring}" stroke-width="1.6"><animate attributeName="cx" from="${ox.toFixed(1)}" to="${ex.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="cy" from="${oy.toFixed(1)}" to="${ey.toFixed(1)}" dur="0.55s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/><animate attributeName="r" from="3" to="8" dur="0.55s" fill="freeze"/></circle></g>`
       : `<g><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="8" fill="${fill}" stroke="${ring}" stroke-width="1.6"/><circle cx="${(ex-2.2).toFixed(1)}" cy="${(ey-2.4).toFixed(1)}" r="2.2" fill="rgba(255,255,255,.55)"/></g>`;
@@ -2915,12 +2919,12 @@ async function mlbLive(g){
     if(pk) window.MLB_PK[id]=pk;
   }
   if(!pk) return null;
-  const fields="liveData,plays,currentPlay,count,balls,strikes,outs,playEvents,isPitch,endTime,playId,details,call,description,type,pitchData,startSpeed,coordinates,x,y";
+  const fields="liveData,plays,currentPlay,count,balls,strikes,outs,playEvents,isPitch,endTime,playId,details,call,description,type,pitchData,startSpeed,strikeZoneTop,strikeZoneBottom,strikeZoneWidth,coordinates,pX,pZ";
   const res=await fetch("https://statsapi.mlb.com/api/v1.1/game/"+pk+"/feed/live?fields="+fields,{cache:"no-store"});
   if(!res.ok) return null;
   const data=await res.json();
   const cur=(((data.liveData||{}).plays)||{}).currentPlay||{};
-  const events=(cur.playEvents||[]).filter(e=>e.isPitch && e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.x!=null);
+  const events=(cur.playEvents||[]).filter(e=>e.isPitch && e.pitchData && e.pitchData.coordinates && e.pitchData.coordinates.pX!=null);
   const pitches=events.map((e,i)=>{
     const c=e.pitchData.coordinates||{};
     const det=e.details||{};
@@ -2929,7 +2933,10 @@ async function mlbLive(g){
     return {
       id:e.playId||e.endTime||("p"+i),
       atBatId:"now",
-      pitchCoordinate:{x:Number(c.x), y:Number(c.y)},
+      pitchCoordinate:{px:Number(c.pX), pz:Number(c.pZ)},
+      zoneTop:e.pitchData.strikeZoneTop,
+      zoneBot:e.pitchData.strikeZoneBottom,
+      zoneWide:e.pitchData.strikeZoneWidth,
       pitchType:{text:type},
       pitchVelocity:e.pitchData.startSpeed?Math.round(e.pitchData.startSpeed):"",
       type:{text:call}
