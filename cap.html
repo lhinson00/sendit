@@ -720,7 +720,7 @@ function tabTo(name){
   if(name==="stand") refreshLive();
 }
 
-function capWeekId(year, espnWeek){
+function capWeekId(){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date());
   const g=k=>parts.find(x=>x.type===k).value;
@@ -728,22 +728,45 @@ function capWeekId(year, espnWeek){
   const map={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
   const dow=map[g("weekday")];
   const dt=new Date(Date.UTC(y,m-1,d));
-  const back = dow>=3 ? dow-3 : dow+4; // days since Wednesday
+  const back = dow>=3 ? dow-3 : dow+4;
   dt.setUTCDate(dt.getUTCDate()-back);
   const wy=dt.getUTCFullYear(), wm=String(dt.getUTCMonth()+1).padStart(2,"0"), wd=String(dt.getUTCDate()).padStart(2,"0");
-  return "cap-"+wy+"-"+wm+"-"+wd;
+  return {id:"cap-"+wy+"-"+wm+"-"+wd, wed:dt};
+}
+function slateStamps(){
+  const wed=capWeekId().wed;
+  const out=[];
+  for(let i=1;i<=5;i++){
+    const dt=new Date(wed);
+    dt.setUTCDate(wed.getUTCDate()+i);
+    out.push(dt.getUTCFullYear()+String(dt.getUTCMonth()+1).padStart(2,"0")+String(dt.getUTCDate()).padStart(2,"0"));
+  }
+  return out;
 }
 async function loadSlate(){
-  const res = await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",{cache:"no-store"});
-  if(!res.ok) throw new Error("Could not load NFL slate");
-  const d = await res.json();
-  const week = (d.week && d.week.number) || "";
-  const year = (d.season && d.season.year) || new Date().getFullYear();
-    STATE.espnWeek = week;
-  STATE.week = capWeekId(year, week);
-  STATE.label = "Week "+week+" · "+year;
+  const stamp=capWeekId();
+  const seen=new Set();
+  const evs=[];
+  let week="", year="";
+  for(const day of slateStamps()){
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+day,{cache:"no-store"});
+    if(!res.ok) continue;
+    const d=await res.json();
+    if(!week && d.week) week=d.week.number;
+    if(!year && d.season) year=d.season.year;
+    (d.events||[]).forEach(ev=>{
+      const iso=ev.date||(((ev.competitions||[])[0]||{}).date)||"";
+      const ymd=iso?new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"}).replace(/-/g,""):"";
+      if(!seen.has(ev.id) && slateStamps().indexOf(ymd)>=0){ seen.add(ev.id); evs.push(ev); }
+    });
+  }
+  if(!evs.length) throw new Error("Could not load NFL slate");
+  STATE.espnWeek = week;
+  STATE.week = stamp.id;
+  const thu=slateStamps()[0], mon=slateStamps()[4];
+  const nice=s=>s.slice(4,6)+"/"+s.slice(6);
+  STATE.label = (week?("Week "+week+" · "):"")+"Thu "+nice(thu)+" – Mon "+nice(mon);
   $("weekLine").textContent = STATE.label+" · $50,000 cap";
-  const evs = d.events||[];
   STATE.games = evs.map(ev=>{
     const c=(ev.competitions||[])[0]||{};
     const comps=c.competitors||[];
@@ -758,7 +781,7 @@ async function loadSlate(){
       homeId:String(ht.id||home.id||""), homeAb:ht.abbreviation||ht.shortDisplayName||"HOME",
       awayId:String(at.id||away.id||""), awayAb:at.abbreviation||at.shortDisplayName||"AWAY"
     };
-  });
+  }).sort((a,b)=>String(a.start).localeCompare(String(b.start)));
 }
 
 const DEPTH={};
