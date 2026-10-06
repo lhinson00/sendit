@@ -2644,7 +2644,7 @@ function renderGame(g, sum){
   if(home.errors!=null) hR.e=home.errors;
   const dots=(n,max,cls)=>Array.from({length:max},(_,i)=>`<i class="${cls}${i<n?" on":""}"></i>`).join("");
   const scoring=(sum.plays||[]).filter(p=>p.scoringPlay||(p.scoreValue>0)).slice(-8).reverse();
-  const pitchPlays=(sum._livePitches&&sum._livePitches.length)?sum._livePitches:(sum.plays||[]).filter(p=>p.pitchCoordinate && p.pitchType && p.atBatId);
+  const pitchPlays=(LEAGUE==="mlb" && Array.isArray(sum._livePitches))?sum._livePitches:(sum.plays||[]).filter(p=>p.pitchCoordinate && p.pitchType && p.atBatId);
   const abId=pitchPlays.length?pitchPlays[pitchPlays.length-1].atBatId:"";
   const abPitches=pitchPlays.filter(p=>p.atBatId===abId).slice(-14);
   const zoneHtml=(()=>{
@@ -2732,18 +2732,18 @@ function renderGame(g, sum){
         <div class="countline"><span>B ${dots(Number(sit.balls)||0,4,"dot")}</span><span>S ${dots(Number(sit.strikes)||0,3,"dot red")}</span><span>O ${dots(Number(sit.outs)||0,3,"dot")}</span></div>
         <div class="abcard r">${bObj?`<div><em>Batter</em><b>${bObj.displayName||bObj.shortName}</b></div><img alt="" src="${shot(bObj)}"/>`:"<em>Batter</em>"}</div>
       </div>
-      ${homePct!=null?`<div class="wpbar"><i style="width:${homePct}%"></i><em>${g.awayAb||g.away} ${100-homePct}%</em><em>${g.homeAb||g.home} ${homePct}%</em></div>`:""}
+
     </div>
     ${zoneHtml}
     ${LEAGUE==="mlb"?`<section class="problock"><h3>This at-bat</h3>${(sum._livePitches||[]).length?(sum._livePitches||[]).map((p,i)=>`<div class="play"><span>${i+1}${p.pitchVelocity?(" · "+p.pitchVelocity+" mph"):""}${(p.pitchType&&p.pitchType.text)?(" "+p.pitchType.text):""}</span><p>${(p.type&&p.type.text)||""}</p></div>`).join(""):"<p class='hint'>Waiting on the first pitch.</p>"}<h3>Plays</h3>${(sum._livePlays||[]).length?(sum._livePlays||[]).map(p=>`<div class="play"><span>${p.inn}</span><p>${p.text}</p></div>`).join(""):"<p class='hint'>Plays show up as they finish.</p>"}</section>`:""}
     <div id="gameOdds">${oddsTape(g,"pick")}</div>
     ${(last.text && LEAGUE!=="mlb")?`<div class="lastbig"><span>Last play</span><p>${last.text}</p></div>`:""}
-    ${note?`<p class="hint">${note}</p>`:""}
+    
     ${LEAGUE==="mlb"?"":(scoring.length?scoring.map(p=>`<div class="play hot"><span>${(p.period&&p.period.displayValue)||""} · ${(p.team&&p.team.abbreviation)||""}</span><p>${p.text||""}</p></div>`).join(""):"")}
     ${venue?`<p class="hint">${venue}</p>`:""}
     ${boxHtml(sum)}`;
   if(!playing){
-    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"?"":"<p class='hint'>Highlights post after ESPN cuts them.</p>");
+    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"||LEAGUE==="mlb"?"":"<p class='hint'>Highlights post after ESPN cuts them.</p>");
   }
   bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
 }
@@ -2959,7 +2959,7 @@ async function mlbLive(g){
     }));
   }catch(e){}
   const half=ls.inningState==="Top"?"Top":ls.inningState==="Bottom"?"Bottom":(ls.inningState||"");
-  return {pitches, balls:count.balls, strikes:count.strikes, outs:count.outs, pitcher:guy(match.pitcher), batter:guy(match.batter), line:{innings:ls.innings||[], teams:ls.teams||{}}, label:(()=>{ if(!half||!ls.currentInning) return ""; const n=Number(ls.currentInning); const suf=n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"; return half+" "+n+suf; })() , plays};
+  return {pitches, balls:count.balls, strikes:count.strikes, outs:count.outs, pitcher:guy(match.pitcher), batter:guy(match.batter), line:{innings:ls.innings||[], teams:ls.teams||{}, currentInning:ls.currentInning, half:ls.inningState||""}, label:(()=>{ if(!half||!ls.currentInning) return ""; const n=Number(ls.currentInning); const suf=n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"; return half+" "+n+suf; })() , plays};
 }
 async function openGame(id, fid){
   OPEN = String(fid||id||"");
@@ -3008,9 +3008,13 @@ async function openGame(id, fid){
               (hdr.competitors||[]).forEach(c=>{
                 const side=c.homeAway==="away"?"away":"home";
                 const t=sides[side]||{};
+                const curN=Number(live.line.currentInning)||0;
+                const half=String(live.line.half||"");
                 c.linescores=inns.map(inn=>{
                   const cell=inn[side]||{};
-                  return {displayValue:cell.runs==null?"":String(cell.runs), hits:Number(cell.hits)||0, errors:Number(cell.errors)||0};
+                  const n=Number(inn.num)||0;
+                  const started=n<curN || (n===curN && (side==="away" || half==="Bottom" || half==="End"));
+                  return {displayValue:cell.runs==null?(started?"0":""):String(cell.runs), hits:Number(cell.hits)||0, errors:Number(cell.errors)||0};
                 });
                 if(t.runs!=null) c.score={displayValue:String(t.runs)};
                 if(t.hits!=null) c.hits=t.hits;
