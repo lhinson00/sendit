@@ -267,6 +267,20 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .rinkbug em{font-family:"Bebas Neue",sans-serif;font-style:normal;font-size:42px}
 .rinkbug span{color:#c9c2b8;font-size:12px;text-align:center}
 .rinkbug b{font-size:12px}
+.casttabs{display:flex;gap:8px;padding:4px var(--pad) 0}
+.casttabs button{flex:1;background:#101218;color:#cfc6b8;border:1px solid #2a241c;border-radius:8px;padding:11px 8px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+.casttabs button.on{background:#ff7a18;color:#140800;border-color:#ff7a18}
+.boxteams{display:flex;gap:8px;padding:12px var(--pad) 4px}
+.boxteams button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#101218;color:#fff;border:1px solid #2a241c;border-radius:8px;padding:8px;font-weight:800}
+.boxteams button.on{border-color:#ff7a18}
+.boxteams img{width:22px;height:22px;object-fit:contain}
+.boxtable{overflow:auto;margin:8px var(--pad) 8px;border:1px solid #2a241c;border-radius:8px}
+.boxtable table{border-collapse:collapse;min-width:860px;width:100%}
+.boxtable th,.boxtable td{padding:9px 8px;text-align:right;font-size:12px;white-space:nowrap;border-bottom:1px solid #1c1814;font-weight:600}
+.boxtable th:first-child{text-align:left;position:sticky;left:0;background:#0c0d10;min-width:132px;z-index:1}
+.boxtable thead th{color:#9b9288;font-size:10px;letter-spacing:.08em}
+.boxsec th{text-align:left;color:#ff7a18;letter-spacing:.14em;font-size:11px;text-transform:uppercase;background:#101218}
+.boxtable tfoot th,.boxtable tfoot td{color:#fff;font-weight:800}
 .court{margin:12px 0 16px;padding:14px 10px 12px;border-radius:18px;background:radial-gradient(70% 140% at 50% 115%,rgba(255,122,24,.22),transparent 46%),radial-gradient(90% 80% at 50% 0%,#1b2838,#07080c);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 36px rgba(0,0,0,.4)}
 .court svg{width:100%;height:auto;display:block;border-radius:4px;touch-action:manipulation}
 .shotpt{cursor:pointer}
@@ -5661,13 +5675,13 @@ function renderNba(g, sum){
     if(endLeft(p)) return {cx:Math.max(1.2,Math.min(45,5.25+y)), cy:Math.max(1.2,Math.min(48.8,x))};
     return {cx:Math.max(49,Math.min(92.8,88.75-y)), cy:Math.max(1.2,Math.min(48.8,50-x))};
   };
-  const shown=shots.slice(-18);
+  const shown=shots.slice(-1);
   const dots=shown.map((p,i)=>{
     const o=place(p);
     const make=/makes/i.test(p.text||"")||!!p.scoringPlay;
     const col=tint(p.team&&p.team.id);
     const txt=String(p.text||"").replace(/"/g,"'");
-    return `<g class="shotpt" data-txt="${txt}"><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="2.4" fill="transparent"/><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="0.72" fill="${make?col:"rgba(8,8,10,.35)"}" stroke="${col}" stroke-width="0.28"/></g>`;
+    return `<g class="shotpt" data-txt="${txt}"><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="2.4" fill="transparent"/><circle cx="${o.cx.toFixed(2)}" cy="${o.cy.toFixed(2)}" r="1.25" fill="${make?col:"rgba(8,8,10,.35)"}" stroke="${col}" stroke-width="0.28"/></g>`;
   }).join("");
   const lastShot=shown[shown.length-1];
   const ring=lastShot?place(lastShot):{cx:47,cy:25};
@@ -5701,7 +5715,7 @@ function renderNba(g, sum){
     <circle cx="5.25" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
     <circle cx="88.75" cy="25" r="0.9" fill="none" stroke="#ff7a18" stroke-width="0.28"/>
     ${dots}
-    <circle id="courtRing" cx="${ring.cx.toFixed(2)}" cy="${ring.cy.toFixed(2)}" r="1.55" fill="none" stroke="#fff" stroke-width="0.32" opacity="${lastShot?1:0}"/>
+    <circle id="courtRing" cx="${ring.cx.toFixed(2)}" cy="${ring.cy.toFixed(2)}" r="2.15" fill="none" stroke="#fff" stroke-width="0.32" opacity="${lastShot?1:0}"/>
   </svg><p id="courtCap">${lastShot?(lastShot.text||""):"Shots land on the floor once they go up. Tap one."}</p></div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
@@ -5744,15 +5758,75 @@ function renderNba(g, sum){
   };
   const leaders=`<section class="problock"><h3>Game leaders</h3>${leadCard("points","PTS")}${leadCard("rebounds","REB")}${leadCard("assists","AST")}</section>`;
   if(!$("gameBody")) $("gameRoom").innerHTML="<div id='gameBody'></div>";
+  const groups=((sum.boxscore||{}).players)||[];
+  const boxTable=g=>{
+    const block=((g.statistics)||[])[0]||{};
+    const labels=block.labels||[];
+    const aths=block.athletes||[];
+    const row=a=>{
+      const name=(a.athlete||{}).displayName||"";
+      const id=(a.athlete||{}).id||"";
+      const cells=(a.stats||[]).map(s=>"<td>"+s+"</td>").join("");
+      return `<tr class="prow" data-pid="${id}" data-pname="${name.replace(/"/g,"")}"><th>${name}</th>${cells}</tr>`;
+    };
+    const starters=aths.filter(a=>a.starter && !a.didNotPlay);
+    const bench=aths.filter(a=>!a.starter && !a.didNotPlay);
+    const dnp=aths.filter(a=>a.didNotPlay).map(a=>(a.athlete||{}).shortName||(a.athlete||{}).displayName||"").filter(Boolean);
+    const totals=(block.totals||[]).map(s=>"<td>"+s+"</td>").join("");
+    const span=labels.length+1;
+    return `<div class="boxtable"><table>
+      <thead><tr><th>Player</th>${labels.map(l=>"<th>"+l+"</th>").join("")}</tr></thead>
+      <tbody>
+        <tr class="boxsec"><th colspan="${span}">Starters</th></tr>
+        ${starters.map(row).join("")||""}
+        <tr class="boxsec"><th colspan="${span}">Bench</th></tr>
+        ${bench.map(row).join("")||""}
+      </tbody>
+      <tfoot><tr><th>Totals</th>${totals}</tr></tfoot>
+    </table></div>${dnp.length?`<p class="hint">DNP ${dnp.join(", ")}</p>`:""}`;
+  };
+  const sideOn=String(window.BOX_SIDE||"0");
+  const boxSides=groups.map((g,i)=>{
+    const t=g.team||{};
+    return `<div class="boxside" data-side="${i}" ${String(i)===sideOn?"":"hidden"}>${boxTable(g)}</div>`;
+  }).join("");
+  const boxBtns=groups.map((g,i)=>{
+    const t=g.team||{};
+    return `<button type="button" data-side="${i}" class="${String(i)===sideOn?"on":""}"><img alt="" src="${(t.logo)||logo(i?home:away)}"/>${t.abbreviation||""}</button>`;
+  }).join("");
+  const pane=window.GAME_PANE||"cast";
   $("gameBody").innerHTML=`<div class="cast">
     <div class="scorestrip"><img alt="" src="${logo(away)}"/><div><b>${sc(away)}</b><span>${nm(away)}</span><em>${rec(away)}</em></div><div class="clock">${st.shortDetail||st.detail||""}</div><div><b>${sc(home)}</b><span>${nm(home)}</span><em>${rec(home)}</em></div><img alt="" src="${logo(home)}"/></div>
     ${line}
-    ${court}
-    ${lastHtml}
-    <section class="problock"><h3>Team stats</h3>${cmp}</section>
-    ${leaders}
-    <section class="problock"><h3>Play-by-play</h3><ol class="espnplays">${trail||"<li><span>No plays posted yet.</span></li>"}</ol></section>
+    <div class="casttabs">
+      <button type="button" data-pane="cast" class="${pane==="cast"?"on":""}">Gamecast</button>
+      <button type="button" data-pane="box" class="${pane==="box"?"on":""}">Box Score</button>
+    </div>
+    <div id="castPane" ${pane==="box"?"hidden":""}>
+      ${court}
+      ${lastHtml}
+      <section class="problock"><h3>Team stats</h3>${cmp}</section>
+      ${leaders}
+      <section class="problock"><h3>Play-by-play</h3><ol class="espnplays">${trail||"<li><span>No plays posted yet.</span></li>"}</ol></section>
+    </div>
+    <div id="boxPane" ${pane==="cast"?"hidden":""}>${groups.length?`<div class="boxteams">${boxBtns}</div>${boxSides}`:"<p class='hint'>Box score not posted yet.</p>"}</div>
   </div>`;
+  $("gameBody").querySelectorAll(".casttabs button").forEach(b=>{
+    b.onclick=()=>{
+      window.GAME_PANE=b.dataset.pane;
+      $("castPane").hidden=b.dataset.pane!=="cast";
+      $("boxPane").hidden=b.dataset.pane!=="box";
+      $("gameBody").querySelectorAll(".casttabs button").forEach(n=>n.classList.toggle("on", n===b));
+    };
+  });
+  $("gameBody").querySelectorAll(".boxteams button").forEach(b=>{
+    b.onclick=()=>{
+      const side=b.dataset.side;
+      window.BOX_SIDE=side;
+      $("gameBody").querySelectorAll(".boxteams button").forEach(n=>n.classList.toggle("on", n===b));
+      $("gameBody").querySelectorAll(".boxside").forEach(n=>{ n.hidden=n.dataset.side!==side; });
+    };
+  });
   $("gameBody").querySelectorAll(".shotpt").forEach(node=>{
     node.onclick=ev=>{
       ev.stopPropagation();
