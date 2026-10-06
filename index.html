@@ -1337,6 +1337,10 @@ function pulseBoard(g){
   const tag=tracked.length?"TRACKER":"FAVORITE";
   if(watching && (liveNow || justFinal) && tot>nScore(prev.as)+nScore(prev.hs) && window.ALERT_TOT[key]!==tot){
     window.ALERT_TOT[key]=tot;
+    if(g.lg==="nba"){
+      window.WATCH_SNAP[key]=pack;
+      return;
+    }
     const kind=playKind(g.lastPlay,g,prev);
     const who=scorerName(g,prev)||"";
     const raw=g.lastPlay||"";
@@ -3459,7 +3463,7 @@ function alertFromSlip(s, g, prev){
   const oldT=nScore(prev.as)+nScore(prev.hs);
   const as=nScore(g.awayScore), hs=nScore(g.homeScore);
   if(as+hs>oldT){
-    flashAlert({
+    if((g.lg||LEAGUE)!=="nba") flashAlert({
       kicker: (scorerName(g,prev)||"").toUpperCase(),
       title: playKind(g.lastPlay,g,prev),
       score: scorebug(g),
@@ -3479,7 +3483,7 @@ function alertFromFav(g, prev){
   const oldT=nScore(prev.as)+nScore(prev.hs);
   const nowT=as+hs;
   if(g.state==="in" && nowT>oldT){
-    flashAlert({
+    if((g.lg||LEAGUE)!=="nba") flashAlert({
       kicker: (scorerName(g,prev)||"").toUpperCase(),
       title: playKind(g.lastPlay,g,prev),
       score: scorebug(g),
