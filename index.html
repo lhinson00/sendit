@@ -5760,7 +5760,6 @@ function renderNba(g, sum){
       ${badge(47,25,logo(home),42)}
       ${shotMark}
     </svg>
-    <p id="courtCap">${lastShot?(lastShot.text||""):"The last shot shows up on the floor."}</p>
   </div>`;
   const boxTeams=(sum.boxscore||{}).teams||[];
   const findTeam=id=>(boxTeams.find(t=>String((t.team||{}).id)===String(id))||{});
