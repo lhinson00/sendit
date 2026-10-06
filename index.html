@@ -5661,7 +5661,7 @@ function renderNba(g, sum){
     const x=Number(c.x), y=Number(c.y);
     if(!(x>=0 && x<=50 && y>=-2 && y<=47)) return false;
     if(p.shootingPlay) return true;
-    return /shot|layup|dunk|jumper/i.test(((p.type||{}).text)||"");
+    return /shot|layup|dunk|jumper|free throw/i.test(((p.type||{}).text)||""+" "+(p.text||""));
   });
   const tint=id=>{
     const c=(String(id)===String(away.id)?away:home);
@@ -5697,8 +5697,8 @@ function renderNba(g, sum){
   if(!poss) poss = away.possession ? away : home;
   const P=(x,y)=>{
     const z=Math.max(0,Math.min(1,y/50));
-    const s=0.5+z*0.78;
-    return [200+(x-47)*3.28*s, 38+z*168];
+    const s=0.9+z*0.16;
+    return [200+(x-47)*3.72*s, 44+z*158];
   };
   const seg=pts=>pts.map((pt,i)=>{const q=P(pt[0],pt[1]);return (i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1);}).join(" ");
   const arc=(cx,cy,r,a0,a1)=>{
@@ -5709,7 +5709,7 @@ function renderNba(g, sum){
     }
     return seg(pts);
   };
-  const ink=d=>`<path d="${d}" fill="none" stroke="#f7f1e6" stroke-width="1.4" stroke-linejoin="round"/>`;
+  const ink=d=>`<path d="${d}" fill="none" stroke="#f7f1e6" stroke-width="1.7" stroke-linejoin="round"/>`;
   const floor=seg([[0,0],[94,0],[94,50],[0,50]])+"Z";
   const lines=[
     seg([[0,0],[94,0],[94,50],[0,50],[0,0]]),
@@ -5730,8 +5730,8 @@ function renderNba(g, sum){
   ].map(ink).join("");
   const hoop=(x,y)=>{
     const q=P(x,y);
-    const ry=2.6+(y/50)*2.4;
-    return `<ellipse cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" rx="8" ry="${ry.toFixed(1)}" fill="none" stroke="#ff7a18" stroke-width="2.2"/>`;
+    const ry=4.2+(y/50)*1.4;
+    return `<ellipse cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" rx="12" ry="${ry.toFixed(1)}" fill="none" stroke="#ff7a18" stroke-width="2.6"/>`;
   };
   const badge=(x,y,src,w)=>{
     const q=P(x,y);
@@ -5744,7 +5744,7 @@ function renderNba(g, sum){
     const q=P(o.cx, o.cy);
     const col=tint(lastShot.team&&lastShot.team.id);
     const src=logo(sideOf(lastShot.team&&lastShot.team.id));
-    shotMark=`<g class="shotpt" data-txt="${String(lastShot.text||"").replace(/"/g,"'")}"><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="15" fill="${col}"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="17.5" fill="none" stroke="#fff" stroke-width="2"/><image href="${src}" x="${(q[0]-11).toFixed(1)}" y="${(q[1]-11).toFixed(1)}" width="22" height="22"/></g>`;
+    shotMark=`<g class="shotpt" data-txt="${String(lastShot.text||"").replace(/"/g,"'")}"><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="8" fill="none" stroke="#fff" stroke-width="2.4"/><circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4.2" fill="${col}"/></g>`;
   }
   const court=`<div class="court">
     <div class="possbar"><img alt="" src="${logo(poss)}"/><div><b>POSSESSION</b><span>${nm(poss)}</span></div></div>
@@ -5753,8 +5753,8 @@ function renderNba(g, sum){
       <path d="${floor}" fill="url(#woodg)"/>
       ${lines}
       ${hoop(5.25,25)}${hoop(88.75,25)}
-      ${badge(47,25,logo(home),46)}
-      ${badge(17,28,logo(away),34)}
+      ${badge(47,25,logo(home),36)}
+      ${badge(16,25,logo(away),28)}
       ${shotMark}
     </svg>
     <p id="courtCap">${lastShot?(lastShot.text||""):"The last shot shows up on the floor."}</p>
