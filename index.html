@@ -52,8 +52,6 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .hero h2{font-family:"Bebas Neue",sans-serif;font-size:clamp(32px,8vw,56px);line-height:.95;margin:8px 0 10px;letter-spacing:.01em}
 .kicker{letter-spacing:.2em;text-transform:uppercase;font-size:10px;color:var(--orange);font-weight:800}
 .lede{color:var(--muted);margin:0}
-.hits{margin-top:14px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);cursor:pointer;user-select:none}
-.hits b{color:var(--orange);font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.04em}
 .ownwrap{padding:8px var(--pad) 36px}
 .owncard{background:#101218;border:1px solid #2a241c;border-radius:12px;padding:14px;margin:0 0 12px}
 .owncard h3{margin:0 0 10px;font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:var(--orange)}
@@ -822,7 +820,6 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <p class="kicker">Sports Sauce</p>
     <h2>One place.<br>Live scores. Real stats.<br>In-depth research.</h2>
     <p class="lede">NFL, college, baseball, MLS, the card — and Sauce Cap, in preview.</p>
-    <p class="hits" id="hitLine">Board visits · —</p>
   </div>
   <div class="hub">
     <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
@@ -6577,31 +6574,17 @@ setTimeout(restorePlace, 0);
     saveUse(u);
   }, true);
 
-  const el=$("hitLine");
   const already=localStorage.getItem(dayKey)===today;
   let local=Number(localStorage.getItem(locKey)||0);
   if(!already){ local+=1; localStorage.setItem(locKey, String(local)); localStorage.setItem(dayKey, today); }
-  const paint=n=>{
-    if(!el) return;
-    const v=Number(n);
-    el.innerHTML="Board visits · <b>"+(v>0?v:local).toLocaleString()+"</b>";
-  };
-  paint(local);
-  abacus("sendit", !already).then(n=>{ if(n>0){ paint(n); if(n>local) localStorage.setItem(locKey,String(n)); }});
+  abacus("sendit", !already).then(n=>{ if(n>local) localStorage.setItem(locKey,String(n)); });
   abacus("raw", true);
   window.trackUse("view","home");
 
-  let taps=0, tapT=0;
   function openOwnerGate(){
     show("owner");
     paintOwner();
   }
-  if(el) el.addEventListener("click", ()=>{
-    const n=Date.now();
-    if(n-tapT>1400) taps=0;
-    tapT=n; taps++;
-    if(taps>=5){ taps=0; openOwnerGate(); }
-  });
   if(location.hash==="#owner") setTimeout(openOwnerGate, 200);
 
   function unlocked(){ return localStorage.getItem("sauceOwner")==="1"; }
