@@ -3027,6 +3027,8 @@ async function mlbLive(g){
 }
 async function openGame(id, fid){
   OPEN = String(fid||id||"");
+  window.NBA_SIG="";
+  window.GAME_BUSY=false;
   if(window.trackUse) window.trackUse("game", (LEAGUE||"")+" "+String(id||fid||""));
   if(poll){ clearInterval(poll); poll=null; }
   show("game");
@@ -3107,7 +3109,23 @@ async function openGame(id, fid){
           }
         }catch(e){}
       }
+      if((LEAGUE==="nba" || LEAGUE==="cbb") && $("gameBody")){
+        const hdr0=((sum.header||{}).competitions||[])[0]||{};
+        const comps0=hdr0.competitors||[];
+        const awayC=comps0.find(x=>x.homeAway==="away")||comps0[0]||{};
+        const homeC=comps0.find(x=>x.homeAway==="home")||comps0[1]||{};
+        const lastP=((sum.plays||[]).filter(p=>p&&p.text).slice(-1)[0])||{};
+        const sig=String(lastP.id||"")+"|"+String(awayC.score==null?"":awayC.score)+"|"+String(homeC.score==null?"":homeC.score);
+        const clock=((hdr0.status||{}).type||{}).shortDetail||((hdr0.status||{}).type||{}).detail||"";
+        if(window.NBA_SIG===sig){
+          const el=document.querySelector("#gameBody .scorestrip .clock");
+          if(el && clock) el.textContent=clock;
+          return;
+        }
+        window.NBA_HOLD=sig;
+      }
       renderGame(g, sum);
+      if(window.NBA_HOLD) window.NBA_SIG=window.NBA_HOLD;
       const headerC = (((sum.header||{}).competitions)||[])[0] || {};
       (headerC.competitors||[]).forEach(x=>{
         const sc = x.score==null?"":String((x.score&&x.score.displayValue)!=null?x.score.displayValue:(x.score&&x.score.value)!=null?x.score.value:x.score);
@@ -3120,8 +3138,9 @@ async function openGame(id, fid){
       if(state.completed || state.state==="post"){ if(poll) clearInterval(poll); poll=null; }
     }catch(e){
       if(!$("gameBody")) $("gameRoom").innerHTML = "<p class='hint'>Could not open game. "+(e.message||"")+"</p>";
+    }finally{
+      window.GAME_BUSY=false;
     }
-    window.GAME_BUSY=false;
   }
   await tickGame();
   poll = setInterval(tickGame, LEAGUE==="nba"?2000:(LEAGUE==="cbb"?4000:(LEAGUE==="mlb"?4000:12000)));
@@ -6183,7 +6202,7 @@ function renderNba(g, sum){
     return `<ellipse cx="${cx}" cy="${cy}" rx="${(w*0.42).toFixed(1)}" ry="${(h*0.22).toFixed(1)}" fill="rgba(0,0,0,.22)"/><image href="${src}" x="${(q[0]-w/2).toFixed(1)}" y="${(q[1]-h/2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" opacity="0.95"/>`;
   };
   let shotMark="";
-  if(lastShot && callPlay && String(lastShot.id)===String(callPlay.id)){
+  if(lastShot){
     const o=place(lastShot);
     const q=P(o.cx, o.cy);
     const x=q[0].toFixed(1), y=q[1].toFixed(1);
