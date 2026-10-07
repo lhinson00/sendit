@@ -285,9 +285,9 @@ body{background:#07080c}
 #tab-build .salbar{height:8px;border-radius:99px;background:#1c1a16;margin:4px 2px 16px;overflow:hidden}
 #tab-build .salbar i{display:block;height:100%;background:#ff7a18}
 #tab-build .fx-bank b{font-family:"Bebas Neue",sans-serif;font-size:34px !important;line-height:.9;color:#ff7a18 !important}
-#tab-build .fx-pos button,#tab-build .fx-games button{padding:8px 12px;border-radius:999px;background:#141820;color:#c9c2b8}
+#tab-build .fx-pos button{padding:8px 12px;border-radius:999px;background:#141820;color:#c9c2b8}
 #tab-build .pick{border:0 !important;border-bottom:1px solid #221e18 !important;border-radius:0 !important;background:transparent !important;min-height:64px !important}
-#tab-build .fx-pos,#tab-build .fx-games{display:flex;gap:8px;overflow:auto;margin-bottom:10px;padding-bottom:2px}
+#tab-build .fx-pos{display:flex;gap:8px;overflow:auto;margin-bottom:10px;padding-bottom:2px}
 #tab-build .fx-search{display:grid;grid-template-columns:1fr 92px;gap:8px;margin-bottom:8px}
 #tab-build .fx-search input,#tab-build .fx-search select{background:#101218;border:1px solid #2a241c;color:#f4efe8;border-radius:10px;padding:10px}
 #tab-build .pick .addbtn{width:32px;height:32px;border:0;border-radius:8px;padding:0}
@@ -309,7 +309,7 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
 .quiet{border:0;background:none;color:#9b9288;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:0}
 #tab-build .fx-head{align-items:center}
 #tab-build .fx-bank b{color:#ff7a18;background:none}
-#tab-build .fx-pos button.on,#tab-build .fx-games button.on{background:#ff7a18;color:#140800}
+#tab-build .fx-pos button.on{background:#ff7a18;color:#140800}
 #tab-build .pick .pos{color:#ff7a18}
 #tab-build .pick .addbtn{background:#ff7a18;color:#140800}
 #tab-build .slot{background:#101218 !important;border-color:#2a241c !important}
@@ -348,10 +348,8 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
     <ol class="fx-line" id="slots"></ol>
     <div class="fx-tools">
       <div class="fx-pos" id="posChips"></div>
-      <div class="fx-games" id="gameChips"></div>
       <div class="fx-search">
         <select id="posFilt" hidden></select>
-        <select id="gameFilt" hidden></select>
         <input id="qFilt" type="search" placeholder="Find a player"/>
         <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Value</option><option value="name">A–Z</option></select>
       </div>
@@ -552,7 +550,6 @@ function isRelevant(p){
   if((inj==="Out"||inj==="Injured Reserve") && !scored && p.pos!=="DST") return false;
   if(p.pos==="DST") return true;
   const known=p.depth===1 || !!p.starter;
-  const game=$("gameFilt") && $("gameFilt").value;
   const seat=p.depth||99;
   if(Object.prototype.hasOwnProperty.call(LOGS, p.id)){
     const card=rateOf(p);
@@ -560,10 +557,6 @@ function isRelevant(p){
     if(card && card.g>0 && (card.ppg>=6 || known || hasBump(p))) return true;
     if(hasBump(p)) return true;
     return false;
-  }
-  if(game){
-    if(p.pos==="QB") return known || hasBump(p);
-    return known || seat<=3;
   }
   if(p.pos==="QB") return known || hasBump(p);
   if(p.pos==="RB") return seat<=2 || known;
@@ -672,13 +665,11 @@ function primeLogs(list){
 }
 function paintPool(){
   const pos = $("posFilt").value;
-  const game = $("gameFilt").value;
   const q = ($("qFilt").value||"").trim().toLowerCase();
   const taken = usedIds();
   let rows = STATE.pool.slice();
   if(pos==="FLEX") rows = rows.filter(p=>p.pos==="RB"||p.pos==="WR"||p.pos==="TE");
   else if(pos) rows = rows.filter(p=>p.pos===pos);
-  if(game) rows = rows.filter(p=>String(p.eventId)===String(game));
   if(q) rows = rows.filter(p=>(p.name+" "+p.team).toLowerCase().includes(q));
   rows = rows.filter(isRelevant);
   const sort=($("sortFilt")&&$("sortFilt").value)||"sal";
@@ -735,18 +726,10 @@ function paintFilters(){
   const posSel = $("posFilt");
   const cur = posSel.value || "QB";
   posSel.innerHTML = ["QB","RB","WR","TE","FLEX","DST"].map(p=>`<option${p===cur?" selected":""}>${p}</option>`).join("");
-  const games = STATE.games;
-  const gcur = $("gameFilt").value;
-  $("gameFilt").innerHTML = `<option value="">All games</option>`+games.map(g=>`<option value="${g.eventId}"${g.eventId===gcur?" selected":""}>${g.awayAb} @ ${g.homeAb}</option>`).join("");
   const chips=$("posChips");
   if(chips){
     chips.innerHTML=["QB","RB","WR","TE","FLEX","DST"].map(p=>`<button type="button" data-pos="${p}" class="${p===cur?"on":""}">${p}</button>`).join("");
     chips.querySelectorAll("button").forEach(b=>b.onclick=()=>{ posSel.value=b.dataset.pos; window.PICK_SLOT=""; paintFilters(); paintPool(); paintSlots(); });
-  }
-  const gc=$("gameChips");
-  if(gc){
-    gc.innerHTML=`<button type="button" data-g="" class="${!gcur?"on":""}">All</button>`+games.map(g=>`<button type="button" data-g="${g.eventId}" class="${g.eventId===gcur?"on":""}">${g.awayAb}@${g.homeAb}</button>`).join("");
-    gc.querySelectorAll("button").forEach(b=>b.onclick=()=>{ $("gameFilt").value=b.dataset.g; paintFilters(); paintPool(); });
   }
 }
 
@@ -1808,7 +1791,6 @@ async function openResearch(id){
 $("drawer").onclick=e=>{ if(e.target.id==="drawer"){ STATE.breakId=null; e.currentTarget.classList.remove("on"); } };
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.dataset.tab));
 $("posFilt").onchange=paintPool;
-$("gameFilt").onchange=paintPool;
 $("qFilt").oninput=paintPool;
 $("btnLock").onclick=lockCard;
 $("btnClear").onclick=()=>{
