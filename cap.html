@@ -1748,6 +1748,87 @@ function injBox(p){
   const ret=n&&n.ret?(" · return "+n.ret):"";
   return `<div class="injbox"><b>${status}${part?(" · "+part):""}${ret}</b>${news?`<p>${news}</p>`:""}</div>`;
 }
+const DSTLOG={};
+async function loadDstLog(p){
+  const tid=String(p.teamId||String(p.id).replace(/^DST-/,""));
+  const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/schedule?season=2026",{cache:"no-store"});
+  const d=r.ok?await r.json():{};
+  const events=(d.events||[]).filter(e=>{
+    const kind=String(((e.seasonType||{}).type)||((e.seasonType||{}).id)||"");
+    if(kind && kind!=="2") return false;
+    const comp=(e.competitions||[])[0]||{};
+    return (((comp.status||{}).type||{}).state)==="post";
+  });
+  const sums=await Promise.all(events.map(async e=>{
+    try{
+      const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+e.id,{cache:"force-cache"});
+      return res.ok?await res.json():null;
+    }catch(err){ return null; }
+  }));
+  return events.map((e,i)=>{
+    const comp=(e.competitions||[])[0]||{};
+    const comps=comp.competitors||[];
+    const me=comps.find(c=>String((c.team||{}).id)===tid)||{};
+    const them=comps.find(c=>c!==me)||{};
+    const my=num((me.score&&(me.score.displayValue!=null?me.score.displayValue:me.score.value))||0);
+    const th=num((them.score&&(them.score.displayValue!=null?them.score.displayValue:them.score.value))||0);
+    let bits=sums[i]?dstBits(sums[i], tid):null;
+    if(!bits){
+      const paPts=th===0?10:th<=6?7:th<=13?4:th<=20?1:th<=27?0:th<=34?-1:-4;
+      bits={pa:th, paPts, sk:0, ints:0, fr:0, dtd:0, sf:0, pts:paPts};
+    }
+    return {
+      week:(e.week&&e.week.number)||"",
+      date:e.date||"",
+      at:me.homeAway==="away"?"@":"vs",
+      opp:(them.team||{}).abbreviation||"",
+      score:my+"-"+th,
+      result:my>th?"W":my<th?"L":"T",
+      bits
+    };
+  }).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+}
+function dstBlurb(b){
+  b=b||{};
+  const bits=[(b.pa!=null?b.pa:0)+" allowed"];
+  if(b.sk) bits.push(b.sk+" sack"+(Number(b.sk)===1?"":"s"));
+  if(b.ints) bits.push(b.ints+" INT");
+  if(b.fr) bits.push(b.fr+" FR");
+  if(b.dtd) bits.push(b.dtd+" def TD");
+  if(b.sf) bits.push(b.sf+" safety");
+  return bits.join(" · ");
+}
+function paintDstSheet(p, games){
+  const played=(games||[]).slice().reverse();
+  const total=played.reduce((s,g)=>s+((g.bits&&g.bits.pts)||0),0);
+  const ppg=played.length?total/played.length:0;
+  const rows=played.map(g=>{
+    const where=(g.at==="@"?"@ ":"vs ")+(g.opp||"OPP");
+    const extra=[g.result, g.score].filter(Boolean).join(" ");
+    const pts=(g.bits&&g.bits.pts)||0;
+    return `<div class="grow">
+      <div>
+        <b>${where}</b>
+        <span>${gameWhen(g)}${extra?(" · "+extra):""}</span>
+        <span>${dstBlurb(g.bits)}</span>
+      </div>
+      <div class="fp">${Number(pts).toFixed(1)}<small>FPTS</small></div>
+    </div>`;
+  }).join("");
+  $("sheet").innerHTML=`<div class="grab"></div>
+    <div class="sheethead">
+      <div>
+        <h3>${p.name}</h3>
+        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+      </div>
+      <div class="pay">$${p.sal.toLocaleString()}</div>
+      <button class="close" id="shX" type="button">×</button>
+    </div>
+    <div class="rate"><b>${played.length?ppg.toFixed(1):"—"}</b><span>${played.length?(total.toFixed(1)+" fantasy points in "+played.length+" game"+(played.length===1?"":"s")):"No games played"}</span></div>
+    <p class="seclab">Game log</p>
+    ${rows?`<div class="flog">${rows}</div>`:"<p class='hint'>No games in the log yet.</p>"}`;
+  $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
+}
 async function openResearch(id){
   const p=STATE.pool.find(x=>x.id===id);
   if(!p) return;
@@ -1756,24 +1837,14 @@ async function openResearch(id){
   sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Loading this season…</p>`;
   $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
   if(p.pos==="DST"){
-    const d=TEAMDEF[p.team]||{};
-    sheet.innerHTML=`<div class="grab"></div>
-      <div class="sheethead">
-        <div>
-          <h3>${p.name}</h3>
-          <p class="sub">2026 · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
-        </div>
-        <div class="pay">$${p.sal.toLocaleString()}</div>
-        <button class="close" id="shX" type="button">×</button>
-      </div>
-      <div class="statgrid">
-        <button type="button"><b>${d.pa??"—"}</b><span>Pts allowed</span></button>
-        <button type="button"><b>${d.to??"—"}</b><span>Takeaways</span></button>
-        <button type="button"><b>${d.sacks??"—"}</b><span>Sacks</span></button>
-        <button type="button"><b>${d.st??0}</b><span>ST TDs</span></button>
-      </div>
-      <p class="kmeta">Season team totals. Lower points allowed ranks higher.</p>`;
-    $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
+    try{
+      const games=DSTLOG[p.id]||await loadDstLog(p);
+      DSTLOG[p.id]=games;
+      paintDstSheet(p, games);
+    }catch(e){
+      sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Could not load this season.</p>`;
+      $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
+    }
     return;
   }
   try{
