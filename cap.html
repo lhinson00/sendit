@@ -348,7 +348,7 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
         <select id="posFilt" hidden></select>
         <select id="gameFilt" hidden></select>
         <input id="qFilt" type="search" placeholder="Find a player"/>
-        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Points</option><option value="name">A–Z</option></select>
+        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Per game</option><option value="name">A–Z</option></select>
       </div>
     </div>
     <div class="fx-list" id="pool"><p class="hint">Loading slate…</p></div>
@@ -533,36 +533,38 @@ function hasBump(p){
   const mates=STATE.pool.filter(x=>x.team===p.team && x.pos===p.pos);
   const down=mates.filter(x=>x.id!==p.id && bad(injOf(x)));
   if(!down.length) return false;
-  const downIsLead=down.some(x=>x.starter || (x.depth||99)<=1 || fptsFrom(PROD[x.id]||{}) >= fptsFrom(PROD[p.id]||{}));
+  const downIsLead=down.some(x=>x.starter || (x.depth||99)<=1 || fptsOf(x) >= fptsOf(p));
   if(!downIsLead) return false;
   if(bad(injOf(p))) return false;
   const avail=mates.filter(x=>!bad(injOf(x)) || injOf(x)==="Doubtful" && x.id===p.id)
     .filter(x=>injOf(x)!=="Out" && injOf(x)!=="Injured Reserve")
-    .sort((a,b)=>(a.depth||99)-(b.depth||99) || fptsFrom(PROD[b.id]||{})-fptsFrom(PROD[a.id]||{}) || a.name.localeCompare(b.name));
+    .sort((a,b)=>(a.depth||99)-(b.depth||99) || fptsOf(b)-fptsOf(a) || a.name.localeCompare(b.name));
   return avail[0] && avail[0].id===p.id;
 }
 function isRelevant(p){
   const inj=injOf(p);
-  const scored=fptsFrom(PROD[p.id]||{})>0;
+  const scored=Object.prototype.hasOwnProperty.call(LOGS, p.id) && playedRows(LOGS[p.id]).length>0;
   if((inj==="Out"||inj==="Injured Reserve") && !scored && p.pos!=="DST") return false;
   if(p.pos==="DST") return true;
+  const known=p.depth===1 || !!p.starter;
   const game=$("gameFilt") && $("gameFilt").value;
   const seat=p.depth||99;
+  if(Object.prototype.hasOwnProperty.call(LOGS, p.id)){
+    const card=rateOf(p);
+    if(card && card.proj) return inj!=="Out" && inj!=="Injured Reserve";
+    if(card && card.g>0 && (card.ppg>=6 || known || hasBump(p))) return true;
+    if(hasBump(p)) return true;
+    return false;
+  }
   if(game){
-    if(p.pos==="QB") return seat===1 || !!p.starter || hasBump(p);
-    return true;
+    if(p.pos==="QB") return known || hasBump(p);
+    return known || seat<=3;
   }
-  if(p.pos==="QB") return seat===1 || !!p.starter || hasBump(p);
-  if(!LOGS[p.id] || !yearGames(LOGS[p.id]).length){
-    if(p.pos==="RB") return seat<=2 || !!p.starter;
-    if(p.pos==="WR") return seat<=3 || !!p.starter;
-    if(p.pos==="TE") return seat<=1 || !!p.starter;
-  }
-  if(hasBump(p)) return true;
-  if(p.pos==="QB") return volume(p)>=900 || (p.starter && volume(p)>=200);
-  if(p.pos==="RB") return volume(p)>=220;
-  if(p.pos==="TE") return volume(p)>=160;
-  return volume(p)>=200;
+  if(p.pos==="QB") return known || hasBump(p);
+  if(p.pos==="RB") return seat<=2 || known;
+  if(p.pos==="WR") return seat<=3 || known;
+  if(p.pos==="TE") return seat<=1 || known;
+  return false;
 }
 
 function sparkHtml(p){
@@ -581,44 +583,82 @@ function sparkHtml(p){
   }).join("")+`</div>`;
 }
 function parseSeasonGames(d){
-  const rows=[];
+  const by={};
   (d.seasonTypes||[]).forEach(st=>{
     if(/preseason/i.test(st.displayName||st.name||"")) return;
     (st.categories||[]).forEach(c=>(c.events||[]).forEach(ev=>{
       const meta=(d.events||{})[ev.eventId]||{};
-      const names=ev.names||d.names||[];
+      const names=ev.names||c.names||d.names||[];
       const stats=ev.stats||[];
-      const grab=k=>{ const i=names.indexOf(k); return i>=0?num(stats[i]):0; };
-      rows.push({
+      const row=by[ev.eventId]||{
         date:meta.gameDate||meta.date||"",
         opp:(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||"",
-        passingYards:grab("passingYards"),
-        passingTouchdowns:grab("passingTouchdowns"),
-        rushingYards:grab("rushingYards"),
-        rushingTouchdowns:grab("rushingTouchdowns"),
-        receptions:grab("receptions"),
-        receivingYards:grab("receivingYards"),
-        receivingTouchdowns:grab("receivingTouchdowns")
-      });
+        passingYards:0, passingTouchdowns:0, interceptions:0, passingAttempts:0,
+        rushingYards:0, rushingTouchdowns:0, rushingAttempts:0,
+        receptions:0, receivingYards:0, receivingTouchdowns:0, targets:0, fumblesLost:0
+      };
+      const take=(key, field)=>{
+        const i=names.indexOf(key);
+        if(i<0) return;
+        row[field]=num(stats[i]);
+      };
+      take("passingYards","passingYards");
+      take("passingTouchdowns","passingTouchdowns");
+      take("interceptions","interceptions");
+      take("passingAttempts","passingAttempts");
+      take("rushingYards","rushingYards");
+      take("rushingTouchdowns","rushingTouchdowns");
+      take("rushingAttempts","rushingAttempts");
+      take("receptions","receptions");
+      take("receivingYards","receivingYards");
+      take("receivingTouchdowns","receivingTouchdowns");
+      take("receivingTargets","targets");
+      take("fumblesLost","fumblesLost");
+      by[ev.eventId]=row;
     }));
   });
-  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  return rows;
+  return Object.keys(by).map(k=>by[k]).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+}
+const PRIOR={};
+function playedRows(rows){
+  return (rows||[]).filter(g=>
+    (g.passingAttempts||0)>0 || (g.rushingAttempts||0)>0 || (g.receptions||0)>0 || (g.targets||0)>0
+    || (g.passingYards||0) || (g.rushingYards||0) || (g.receivingYards||0)
+    || (g.passingTouchdowns||0) || (g.rushingTouchdowns||0) || (g.receivingTouchdowns||0)
+  );
+}
+function gameFpts(g){
+  let pts=(g.passingYards||0)*0.04+(g.passingTouchdowns||0)*4+(g.interceptions||0)*-1
+    +(g.rushingYards||0)*0.1+(g.rushingTouchdowns||0)*6
+    +(g.receptions||0)*1+(g.receivingYards||0)*0.1+(g.receivingTouchdowns||0)*6
+    +(g.fumblesLost||0)*-1;
+  if((g.passingYards||0)>=300) pts+=3;
+  if((g.rushingYards||0)>=100) pts+=3;
+  if((g.receivingYards||0)>=100) pts+=3;
+  return pts;
+}
+async function fetchLog(id, season){
+  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog?season="+season,{cache:"force-cache"});
+  return r.ok?parseSeasonGames(await r.json()):[];
 }
 let logQueue=Promise.resolve();
 function primeLogs(list){
-  list.filter(p=>p.pos!=="DST" && !LOGS[p.id]).slice(0,60).forEach(p=>{
-    logQueue=logQueue.then(async()=>{
-      if(LOGS[p.id]) return;
-      try{
-        const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog",{cache:"force-cache"});
-        LOGS[p.id]=r.ok?parseSeasonGames(await r.json()):[];
-      }catch(e){ LOGS[p.id]=[]; }
-      const pl=STATE.pool.find(x=>x.id===p.id);
-      if(pl){ pl.sal=priceLikeDk(pl); pl.inj=injOf(pl); }
+  const todo=(list||[]).filter(p=>p && p.pos!=="DST" && !Object.prototype.hasOwnProperty.call(LOGS, p.id) && ((p.depth||99)<=3 || p.starter));
+  if(!todo.length) return;
+  logQueue=logQueue.then(async()=>{
+    for(let i=0;i<todo.length;i+=6){
+      await Promise.all(todo.slice(i,i+6).map(async p=>{
+        if(Object.prototype.hasOwnProperty.call(LOGS, p.id)) return;
+        try{ LOGS[p.id]=await fetchLog(p.id, 2026); }
+        catch(e){ LOGS[p.id]=[]; }
+        if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter)){
+          try{ PRIOR[p.id]=await fetchLog(p.id, 2025); }
+          catch(e){ PRIOR[p.id]=[]; }
+        }
+      }));
       repriceAll();
-      if(!window._capRepaint){ window._capRepaint=setTimeout(()=>{ window._capRepaint=null; paintAll(); }, 500); }
-    });
+      paintAll();
+    }
   });
 }
 function paintPool(){
@@ -858,10 +898,32 @@ function dstFpts(d){
   else pa=-4;
   return (d.sacks||0)*1 + (d.to||0)*2 + (d.st||0)*6 + pa*gp;
 }
+function rateOf(p){
+  if(!p) return {pts:0, g:0, ppg:0, proj:false};
+  if(p.pos==="DST"){
+    const pts=dstFpts(TEAMDEF[p.team]||{});
+    return {pts, g:0, ppg:pts, proj:false};
+  }
+  if(!Object.prototype.hasOwnProperty.call(LOGS, p.id)) return null;
+  const games=playedRows(LOGS[p.id]);
+  if(games.length){
+    const pts=games.reduce((s,g)=>s+gameFpts(g),0);
+    return {pts, g:games.length, ppg:pts/games.length, proj:false};
+  }
+  const known=(p.depth===1 || p.starter) && injOf(p)!=="Out" && injOf(p)!=="Injured Reserve";
+  if(!known) return {pts:0, g:0, ppg:0, proj:false};
+  const prior=playedRows(PRIOR[p.id]||[]);
+  if(prior.length){
+    const pts=prior.reduce((s,g)=>s+gameFpts(g),0);
+    return {pts:0, g:0, ppg:pts/prior.length, proj:true, prior:true};
+  }
+  const base={QB:15, RB:12, WR:10, TE:7}[p.pos]||8;
+  return {pts:0, g:0, ppg:base, proj:true, prior:false};
+}
 function fptsOf(p){
   if(!p) return 0;
-  if(p.pos==="DST") return dstFpts(TEAMDEF[p.team]||{});
-  return fptsFrom(PROD[p.id]||{});
+  const card=rateOf(p);
+  return card?card.ppg:0;
 }
 function fptsFrom(s){
   s=s||{};
@@ -869,23 +931,17 @@ function fptsFrom(s){
 }
 function seasonGamesSoFar(){ return 2; }
 function gamesOf(p){
-  const n=(yearGames(LOGS[p.id]||[])||[]).length;
-  if(n) return n;
-  return fptsFrom(PROD[p.id]) ? 1 : 0;
-}
-function seasonPts(p){
-  if(p.pos==="DST") return dstFpts(TEAMDEF[p.team]||{});
-  const raw=fptsFrom(PROD[p.id]);
-  if(raw) return raw;
-  if(p.depth===1 || p.starter) return 18;
+  const card=rateOf(p);
+  if(card && card.g) return card.g;
   return 0;
 }
+function seasonPts(p){
+  const card=rateOf(p);
+  if(!card) return 0;
+  if(card.proj) return card.ppg;
+  return card.pts;
+}
 function leaderLine(p){
-  const s=PROD[p.id]||{};
-  if(p.pos!=="DST"){
-    const fp=fptsFrom(s);
-    if(fp) return fp.toFixed(1)+" FPTS";
-  }
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
     const bits=[];
@@ -896,54 +952,44 @@ function leaderLine(p){
     bits.push(dstFpts(d).toFixed(1)+" FPTS");
     return bits.join(" · ")||"D/ST";
   }
-  if(p.pos==="QB") return (s.py||0)+" pass yds"+(s.ptd?(" · "+s.ptd+" TD"):"");
-  if(p.pos==="RB") return ((s.ry||0)+(s.recy||0))+" rush+rec yds";
-  return (s.recy||0)+" rec yds"+(s.rec?(" · "+s.rec+" rec"):"");
+  if(!Object.prototype.hasOwnProperty.call(LOGS, p.id)) return "…";
+  const card=rateOf(p);
+  if(!card) return "…";
+  if(card.proj) return "PROJ "+card.ppg.toFixed(1)+(card.prior?" · last year":" · starter");
+  if(!card.g) return "No games";
+  return card.pts.toFixed(1)+" in "+card.g+"G · "+card.ppg.toFixed(1);
 }
 function fppgOf(p){
-  const pts=seasonPts(p);
-  if(pts) return pts/18;
-  const games=yearGames(LOGS[p.id]||[]).slice(-18);
-  if(games.length){
-    return games.reduce((s,g)=>s+(g.passingYards||0)*0.04+(g.passingTouchdowns||0)*4+(g.rushingYards||0)*0.1+(g.rushingTouchdowns||0)*6+(g.receptions||0)*1+(g.receivingYards||0)*0.1+(g.receivingTouchdowns||0)*6,0)/games.length;
-  }
-  return p.depth===1?8:2;
+  const card=rateOf(p);
+  return card?card.ppg:0;
 }
 function injOf(p){ return (STATE.inj&&STATE.inj[p.id])||""; }
 function projOf(p){
   if(injOf(p)==="Out"||injOf(p)==="Injured Reserve") return 0;
-  return seasonPts(p);
+  return fptsOf(p);
 }
 function posCeil(pos){
-  if(pos==="DST") return 80;
-  let m=1;
-  Object.keys(PROD).forEach(id=>{
-    const s=PROD[id]||{};
-    const isQ= (s.py||0) >= (s.recy||0) && (s.py||0) >= (s.ry||0);
-    const isR= (s.ry||0) > (s.recy||0) && (s.py||0) < 200;
-    if(pos==="QB" && !isQ) return;
-    if(pos==="RB" && !isR) return;
-    if((pos==="WR"||pos==="TE") && isQ) return;
-    const v=fptsFrom(s);
-    if(v>m) m=v;
+  const base={QB:26, RB:22, WR:22, TE:16, DST:14}[pos]||20;
+  let m=base;
+  (STATE.pool||[]).forEach(p=>{
+    if(p.pos!==pos) return;
+    const card=rateOf(p);
+    if(card && !card.proj && card.ppg>m) m=card.ppg;
   });
   return m;
 }
-const CEIL={QB:posCeil("QB"),RB:posCeil("RB"),WR:posCeil("WR"),TE:posCeil("TE"),DST:Math.max(8,...Object.values(TEAMDEF).map(dstFpts))};
 function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
   const inj=injOf(p);
+  if(p.pos!=="DST" && !Object.prototype.hasOwnProperty.call(LOGS, p.id)) return Math.round(((lo+hi)/2)/100)*100;
   const pts=fptsOf(p);
   if(p.pos==="QB" && (isQb2(p)||hasBump(p)) && pts<12) return 5600;
   if(hasBump(p) && pts<8){
     const bump=p.pos==="RB"?5200:4600;
     return bump;
   }
-  if(!pts){
-    if(inj==="Out"||inj==="Injured Reserve") return lo;
-    return lo;
-  }
-  const ceil=CEIL[p.pos]||1;
+  if(!pts) return lo;
+  const ceil=posCeil(p.pos)||1;
   let t=Math.max(0,Math.min(1,pts/ceil));
   let sal=Math.round((lo+Math.pow(t,0.9)*(hi-lo))/100)*100;
   if(pts>0) sal=Math.max(sal, lo+400);
@@ -1039,7 +1085,7 @@ async function loadPool(){
     p.inj=injOf(p); p.sal=priceLikeDk(p); return p;
   });
   repriceAll();
-  $("weekLine").textContent=STATE.label+" · $50,000 · 2026 stats";
+  $("weekLine").textContent=STATE.label+" · $50,000 · games played only";
   paintAll();
   Promise.all([
     loadInjuries().then(()=>{ repriceAll(); paintAll(); }),
@@ -1050,10 +1096,12 @@ async function loadPool(){
         if(d) p.depth=d[p.id];
         else if(p.starter) p.depth=1;
       });
-      repriceAll(); paintAll();
+      repriceAll();
+      paintAll();
+      primeLogs(STATE.pool);
     })
   ]).catch(()=>{});
-  primeLogs(STATE.pool.filter(x=>x.pos!=="DST" && (x.depth===1||x.starter)).slice(0,40));
+  primeLogs(STATE.pool);
 }
 
 function num(v){ return Number(String(v||"0").replace(/,/g,""))||0; }
