@@ -151,7 +151,12 @@ select,input[type=search],input[type=text]{width:100%;background:#0c0d14;border:
 .statgrid b{display:block;font-variant-numeric:tabular-nums;font-size:20px;font-weight:800;letter-spacing:-.03em;line-height:1}
 .statgrid span{display:block;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:5px;font-weight:700}
 .glog{display:grid;gap:6px;margin-top:8px}
-.glog div{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.flog{margin-top:4px}
+.flog .grow{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.flog .grow b{display:block;font-size:14px;font-weight:700}
+.flog .grow span{display:block;color:var(--muted);font-size:12px;margin-top:3px;line-height:1.35}
+.flog .fp{font-family:"Bebas Neue",sans-serif;font-size:28px;line-height:.85;color:var(--orange);text-align:right}
+.flog .fp small{display:block;font-family:Manrope,system-ui,sans-serif;font-size:9px;letter-spacing:.14em;color:var(--muted);font-weight:700;margin-top:3px}
 .kitbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}
 .kitbar label{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);margin-bottom:4px}
 .kitbar select{width:100%;background:#101218;color:#efe6d8;border:1px solid #3a2a18;padding:10px}
@@ -592,6 +597,10 @@ function parseSeasonGames(d){
       const stats=ev.stats||[];
       const row=by[ev.eventId]||{
         date:meta.gameDate||meta.date||"",
+        week:meta.week||"",
+        at:meta.atVs||"",
+        score:meta.score||"",
+        result:meta.gameResult||"",
         opp:(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.displayName))||"",
         passingYards:0, passingTouchdowns:0, interceptions:0, passingAttempts:0,
         rushingYards:0, rushingTouchdowns:0, rushingAttempts:0,
@@ -1688,42 +1697,62 @@ function pickStat(row,key){
   const i=(row.names||[]).indexOf(key);
   return i>=0?num(row.stats[i]):0;
 }
+function gameWhen(g){
+  let day="";
+  if(g.date){
+    const d=new Date(g.date);
+    if(!isNaN(d.getTime())) day=d.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"});
+  }
+  return [g.week?("Wk "+g.week):"", day].filter(Boolean).join(" · ");
+}
+function gameBlurb(g, pos){
+  const bits=[];
+  if(pos==="QB" || g.passingAttempts || g.passingYards || g.passingTouchdowns){
+    bits.push((g.passingYards||0)+" pass yds");
+    if(g.passingTouchdowns) bits.push(g.passingTouchdowns+" TD");
+    if(g.interceptions) bits.push(g.interceptions+" INT");
+  }
+  if(g.rushingAttempts || g.rushingYards || g.rushingTouchdowns){
+    bits.push((g.rushingYards||0)+" rush");
+    if(g.rushingTouchdowns) bits.push(g.rushingTouchdowns+" rush TD");
+  }
+  if(pos!=="QB" && (g.receptions||g.receivingYards||g.receivingTouchdowns)){
+    bits.push((g.receptions||0)+" rec");
+    bits.push((g.receivingYards||0)+" yds");
+    if(g.receivingTouchdowns) bits.push(g.receivingTouchdowns+" TD");
+  }
+  return bits.join(" · ")||"Played";
+}
 function paintResearchSheet(p, games){
-  const keys=seasonKeys(p.pos);
-  const last=games.slice(-18);
-  const n=last.length||1;
-  const avg=k=>{
-    const s=last.reduce((a,g)=>a+pickStat(g,k),0);
-    return /Yard/.test(k) ? Math.round(s/n) : (s/n).toFixed(1);
-  };
-  const stat=($("rStat")&&$("rStat").value)||keys[0].k;
-  const keyObj=keys.find(x=>x.k===stat)||keys[0];
-  const vals=last.map(g=>pickStat(g,keyObj.k));
-  const max=Math.max(1,...vals);
-  const spark=last.map((g,i)=>{
-    const v=vals[i];
-    const h=Math.max(12, Math.round((v/max)*86));
-    return `<i class="hit" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
+  const played=playedRows(games).slice().reverse();
+  const total=played.reduce((s,g)=>s+gameFpts(g),0);
+  const ppg=played.length?total/played.length:0;
+  const rows=played.map(g=>{
+    const where=(g.at==="@"?"@ ":"vs ")+(g.opp||"OPP");
+    const extra=[g.score, g.result].filter(Boolean).join(" ");
+    return `<div class="grow">
+      <div>
+        <b>${where}</b>
+        <span>${gameWhen(g)}${extra?(" · "+extra):""}</span>
+        <span>${gameBlurb(g, p.pos)}</span>
+      </div>
+      <div class="fp">${gameFpts(g).toFixed(1)}<small>FPTS</small></div>
+    </div>`;
   }).join("");
   $("sheet").innerHTML=`<div class="grab"></div>
     <div class="sheethead">
       <div>
         <h3>${p.name}</h3>
-        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""} · last ${last.length} games</p>
+        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
       </div>
       <div class="pay">$${p.sal.toLocaleString()}</div>
       <button class="close" id="shX" type="button">×</button>
     </div>
     ${injBox(p)}
-    <div class="statgrid">${keys.map(x=>`<button type="button" data-stat="${x.k}" class="${x.k===keyObj.k?"on":""}"><b>${last.length?avg(x.k):"—"}</b><span>${x.n}</span></button>`).join("")}</div>
-    <p class="kmeta">${keyObj.n} by game</p>
-    ${last.length?`<div class="spark">${spark}</div>`:"<p class='hint'>No games in the log yet.</p>"}
-    <input type="hidden" id="rStat" value="${keyObj.k}"/>`;
+    <div class="rate"><b>${played.length?ppg.toFixed(1):"—"}</b><span>${played.length?(total.toFixed(1)+" fantasy points in "+played.length+" game"+(played.length===1?"":"s")):"No games played"}</span></div>
+    <p class="seclab">Game log</p>
+    ${rows?`<div class="flog">${rows}</div>`:"<p class='hint'>No games in the log yet.</p>"}`;
   $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
-  $("sheet").querySelectorAll("[data-stat]").forEach(b=>b.onclick=()=>{
-    $("rStat").value=b.dataset.stat;
-    paintResearchSheet(p,games);
-  });
 }
 
 function injBox(p){
@@ -1767,7 +1796,9 @@ async function openResearch(id){
   try{
     const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog",{cache:"no-store"});
     const d=r.ok?await r.json():{};
-    paintResearchSheet(p, thisSeasonGames(d));
+    const games=parseSeasonGames(d);
+    if(games.length) LOGS[p.id]=games;
+    paintResearchSheet(p, games.length?games:(LOGS[p.id]||[]));
   }catch(e){
     sheet.innerHTML=`<button class="close" id="shX">✕</button><h3>${p.name}</h3><p class="hint">Could not load this season.</p>`;
     $("shX").onclick=()=>{ STATE.breakId=null; $("drawer").classList.remove("on"); };
