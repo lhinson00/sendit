@@ -3044,9 +3044,11 @@ async function openGame(id, fid){
     return;
   }
   async function tickGame(){
-    if(OPEN!==id) return;
+    if(OPEN!==id || window.GAME_BUSY) return;
+    window.GAME_BUSY=true;
     try{
-      const res = await fetch(SUM[LEAGUE](id), {cache:"no-store"});
+      const bust=LEAGUE==="nba"?"&cb="+Date.now():"";
+      const res = await fetch(SUM[LEAGUE](id)+bust, {cache:"no-store"});
       const sum = res.ok ? await res.json() : {};
       if(LEAGUE==="mls"){
         window.MLS_PLAYS=window.MLS_PLAYS||{};
@@ -3117,11 +3119,12 @@ async function openGame(id, fid){
       pulseBoard(g);
       if(state.completed || state.state==="post"){ if(poll) clearInterval(poll); poll=null; }
     }catch(e){
-      $("gameRoom").innerHTML = "<p class='hint'>Could not open game. "+(e.message||"")+"</p>";
+      if(!$("gameBody")) $("gameRoom").innerHTML = "<p class='hint'>Could not open game. "+(e.message||"")+"</p>";
     }
+    window.GAME_BUSY=false;
   }
   await tickGame();
-  poll = setInterval(tickGame, (LEAGUE==="nba"||LEAGUE==="cbb")?8000:(LEAGUE==="mlb"?4000:12000));
+  poll = setInterval(tickGame, LEAGUE==="nba"?2000:(LEAGUE==="cbb"?4000:(LEAGUE==="mlb"?4000:12000)));
 }
 function showUfcLineup(card, games){
   const host=$("ufcLineup");
@@ -6013,7 +6016,7 @@ function renderNba(g, sum){
     if(/block/i.test(t)) return "Block";
     return "";
   };
-  const plays=(sum.plays||[]).filter(p=>p.text && !/^(End of|Start of)/i.test(p.text));
+  const plays=(sum.plays||[]).filter(p=>p.text && !/^(End of|Start of)/i.test(p.text)).sort((a,b)=>(Number(a.sequenceNumber)||0)-(Number(b.sequenceNumber)||0));
   const row=p=>{
     const team=byId[String((p.team||{}).id)]||{};
     const clock=((p.clock||{}).displayValue)||"";
@@ -6040,7 +6043,9 @@ function renderNba(g, sum){
     return awayShot ? q<3 : q>=3;
   };
   const place=p=>{
-    const x=Number(p.coordinate.x), y=Number(p.coordinate.y);
+    let x=Number(p.coordinate.x), y=Number(p.coordinate.y);
+    const feet=Number((String(p.text||"").match(/(\d+)\s*-?\s*foot/i)||[])[1]);
+    if(feet && Math.abs(y-feet)>8) y=feet;
     if(endLeft(p)) return {cx:Math.max(1.2,Math.min(45,5.25+y)), cy:Math.max(1.2,Math.min(48.8,x))};
     return {cx:Math.max(49,Math.min(92.8,88.75-y)), cy:Math.max(1.2,Math.min(48.8,50-x))};
   };
@@ -6048,7 +6053,7 @@ function renderNba(g, sum){
   const lastShot=shown[0];
   const nbaCall=p=>{
     if(!p) return null;
-    const text=String(p.text||"").trim();
+    const text=String(p.text||"").replace(/\s+/g," ").trim();
     if(!text || /enters the game|timeout|jump ball|jumpball/i.test(text)) return null;
     const type=String((p.type||{}).text||"");
     const blob=text+" "+type;
@@ -6057,13 +6062,18 @@ function renderNba(g, sum){
     const ft=/free throw/i.test(blob);
     const made=/\bmakes\b/i.test(text);
     const miss=/\bmiss/i.test(text);
+    const stole=text.match(/\(([^)]+?)\s+steals?\)/i);
     let player="", event="", detail="";
     const cut=verb=>{
       const i=text.toLowerCase().indexOf(verb);
       if(i<0) return null;
       return [text.slice(0,i).trim(), text.slice(i+verb.length).trim()];
     };
-    if(made){
+    if(stole){
+      player=stole[1].trim();
+      event="STEAL";
+      detail=text.replace(/\s*\([^)]+\)\s*$/,"").trim();
+    }else if(made){
       const parts=cut("makes ");
       player=parts?parts[0]:"";
       detail=parts?parts[1]:"";
@@ -6173,7 +6183,7 @@ function renderNba(g, sum){
     return `<ellipse cx="${cx}" cy="${cy}" rx="${(w*0.42).toFixed(1)}" ry="${(h*0.22).toFixed(1)}" fill="rgba(0,0,0,.22)"/><image href="${src}" x="${(q[0]-w/2).toFixed(1)}" y="${(q[1]-h/2).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" opacity="0.95"/>`;
   };
   let shotMark="";
-  if(lastShot){
+  if(lastShot && callPlay && String(lastShot.id)===String(callPlay.id)){
     const o=place(lastShot);
     const q=P(o.cx, o.cy);
     const x=q[0].toFixed(1), y=q[1].toFixed(1);
