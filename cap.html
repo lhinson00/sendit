@@ -348,7 +348,7 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
         <select id="posFilt" hidden></select>
         <select id="gameFilt" hidden></select>
         <input id="qFilt" type="search" placeholder="Find a player"/>
-        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Per game</option><option value="name">A–Z</option></select>
+        <select id="sortFilt"><option value="sal">Salary</option><option value="fpts">Value</option><option value="name">A–Z</option></select>
       </div>
     </div>
     <div class="fx-list" id="pool"><p class="hint">Loading slate…</p></div>
@@ -533,12 +533,12 @@ function hasBump(p){
   const mates=STATE.pool.filter(x=>x.team===p.team && x.pos===p.pos);
   const down=mates.filter(x=>x.id!==p.id && bad(injOf(x)));
   if(!down.length) return false;
-  const downIsLead=down.some(x=>x.starter || (x.depth||99)<=1 || fptsOf(x) >= fptsOf(p));
+  const downIsLead=down.some(x=>x.starter || (x.depth||99)<=1);
   if(!downIsLead) return false;
   if(bad(injOf(p))) return false;
   const avail=mates.filter(x=>!bad(injOf(x)) || injOf(x)==="Doubtful" && x.id===p.id)
     .filter(x=>injOf(x)!=="Out" && injOf(x)!=="Injured Reserve")
-    .sort((a,b)=>(a.depth||99)-(b.depth||99) || fptsOf(b)-fptsOf(a) || a.name.localeCompare(b.name));
+    .sort((a,b)=>(a.depth||99)-(b.depth||99) || a.name.localeCompare(b.name));
   return avail[0] && avail[0].id===p.id;
 }
 function isRelevant(p){
@@ -920,10 +920,20 @@ function rateOf(p){
   const base={QB:15, RB:12, WR:10, TE:7}[p.pos]||8;
   return {pts:0, g:0, ppg:base, proj:true, prior:false};
 }
+function willPlay(p){
+  if(!p || p.pos==="DST") return true;
+  const seat=p.depth||99;
+  if(seat===1) return true;
+  if(seat>=99 && p.starter) return true;
+  return false;
+}
 function fptsOf(p){
   if(!p) return 0;
   const card=rateOf(p);
-  return card?card.ppg:0;
+  if(!card) return 0;
+  if(p.pos==="DST") return card.ppg;
+  if(willPlay(p) || hasBump(p)) return card.ppg;
+  return 0;
 }
 function fptsFrom(s){
   s=s||{};
@@ -957,7 +967,9 @@ function leaderLine(p){
   if(!card) return "…";
   if(card.proj) return "PROJ "+card.ppg.toFixed(1)+(card.prior?" · last year":" · starter");
   if(!card.g) return "No games";
-  return card.pts.toFixed(1)+" in "+card.g+"G · "+card.ppg.toFixed(1);
+  const seat=(p.depth||99)<=8 ? (" · "+p.pos+p.depth) : "";
+  const bench=(!willPlay(p) && !hasBump(p)) ? " · bench" : "";
+  return card.pts.toFixed(1)+" in "+card.g+"G · "+card.ppg.toFixed(1)+seat+bench;
 }
 function fppgOf(p){
   const card=rateOf(p);
@@ -974,7 +986,7 @@ function posCeil(pos){
   (STATE.pool||[]).forEach(p=>{
     if(p.pos!==pos) return;
     const card=rateOf(p);
-    if(card && !card.proj && card.ppg>m) m=card.ppg;
+    if(card && !card.proj && willPlay(p) && card.ppg>m) m=card.ppg;
   });
   return m;
 }
@@ -983,7 +995,7 @@ function priceLikeDk(p){
   const inj=injOf(p);
   if(p.pos!=="DST" && !Object.prototype.hasOwnProperty.call(LOGS, p.id)) return Math.round(((lo+hi)/2)/100)*100;
   const pts=fptsOf(p);
-  if(p.pos==="QB" && (isQb2(p)||hasBump(p)) && pts<12) return 5600;
+  if(hasBump(p) && p.pos==="QB" && pts<12) return 5600;
   if(hasBump(p) && pts<8){
     const bump=p.pos==="RB"?5200:4600;
     return bump;
