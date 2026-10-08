@@ -1398,12 +1398,13 @@ function openLiveBreak(id){
 }
 function paintLive(){
   const lu=activeLineup();
-  const pulses=[];
+  const mine=!STATE.viewCard || !!(STATE.viewCard.mine) || String(STATE.viewCard.name||"").trim().toLowerCase()===String(STATE.sealName||STATE.name||"").trim().toLowerCase();
   const seen=new Set();
   const strips=[];
   SLOTS.forEach(k=>{
     const p=STATE.pool.find(x=>x.id===lu[k]);
     if(!p||!p.eventId||seen.has(p.eventId)) return;
+    if(!mine && !gameStarted(p)) return;
     seen.add(p.eventId);
     const gp=gamePulse(p.eventId);
     const live=gp.st==="in";
@@ -1420,8 +1421,7 @@ function paintLive(){
     const cls=sc.status==="LIVE"?" live":sc.status==="Final"?" done":"";
     const prev=(window._livePts||{})[k];
     const bump=p && prev!=null && sc.pts>prev+0.05 ? " bump" : "";
-    if(p){ window._livePts=window._livePts||{}; window._livePts[k]=sc.pts; }
-    const mine=!STATE.viewCard || STATE.viewCard.name===STATE.name;
+    if(p && mine){ window._livePts=window._livePts||{}; window._livePts[k]=sc.pts; }
     const show=mine || !p || gameStarted(p);
     const chip=sc.status==="LIVE"?"<span class='chip live'>"+(gp&&gp.sit?gp.sit:"Live")+"</span>":sc.status==="Final"?"<span class='chip fin'>Final</span>":"<span class='chip pre'>Upcoming</span>";
     const face=(p&&show)?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
@@ -1437,10 +1437,15 @@ function paintLive(){
   $("liveGrid").querySelectorAll("[data-cast]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); openSauceCast(b.dataset.cast); });
   $("liveGrid").querySelectorAll("[data-break]").forEach(row=>row.onclick=()=>{ if(row.dataset.break) openLiveBreak(row.dataset.break); });
   $("liveGrid").querySelectorAll("a.gchip").forEach(a=>a.onclick=e=>{ e.preventDefault(); const u=new URL(a.href, location.href); openSauceCast(u.searchParams.get("game")); });
-  const tot=cardTotal(lu);
+  const tot=SLOTS.reduce((s,k)=>{
+    const p=STATE.pool.find(x=>x.id===lu[k]);
+    if(!p) return s;
+    if(!mine && !gameStarted(p)) return s;
+    return s+scorePlayer(p).pts;
+  },0);
   $("liveTotal").textContent=tot.toFixed(1);
   const watching=STATE.viewCard;
-  $("liveSub").textContent = watching ? (watching.name+" · tap a player") : "";
+  $("liveSub").textContent = watching ? (watching.name+(mine?"":" · picks open at kickoff")) : "";
   if(watching){
     const bar=document.createElement("div");
     bar.className="backbar";
