@@ -228,22 +228,26 @@ function openCard(name){
   state.openName=name;
   const row=(state.board||[]).find(x=>x.name===name); if(!row) return;
   const picks=row.picks||{};
+  const mine=String(name||"").trim().toLowerCase()===String(card().name||"").trim().toLowerCase();
   const rows=state.games.filter(g=>picks[g.id]).map(g=>{
-    const cls=resultOf(g,picks[g.id]);
+    const reveal=mine || started(g);
+    const cls=reveal?resultOf(g,picks[g.id]):"open";
     const live=g.state==="in"?" live":"";
     const done=g.state==="post"?" done":"";
     const href="/?league="+(state.lg==="nfl"?"nfl":"cfb")+"&game="+g.id;
-    const aWin=cls==="hit"&&picks[g.id]===g.away.id?" win":cls==="miss"&&picks[g.id]===g.away.id?" miss":"";
-    const hWin=cls==="hit"&&picks[g.id]===g.home.id?" win":cls==="miss"&&picks[g.id]===g.home.id?" miss":"";
+    const aWin=reveal&&cls==="hit"&&picks[g.id]===g.away.id?" win":reveal&&cls==="miss"&&picks[g.id]===g.away.id?" miss":"";
+    const hWin=reveal&&cls==="hit"&&picks[g.id]===g.home.id?" win":reveal&&cls==="miss"&&picks[g.id]===g.home.id?" miss":"";
     const when=g.state==="in"?("LIVE · "+(g.detail||"")):g.state==="post"?(g.detail||"Final"):(g.detail||"");
+    const starA=reveal&&picks[g.id]===g.away.id?"★":"☆";
+    const starH=reveal&&picks[g.id]===g.home.id?"★":"☆";
     return `<a class="gcard${live}${done}" href="${href}">
       <div class="gstat"><span>${when}</span><span>${g.tv||""}</span></div>
       <div class="bigline">
-        <div class="nm${aWin}"><span class="star">${picks[g.id]===g.away.id?"★":"☆"}</span><span class="logoplate"><img alt="" src="${g.away.logo}"/></span><span class="who">${g.away.name}</span></div>
+        <div class="nm${aWin}"><span class="star">${starA}</span><span class="logoplate"><img alt="" src="${g.away.logo}"/></span><span class="who">${g.away.name}</span></div>
         <div class="sc"><em class="${aWin.trim()}">${g.away.score||"–"}</em><span>–</span><em class="${hWin.trim()}">${g.home.score||"–"}</em></div>
-        <div class="nm r${hWin}"><span class="who">${g.home.name}</span><span class="logoplate"><img alt="" src="${g.home.logo}"/></span><span class="star">${picks[g.id]===g.home.id?"★":"☆"}</span></div>
+        <div class="nm r${hWin}"><span class="who">${g.home.name}</span><span class="logoplate"><img alt="" src="${g.home.logo}"/></span><span class="star">${starH}</span></div>
       </div>
-      <div class="sub">${g.play||""}</div>
+      <div class="sub">${reveal?(g.play||""):"Pick hidden until kickoff"}</div>
     </a>`;
   }).join("");
   $("match").innerHTML=`<div class="bar"><button class="back" id="backBoard" type="button">← Board</button></div><div class="list">${rows}</div>`;
