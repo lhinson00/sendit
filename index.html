@@ -972,6 +972,18 @@ let slateT = null;
 const $ = id => document.getElementById(id);
 window.VIEW_Y = window.VIEW_Y || {};
 window.VIEW_NOW = window.VIEW_NOW || "home";
+try{ history.scrollRestoration="manual"; }catch(e){}
+function stickScroll(done){
+  const go=()=>{
+    if(window.HOLD_Y==null) return;
+    const y=Number(window.HOLD_Y)||0;
+    const max=Math.max(0, (document.documentElement.scrollHeight||0)-window.innerHeight);
+    window.scrollTo(0, Math.min(y, max));
+  };
+  go();
+  [40,120,300,700,1400,2400,4000].forEach(t=>setTimeout(go, t));
+  if(done) setTimeout(()=>{ window.HOLD_Y=null; }, 4200);
+}
 function viewPin(){
   const k = (window.VIEW_NOW||"home")+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
   window.VIEW_Y[k] = window.scrollY || document.documentElement.scrollTop || 0;
@@ -991,7 +1003,8 @@ async function show(name, opts){
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
   window.VIEW_NOW = name;
   if($("navBack")) $("navBack").hidden = name==="home";
-  if(opts.keep) viewPop(name);
+  if(window.HOLD_Y!=null) stickScroll();
+  else if(opts.keep) viewPop(name);
   else window.scrollTo(0,0);
   if(window.trackUse) window.trackUse("view", name);
   savePlace();
@@ -1006,7 +1019,13 @@ function savePlace(){
     sessionStorage.setItem("saucePlace", JSON.stringify({
       view, league:LEAGUE, tab:window.BOARD||"", open:OPEN||"", eat,
       team:window.TEAM_CTX||null, teamSport:window.FROMCBB?"cbb":window.FROMNBA?"nba":window.FROMNHL?"nhl":window.FROMMLB?"mlb":window.FROMNFL?"nfl":window.FROMMLS?"mls":"",
-      player:window.PLAYER_CTX||null
+      player:window.PLAYER_CTX||null,
+      y: window.HOLD_Y!=null ? window.HOLD_Y : (window.scrollY||document.documentElement.scrollTop||0),
+      ufcTab: window.UFC_TAB||"",
+      ufcOpen: window.UFC_OPEN||"",
+      tnTab: window.TN_TAB||"",
+      slate: window.SLATE_PICK||null,
+      fighter: LEAGUE==="ufc" && window.PLAYER_CTX ? window.PLAYER_CTX : null
     }));
   }catch(e){}
 }
@@ -1014,19 +1033,29 @@ async function restorePlace(){
   let p=null;
   try{ p=JSON.parse(sessionStorage.getItem("saucePlace")||"null"); }catch(e){}
   if(!p || !p.view || p.view==="home"){ show("home"); return; }
+  window.HOLD_Y = Number(p.y)||0;
+  if(p.slate) window.SLATE_PICK=p.slate;
   if(p.league && typeof loadLeague==="function"){
     await loadLeague(p.league);
-    if(p.eat){ showEat({keepFrom:true}); return; }
-    if(p.tab==="kit" && LEAGUE==="nfl") nflTab("kit");
+    if(p.eat){ showEat({keepFrom:true}); stickScroll(true); return; }
+    if(LEAGUE==="ufc"){
+      ufcTab(p.ufcTab||"card");
+      if(p.ufcOpen && (p.ufcTab||"")==="sched"){ window.UFC_OPEN=p.ufcOpen; paintUfcSchedule(); }
+    } else if(LEAGUE==="nba" && p.tab && p.tab!=="slate") nbaTab(p.tab);
+    else if(LEAGUE==="cbb" && p.tab && p.tab!=="slate") cbbTab(p.tab);
+    else if(p.tab==="kit" && LEAGUE==="nfl") nflTab("kit");
     else if(p.tab==="lead" && LEAGUE==="nfl") nflTab("lead");
     else if(p.tab==="stand" && LEAGUE==="nfl") nflTab("stand");
     else if(p.tab && LEAGUE==="cfb" && p.tab!=="slate") cfbTab(p.tab);
     else if(p.tab && (LEAGUE==="mlb" || LEAGUE==="nhl") && p.tab!=="slate") mlbTab(p.tab);
     else if(p.tab && LEAGUE==="mls" && p.tab!=="slate" && typeof mlsTab==="function") mlsTab(p.tab);
+    else if(LEAGUE==="tssaa") tssaaTab(p.tnTab||p.tab||"fb");
     if(p.view==="game" && p.open && typeof openGame==="function"){
       openGame(p.open);
-    }
-    if(p.view==="player" && p.player && p.player.id){
+    } else if(p.view==="player" && LEAGUE==="ufc" && (p.fighter||p.player)){
+      const f=p.fighter||p.player||{};
+      openFighter(f.id||"", f.name||"Fighter");
+    } else if(p.view==="player" && p.player && p.player.id){
       openPlayer(p.player.id, p.player.name||"Player");
     } else if(p.view==="player" && p.team && p.team.id){
       if(p.teamSport==="cbb") openCbbTeam(p.team.id, p.team.name||"Team");
@@ -1035,7 +1064,10 @@ async function restorePlace(){
       else if(p.teamSport==="mlb") openMlbTeam(p.team.id, p.team.name||"Team");
       else if(p.teamSport==="nfl") openNflTeam(p.team.id, p.team.name||"Team");
       else if(p.teamSport==="mls") openMlsTeam(p.team.id, p.team.name||"Team");
+      else if(p.teamSport==="cfb" || LEAGUE==="cfb") openTeam(p.team.id, p.team.name||"Team");
     }
+    stickScroll(true);
+    savePlace();
     return;
   }
   show("home");
@@ -3220,11 +3252,13 @@ function paintUfcSchedule(){
   const host=$("boardPanel");
   if(!host) return;
   host.hidden=false;
-  if(window.UFC_OPEN){ paintUfcFutureCard(window.UFC_OPEN); return; }
+  const reopen=window.UFC_OPEN;
+  if(window.UFC_EVENTS && window.UFC_EVENTS.length && reopen){ paintUfcFutureCard(reopen); return; }
   host.innerHTML="<p class='hint'>Loading the upcoming cards…</p>";
   pullUfcFuture().then(evs=>{
     window.UFC_EVENTS=evs;
     if(window.UFC_TAB!=="sched") return;
+    if(reopen){ window.UFC_OPEN=reopen; paintUfcFutureCard(reopen); return; }
     if(!evs.length){ host.innerHTML="<p class='hint'>No upcoming UFC cards posted.</p>"; return; }
     host.innerHTML=evs.map(ev=>{
       const n=(ev.competitions||[]).length;
@@ -6595,6 +6629,8 @@ $("toSlate").onclick = ()=>{
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
 setTimeout(restorePlace, 0);
+window.addEventListener("scroll", ()=>{ if(window.HOLD_Y!=null) return; clearTimeout(window.PIN_T); window.PIN_T=setTimeout(savePlace, 120); }, {passive:true});
+window.addEventListener("pagehide", savePlace);
 (async function openFromQuery(){
   try{
     const q=new URLSearchParams(location.search);
