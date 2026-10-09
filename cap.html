@@ -764,6 +764,7 @@ function tabTo(name, opt){
   $("tab-stand").hidden = name!=="stand";
   paintBudget();
   if(name==="stand") refreshLive();
+  capSpot();
 }
 
 function capWeekId(){
@@ -1314,6 +1315,7 @@ function openCardLive(name){
   const bar=$("lockbar"); if(bar) bar.classList.remove("on");
   if(hist[hist.length-1]!=="card") hist.push("card");
   paintLive();
+  capSpot();
 }
 
 function pullBox(p){
@@ -1901,6 +1903,26 @@ $("btnUnlock").onclick=()=>{
 };
 
 loadStore();
+try{ history.scrollRestoration="manual"; }catch(e){}
+function capSpot(){
+  const tab=!$("tab-live").hidden?"card":(!$("tab-stand").hidden?"stand":"build");
+  try{
+    sessionStorage.setItem("sauceCap.spot", JSON.stringify({
+      tab, card: (STATE.viewCard&&STATE.viewCard.name)||"", y: window.scrollY||document.documentElement.scrollTop||0
+    }));
+  }catch(e){}
+}
+function stickCap(y){
+  const n=Number(y)||0;
+  const go=()=>{
+    const max=Math.max(0, (document.documentElement.scrollHeight||0)-window.innerHeight);
+    window.scrollTo(0, Math.min(n, max));
+  };
+  go();
+  [40,120,300,700,1400].forEach(t=>setTimeout(go, t));
+}
+window.addEventListener("scroll", ()=>{ clearTimeout(window.PIN_T); window.PIN_T=setTimeout(capSpot, 120); }, {passive:true});
+window.addEventListener("pagehide", capSpot);
 (async function boot(){
   try{
     const prevWeek=STATE.week;
@@ -1909,8 +1931,14 @@ loadStore();
     await loadPool();
     await pullBoard();
     await refreshLive();
-    const stay=sessionStorage.getItem("sauceCap.tab")==="stand"?"stand":"build";
-    tabTo(stay);
+    let spot=null;
+    try{ spot=JSON.parse(sessionStorage.getItem("sauceCap.spot")||"null"); }catch(e){}
+    if(spot && spot.tab==="card" && spot.card){
+      openCardLive(spot.card);
+      if($("tab-live").hidden) tabTo(spot.tab==="stand"?"stand":"stand", {back:true});
+    } else tabTo(spot&&spot.tab==="stand"?"stand":"build", {back:true});
+    if(spot) stickCap(spot.y||0);
+    capSpot();
     startInjuryClock();
     setInterval(()=>{
       const live=STATE.games.some(g=>g.state==="in");
