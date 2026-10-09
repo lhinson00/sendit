@@ -293,8 +293,9 @@ body{background:#07080c}
 #tab-build .pick .addbtn{width:32px;height:32px;border:0;border-radius:8px;padding:0}
 #tab-build .desk,#tab-build .pcard{display:none}
 
-.top{display:flex;align-items:flex-end;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
-.top b{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em;font-weight:400}
+.top{display:flex;align-items:center;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
+.top b{flex:1;font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em;font-weight:400}
+.backpill{border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;padding:8px 12px;margin-right:10px}
 .top em{color:var(--orange);font-style:normal}
 .top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .weekline{margin:0;padding:10px 16px 0;color:#9b9288;font-size:12px;letter-spacing:.04em}
@@ -327,7 +328,7 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
 </style>
 </head>
 <body>
-<header class="top"><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
+<header class="top"><button type="button" class="backpill" id="navBack">Back</button><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
 <p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
 <nav class="tabs">
   <button type="button" class="on" data-tab="build">LINEUP</button>
@@ -462,14 +463,14 @@ function paintBudget(){
   $("remain").textContent = "$"+r.toLocaleString();
   $("spent").textContent = "$"+s.toLocaleString();
   $("remain").style.color = r<0 ? "#ff3b3b" : "#ff7a18";
-  $("btnLock").textContent = "Lock";
+  $("btnLock").textContent = STATE.locked ? "Unlock" : "Lock";
   const ready = !STATE.locked && filled() && r>=0;
   const bar=$("lockbar");
   const onLineup = $("tab-build") && !$("tab-build").hidden;
-  if(bar) bar.classList.toggle("on", !!(onLineup && ready));
+  if(bar) bar.classList.toggle("on", !!(onLineup && (STATE.locked || ready)));
   const who=$("whoLine"); if(who) who.textContent=STATE.name||"";
   const un=$("btnUnlock");
-  if(un) un.hidden = !STATE.locked;
+  if(un) un.hidden = true;
   const clr=$("btnClear");
   if(clr) clr.hidden = STATE.locked || !SLOTS.some(k=>STATE.lineup[k]);
 }
@@ -738,8 +739,19 @@ function paintAll(){
   paintBudget(); paintSlots(); paintFilters(); paintPool(); paintLive(); paintStand();
 }
 
-function tabTo(name){
-  if(name==="live") name="stand";
+const hist=["build"];
+function goBack(){
+  const ask=$("nameAsk");
+  if(ask && ask.classList.contains("on")){ ask.classList.remove("on"); return; }
+  if($("drawer") && $("drawer").classList.contains("on")){ STATE.breakId=null; $("drawer").classList.remove("on"); return; }
+  if(STATE.viewCard){ STATE.viewCard=null; if(hist[hist.length-1]==="card") hist.pop(); tabTo(hist[hist.length-1]||"stand", {back:true}); return; }
+  if(hist.length<=1){ location.href="/"; return; }
+  hist.pop();
+  tabTo(hist[hist.length-1]||"build", {back:true});
+}
+function tabTo(name, opt){
+  if(name==="live"||name==="card") name="stand";
+  if(!opt || !opt.back){ if(hist[hist.length-1]!==name) hist.push(name); }
   STATE.viewCard=null;
   STATE.tab=name;
   try{ sessionStorage.setItem("sauceCap.tab", name); }catch(e){}
@@ -1299,6 +1311,7 @@ function openCardLive(name){
   $("tab-live").hidden=false;
   const nav=document.querySelector(".tabs"); if(nav) nav.style.display="none";
   const bar=$("lockbar"); if(bar) bar.classList.remove("on");
+  if(hist[hist.length-1]!=="card") hist.push("card");
   paintLive();
 }
 
@@ -1451,7 +1464,7 @@ function paintLive(){
     bar.className="backbar";
     bar.innerHTML='<button type="button" id="backBoard">Board</button><b>'+watching.name+'</b>';
     $("liveGrid").prepend(bar);
-    $("backBoard").onclick=()=>{ STATE.viewCard=null; tabTo("stand"); };
+    $("backBoard").onclick=()=>goBack();
   }
 }
 
@@ -1865,10 +1878,20 @@ async function openResearch(id){
 }
 
 $("drawer").onclick=e=>{ if(e.target.id==="drawer"){ STATE.breakId=null; e.currentTarget.classList.remove("on"); } };
+$("navBack").onclick=goBack;
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.dataset.tab));
 $("posFilt").onchange=paintPool;
 $("qFilt").oninput=paintPool;
-$("btnLock").onclick=lockCard;
+$("btnLock").onclick=()=>{
+  if(STATE.locked){
+    STATE.locked=false;
+    saveStore();
+    paintAll();
+    toast("Unlocked. Started games stay on the card.");
+    return;
+  }
+  lockCard();
+};
 $("btnClear").onclick=()=>{
   const keep={};
   SLOTS.forEach(k=>{ if(slotFrozen(k)) keep[k]=STATE.lineup[k]; });
