@@ -15,6 +15,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .top em{color:var(--orange);font-style:normal}
 .top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .screen{display:none}.screen.on{display:block;padding-bottom:84px}
+body:has(.lockbar.on) .screen.on{padding-bottom:150px}
 .doors{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px}
 .door{border:0;border-radius:18px;padding:22px 14px;text-align:left;color:#fff;background:#120e0c linear-gradient(115deg,rgba(255,122,24,.35),transparent 42%);border:1px solid rgba(255,122,24,.4)}
 .door img{width:64px;height:64px;object-fit:contain;background:#fff;border-radius:16px;padding:6px}
@@ -32,10 +33,12 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .side span{color:#9b9288;font-size:11px}
 .side.on{background:#2a170c;box-shadow:inset 0 -3px 0 var(--orange)}
 .vs{display:grid;place-items:center;color:var(--orange);font-family:"Bebas Neue",sans-serif;font-size:20px}
-.nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);display:none;grid-template-columns:1fr 1fr;background:#101218;border-top:2px solid var(--orange);padding-left:118px;box-sizing:border-box}
-.navback{position:fixed;left:14px;bottom:16px;z-index:50;height:46px;padding:0 18px;border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:14px;box-shadow:0 10px 28px rgba(0,0,0,.45)}
-.nav.on{display:grid}
-.nav button{border:0;background:transparent;color:#9b9288;padding:16px;font-weight:800;letter-spacing:.08em}
+.nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:76px;background:#101218;border-top:2px solid var(--orange);box-sizing:border-box;z-index:30}
+.nav.full{grid-template-columns:76px 1fr 1fr}
+.nav button[data-view]{display:none}
+.nav.full button[data-view]{display:block}
+.nav button{border:0;background:transparent;color:#9b9288;padding:16px 8px;font-weight:800;letter-spacing:.08em}
+.nav #navBack{color:#ffc46b}
 .nav button.on{color:#140800;background:var(--orange)}
 .seat{width:100%;border:0;background:#101218;color:inherit;display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:14px;text-align:left;border-bottom:1px solid #221e18}
 .seat .rk{font-family:"Bebas Neue",sans-serif;font-size:32px;color:var(--orange)}
@@ -83,8 +86,8 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .scard .win{color:#3ee0a0}
 .scard .pick{box-shadow:inset 0 -2px 0 #ff7a18}
 .scard .sub{margin-top:6px;color:#c9c2b8;font-size:12px}
-#slate{padding-bottom:130px}.lockbar{display:none;margin:0;padding:0}
-.lockbar.on{display:block;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;background:#0c0a09;padding:8px;box-sizing:border-box}
+#slate{padding-bottom:150px}.lockbar{display:none;margin:0;padding:0}
+.lockbar.on{display:block;position:fixed;left:50%;bottom:62px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:20;background:transparent;padding:0 0 8px;box-sizing:border-box}
 .lockbar button{width:100%;height:48px;border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px}
 .whoami{margin:10px 16px 0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em}
 .whoami:empty{display:none}
@@ -99,7 +102,6 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 </head>
 <body>
 <header class="top"><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></header>
-<button type="button" class="navback" id="navBack">Back</button>
 <section class="screen on" id="choose">
   <div class="doors">
     <button class="door" id="lgNfl" type="button"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Week slate</span></button>
@@ -113,7 +115,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 </section>
 <section class="screen" id="board"><div id="boardList"></div></section>
 <section class="screen" id="match"></section>
-<nav class="nav" id="nav"><button class="on" data-view="slate" type="button">SLATE</button><button data-view="board" type="button">BOARD</button></nav>
+<nav class="nav" id="nav"><button type="button" id="navBack">Back</button><button class="on" data-view="slate" type="button">SLATE</button><button data-view="board" type="button">BOARD</button></nav>
 <div class="lockbar" id="lockbar"><button id="lock" type="button">Lock</button></div>
 <div class="toast" id="toast"></div>
 <div class="nameask" id="nameAsk"><form onsubmit="return false">
@@ -133,7 +135,7 @@ function show(id, opt){
   opt=opt||{};
   if(!opt.back && hist[hist.length-1]!==id) hist.push(id);
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id));
-  $("nav").classList.toggle("on", id==="slate"||id==="board");
+  $("nav").classList.toggle("full", id!=="choose");
   paintLock();
 }
 function goBack(){
