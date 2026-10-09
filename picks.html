@@ -10,10 +10,13 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,sans-serif}
 body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
-.top{display:flex;align-items:flex-end;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
+.top{display:flex;align-items:center;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
+.top b{flex:1}
+.backpill{border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;padding:8px 12px;margin-right:10px}
+.top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .top b{font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em}
 .top em{color:var(--orange);font-style:normal}
-.top a,.top button{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
+.top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .screen{display:none}.screen.on{display:block;padding-bottom:84px}
 .doors{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:18px}
 .door{border:0;border-radius:18px;padding:22px 14px;text-align:left;color:#fff;background:#120e0c linear-gradient(115deg,rgba(255,122,24,.35),transparent 42%);border:1px solid rgba(255,122,24,.4)}
@@ -97,7 +100,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 </style>
 </head>
 <body>
-<header class="top"><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></header>
+<header class="top"><button type="button" class="backpill" id="navBack">Back</button><b>SAUCE <em>PICK EM</em></b><a href="/">HOME</a></header>
 <section class="screen on" id="choose">
   <div class="doors">
     <button class="door" id="lgNfl" type="button"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Week slate</span></button>
@@ -108,11 +111,11 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
   <div class="strip"><span>PICKS<strong id="made">0</strong></span><span>RECORD<strong id="rec">0-0</strong></span><span>OPEN<strong id="open">0</strong></span></div>
   <p class="whoami" id="whoLine"></p>
   <div id="games"></div>
-  <div class="lockbar" id="lockbar"><button id="lock" type="button">Lock</button></div>
 </section>
 <section class="screen" id="board"><div id="boardList"></div></section>
 <section class="screen" id="match"></section>
 <nav class="nav" id="nav"><button class="on" data-view="slate" type="button">SLATE</button><button data-view="board" type="button">BOARD</button></nav>
+<div class="lockbar" id="lockbar"><button id="lock" type="button">Lock</button></div>
 <div class="toast" id="toast"></div>
 <div class="nameask" id="nameAsk"><form onsubmit="return false">
   <p>Name on the board</p>
@@ -125,7 +128,38 @@ const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const state={lg:"nfl",games:[],board:[],cards:{nfl:{picks:{},name:"",locked:false},cfb:{picks:{},name:"",locked:false}}};
 const $ = id => document.getElementById(id);
 function toast(m){ const t=$("toast"); t.textContent=m; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none",1400); }
-function show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); $("nav").classList.toggle("on", id==="slate"||id==="board"); }
+const hist=["choose"];
+function screenNow(){ return hist[hist.length-1]||"choose"; }
+function show(id, opt){
+  opt=opt||{};
+  if(!opt.back && hist[hist.length-1]!==id) hist.push(id);
+  document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id));
+  $("nav").classList.toggle("on", id==="slate"||id==="board");
+  paintLock();
+}
+function goBack(){
+  const ask=$("nameAsk");
+  if(ask && ask.classList.contains("on")){ ask.classList.remove("on"); return; }
+  if(hist.length<=1){ location.href="/"; return; }
+  hist.pop();
+  show(hist[hist.length-1], {back:true});
+  if(screenNow()==="board") load().then(paintBoard);
+}
+function paintLock(){
+  const btn=$("lock");
+  const bar=$("lockbar");
+  if(!btn||!bar) return;
+  const here=screenNow();
+  const need=state.games.filter(g=>!started(g));
+  const ready=need.length>0&&need.every(g=>card().picks[g.id]);
+  if(card().locked){
+    btn.textContent="Unlock";
+    bar.classList.toggle("on", here==="slate"||here==="board");
+  }else{
+    btn.textContent="Lock";
+    bar.classList.toggle("on", here==="slate" && ready);
+  }
+}
 function weekAnchor(){
   const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"});
   const parts=fmt.formatToParts(new Date()); const g=k=>parts.find(x=>x.type===k).value;
@@ -184,7 +218,7 @@ function saveLocal(){
   const who=$("whoLine"); if(who) who.textContent=card().name||"";
   const need=state.games.filter(g=>!started(g));
   const ready=need.length>0&&need.every(g=>card().picks[g.id]);
-  $("lockbar").classList.toggle("on", ready);
+  paintLock();
   const picks=card().picks; let w=0,l=0,open=0;
   state.games.forEach(g=>{ if(!started(g)) open++; const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; });
   $("made").textContent=Object.keys(picks).length+"/"+state.games.length; $("rec").textContent=w+"-"+l; $("open").textContent=open;
@@ -252,7 +286,7 @@ function openCard(name){
   }).join("");
   $("match").innerHTML=`<div class="bar"><button class="back" id="backBoard" type="button">← Board</button></div><div class="list">${rows}</div>`;
   show("match");
-  $("backBoard").onclick=()=>show("board");
+  $("backBoard").onclick=()=>goBack();
 }
 async function paintBoard(){
   const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&week=like.pem-*&select=name,lineup",{headers:headers()});
@@ -284,7 +318,14 @@ function askName(){
   });
 }
 $("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb");
+$("navBack").onclick=goBack;
 $("lock").onclick=async()=>{
+  if(card().locked){
+    card().locked=false;
+    saveLocal();
+    toast("Unlocked. Started games stay.");
+    return;
+  }
   const need=state.games.filter(g=>!started(g));
   if(!need.length || need.some(g=>!card().picks[g.id])) return toast("Finish the open games");
   if(!card().name){
