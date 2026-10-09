@@ -295,12 +295,12 @@ body{background:#07080c}
 
 .top{display:flex;align-items:center;padding:14px 16px 10px;background:linear-gradient(90deg,#2a1408,#07080c 62%);border-bottom:2px solid var(--orange)}
 .top b{flex:1;font-family:"Bebas Neue",sans-serif;font-size:34px;letter-spacing:.04em;font-weight:400}
-.backpill{border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;padding:8px 12px;margin-right:10px}
 .top em{color:var(--orange);font-style:normal}
 .top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .weekline{margin:0;padding:10px 16px 0;color:#9b9288;font-size:12px;letter-spacing:.04em}
 body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
-.tabs{position:fixed;top:auto;left:50%;bottom:0;height:auto;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0;background:#101218;border-top:2px solid var(--orange);z-index:25}
+.tabs{position:fixed;top:auto;left:50%;bottom:0;height:auto;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0 0 0 118px;box-sizing:border-box;background:#101218;border-top:2px solid var(--orange);z-index:25}
+.navback{position:fixed;left:14px;bottom:16px;z-index:50;height:46px;padding:0 18px;border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:14px;box-shadow:0 10px 28px rgba(0,0,0,.45)}
 .tabs button{flex:none;height:auto;border:0;border-radius:0;background:transparent;color:#9b9288;padding:16px;font-weight:800;letter-spacing:.08em;font-size:13px}
 .tabs button.on{border-color:transparent;background:var(--orange);color:#140800}
 .lockbar{display:none;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;background:#0c0a09;padding:8px;box-sizing:border-box}
@@ -328,7 +328,8 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
 </style>
 </head>
 <body>
-<header class="top"><button type="button" class="backpill" id="navBack">Back</button><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
+<header class="top"><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
+<button type="button" class="navback" id="navBack">Back</button>
 <p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
 <nav class="tabs">
   <button type="button" class="on" data-tab="build">LINEUP</button>
@@ -1459,13 +1460,6 @@ function paintLive(){
   $("liveTotal").textContent=tot.toFixed(1);
   const watching=STATE.viewCard;
   $("liveSub").textContent = watching ? (watching.name+(mine?"":" · picks open at kickoff")) : "";
-  if(watching){
-    const bar=document.createElement("div");
-    bar.className="backbar";
-    bar.innerHTML='<button type="button" id="backBoard">Board</button><b>'+watching.name+'</b>';
-    $("liveGrid").prepend(bar);
-    $("backBoard").onclick=()=>goBack();
-  }
 }
 
 
