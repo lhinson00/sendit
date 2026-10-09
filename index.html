@@ -914,7 +914,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <div><label>Line · last 18</label><select id="kLine"></select></div>
     </div>
     <p class="hint kitnote">Track a trend to put it on Tracker.</p>
-    <p class="hint" id="kitMeta">Last 18 games · ESPN logs</p>
+    <p class="hint" id="kitMeta">Last 18 games</p>
     <div id="kitLog" class="kitlog"></div>
     <div id="kitList" class="list"></div>
   </div>
@@ -1502,7 +1502,7 @@ function paint(games){
     if(todays.length) shown=todays;
     $("liveMeta").textContent = "MLB · Today · "+shown.length+(shown.some(g=>g.state==="in")?" · LIVE":"");
   }
-  if(!shown.length){ host.innerHTML="<p class='hint'>Nothing on the ESPN board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
+  if(!shown.length){ host.innerHTML="<p class='hint'>Nothing on the board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
   if(LEAGUE==="ufc"){
     const events={};
     games.forEach(g=>{
@@ -1728,13 +1728,13 @@ async function pullDayBoard(lg){
   }catch(e){}
   if(off) return [];
   const res=await fetch(base,{cache:"no-store"});
-  if(!res.ok) throw new Error("ESPN "+res.status);
+  if(!res.ok) throw new Error("unavailable");
   return (await res.json()).events||[];
 }
 async function pullCfbEvents(){
   const base=URLS.cfb;
   const res=await fetch(base,{cache:"no-store"});
-  if(!res.ok) throw new Error("ESPN "+res.status);
+  if(!res.ok) throw new Error("unavailable");
   const d=await res.json();
   const week=noteWeek("cfb", d);
   const year=Number((d.season&&d.season.year)||2026);
@@ -1749,7 +1749,7 @@ async function pullCfbEvents(){
 async function pullNflEvents(){
   const base=URLS.nfl;
   const res=await fetch(base,{cache:"no-store"});
-  if(!res.ok) throw new Error("ESPN "+res.status);
+  if(!res.ok) throw new Error("unavailable");
   const d=await res.json();
   let evs=d.events||[];
   const dow=centralDow();
@@ -1788,7 +1788,7 @@ async function pullScoreboard(lg){
   if(lg==="mlb" || lg==="nhl" || lg==="nba" || lg==="cbb") return pullDayBoard(lg);
   if(lg!=="mlb" && lg!=="mls"){
     const res=await fetch(base,{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     return (await res.json()).events||[];
   }
   const evs=[], seen=new Set();
@@ -1809,7 +1809,7 @@ async function pullScoreboard(lg){
   }
   if(evs.length) return evs;
   const res=await fetch(base,{cache:"no-store"});
-  if(!res.ok) throw new Error("ESPN "+res.status);
+  if(!res.ok) throw new Error("unavailable");
   return (await res.json()).events||[];
 }
 function tnDateLabel(mdy){
@@ -2153,8 +2153,8 @@ async function loadLeague(lg){
   LEAGUE=lg;
   if(window.trackUse) window.trackUse("league", lg);
   show("live");
-  $("liveMeta").textContent = "Loading "+lg.toUpperCase();
-  if(lg!=="tssaa") $("liveList").innerHTML = "<p class='hint'>Talking to ESPN…</p>";
+  $("liveMeta").textContent = "";
+  if(lg!=="tssaa") $("liveList").innerHTML = "";
   if($("tssaaTabs")) $("tssaaTabs").hidden = lg!=="tssaa";
   if($("dayTabs") && lg==="tssaa") $("dayTabs").hidden=true;
   if($("tabEatAny")) $("tabEatAny").hidden = true;
@@ -2587,7 +2587,7 @@ function renderFootball(g, sum){
   if(!playing){
     $("clipMount").innerHTML = clips
       ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>`
-      : `<p class="hint">Highlights post when ESPN cuts them.</p>`;
+      : `<p class="hint">Highlights post after the game.</p>`;
   }
   $("clipMount").hidden = tab!=="hl" && tab!=="live";
   bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
@@ -2836,7 +2836,7 @@ function renderGame(g, sum){
     ${venue?`<p class="hint">${venue}</p>`:""}
     ${LEAGUE==="mlb"?"":boxHtml(sum)}`;
   if(!playing){
-    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"||LEAGUE==="mlb"?"":"<p class='hint'>Highlights post after ESPN cuts them.</p>");
+    $("clipMount").innerHTML = clips ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>` : (g.state==="pre"||LEAGUE==="mlb"?"":"<p class='hint'>Highlights post after the game.</p>");
   }
   bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
 }
@@ -2869,7 +2869,7 @@ function ufcLiveBoard(g, extra){
   const live=g.state==="in";
   const sa=extra.away||{}, sh=extra.home||{};
   if(!(live || extra.away || extra.home)){
-    return `<p class="hint">${live?"Waiting on ESPN live stats…":"Stats post when the cage door shuts — or the second the fight goes live."}</p>`;
+    return `<p class="hint">${live?"Stats update as the fight goes.":"Stats post when the cage door shuts — or the second the fight goes live."}</p>`;
   }
   const sigA=(sa.sigStrikesLanded||"0")+"/"+(sa.sigStrikesAttempted||"0");
   const sigH=(sh.sigStrikesLanded||"0")+"/"+(sh.sigStrikesAttempted||"0");
@@ -2967,10 +2967,10 @@ function renderFight(g){
 }
 async function loadFightHistory(aid, name, hostId){
   const write = html => { const host=$(hostId); if(host) host.innerHTML=html; };
-  if(!aid){ write("<div class='box'><h3>"+(name||"Fighter")+" · history</h3><p class='hint'>No ESPN id for this fighter.</p></div>"); return; }
+  if(!aid){ write("<div class='box'><h3>"+(name||"Fighter")+" · history</h3><p class='hint'>No history for this fighter yet.</p></div>"); return; }
   try{
     const res=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/mma/ufc/athletes/"+aid,{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const data=await res.json();
     const keys=data.events||[];
     const map=data.eventsMap||{};
@@ -2986,9 +2986,9 @@ async function loadFightHistory(aid, name, hostId){
       const title=e.titleFight?" <span class='titlechip'>Title</span>":"";
       return "<tr><td>"+dt+"</td><td>"+(e.shortName||e.name||"")+" "+title+"</td><td>"+opp+"</td><td>"+method+(rnd?(" · "+rnd):"")+"</td><td>"+tag+"</td></tr>";
     }).filter(Boolean);
-    if(!rows.length){ write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>No ESPN history posted yet.</p></div>"); return; }
+    if(!rows.length){ write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>No fight history posted yet.</p></div>"); return; }
     const w=rows.filter(x=>x.indexOf("chipwin")>=0).length, l=rows.filter(x=>x.indexOf("chiploss")>=0).length;
-    write("<div class='box'><h3>"+name+" · "+rows.length+" fights · "+w+"-"+l+" on ESPN</h3><table class='bx'><thead><tr><th>Date</th><th>Event</th><th>Opp</th><th>Method</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>");
+    write("<div class='box'><h3>"+name+" · "+rows.length+" fights · "+w+"-"+l+"</h3><table class='bx'><thead><tr><th>Date</th><th>Event</th><th>Opp</th><th>Method</th><th></th></tr></thead><tbody>"+rows.join("")+"</tbody></table></div>");
   }catch(e){
     write("<div class='box'><h3>"+name+" · history</h3><p class='hint'>Could not load history. "+(e.message||"")+"</p></div>");
   }
@@ -3376,7 +3376,7 @@ async function openFighter(pid, name){
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
   if(!pid) pid = await findMmaId(name);
   if(!pid){
-    $("playerRoom").innerHTML="<p class='hint'>Could not match "+name+" on ESPN.</p>";
+    $("playerRoom").innerHTML="<p class='hint'>Could not match "+name+".</p>";
     return;
   }
   try{
@@ -5349,7 +5349,7 @@ async function openMlbLeaders(){
     const sport=LEAGUE==="nhl"?"hockey/leagues/nhl":"baseball/leagues/mlb";
     const year=LEAGUE==="nhl"?"2027":"2026";
     const res=await fetch("https://sports.core.api.espn.com/v2/sports/"+sport+"/seasons/"+year+"/types/2/leaders?limit=15",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
       const leaders=(c.leaders||[]).slice(0,12).map(L=>{
@@ -5526,7 +5526,7 @@ async function openPolls(){
     };
     const cfp = extra[0] || (d.rankings||[]).find(p=>/playoff|cfp|committee/i.test(p.name||""));
     host.innerHTML = `<p class="hint">${(d.latestWeek&&d.latestWeek.displayName)||"Week polls"} · tap a team</p><div class="pollgrid">${list.map(col).join("")}</div>` +
-      (cfp && !list.includes(cfp) ? `<div class="pollgrid">${col(cfp)}</div>` : `<p class="hint">College Football Playoff ranking publishes later in the season. This board will pick it up when ESPN adds the ballot.</p>`);
+      (cfp && !list.includes(cfp) ? `<div class="pollgrid">${col(cfp)}</div>` : `<p class="hint">College Football Playoff ranking publishes later in the season. </p>`);
     host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openTeam(b.dataset.tid, b.dataset.tname||"Team"));
   }catch(e){
     host.innerHTML="<p class='hint'>Could not load polls. "+(e.message||"")+"</p>";
@@ -5782,7 +5782,7 @@ async function openLeaders(lg){
     let cats=[];
     if(lg==="nfl"){
       const res=await fetch("https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/types/2/leaders?limit=20",{cache:"no-store"});
-      if(!res.ok) throw new Error("ESPN "+res.status);
+      if(!res.ok) throw new Error("unavailable");
       const d=await res.json();
       cats=(d.categories||[]).map(c=>{
         const leaders=(c.leaders||[]).slice(0,15).map(L=>{
@@ -5800,7 +5800,7 @@ async function openLeaders(lg){
         ? "https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/groups/"+gid+"/leaders?limit=50"
         : "https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/leaders?limit=50";
       const res=await fetch(curl,{cache:"no-store"});
-      if(!res.ok) throw new Error("ESPN "+res.status);
+      if(!res.ok) throw new Error("unavailable");
       const d=await res.json();
       cats=(d.categories||[]).map(c=>{
         const leaders=(c.leaders||[]).slice(0,40).map(L=>{
@@ -5905,7 +5905,7 @@ async function openCbbStandings(){
   host.innerHTML="<p class='hint'>Loading college basketball standings…</p>";
   try{
     const res=await fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     window.CBB_CONF=(d.children||[]).map(conf=>({
       id:String(conf.abbreviation||conf.id||"").toLowerCase(),
@@ -5944,7 +5944,7 @@ async function openCbbLeaders(){
   host.innerHTML="<p class='hint'>Loading college basketball leaders…</p>";
   try{
     const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/2026/types/2/leaders?limit=12",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
       const leaders=(c.leaders||[]).slice(0,10).map(L=>{
@@ -6045,7 +6045,7 @@ async function openNbaStandings(){
   host.innerHTML="<p class='hint'>Loading NBA standings…</p>";
   try{
     const res=await fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const blocks=(d.children||[]).map(conf=>{
       const teams=((conf.standings||{}).entries||[]).slice().sort((a,b)=>Number(stv(a.stats,"playoffSeed")||99)-Number(stv(b.stats,"playoffSeed")||99));
@@ -6070,7 +6070,7 @@ async function openNbaLeaders(){
   host.innerHTML="<p class='hint'>Loading NBA leaders…</p>";
   try{
     const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/types/2/leaders?limit=12",{cache:"no-store"});
-    if(!res.ok) throw new Error("ESPN "+res.status);
+    if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
       const leaders=(c.leaders||[]).slice(0,10).map(L=>{
