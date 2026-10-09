@@ -137,6 +137,7 @@ function show(id, opt){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id));
   $("nav").classList.toggle("full", id!=="choose");
   paintLock();
+  pinPick();
 }
 function goBack(){
   const ask=$("nameAsk");
@@ -337,7 +338,41 @@ $("lock").onclick=async()=>{
   try{ await pushCard(); toast("On the board"); paintBoard(); show("board"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="board")); }
   catch(e){ card().locked=false; saveLocal(); toast("Not saved"); }
 };
+try{ history.scrollRestoration="manual"; }catch(e){}
+function pinPick(){
+  try{
+    sessionStorage.setItem("saucePick.spot", JSON.stringify({
+      screen: screenNow(), lg: state.lg, who: state.openName||"", y: window.scrollY||document.documentElement.scrollTop||0
+    }));
+  }catch(e){}
+}
+function stickPick(y){
+  const n=Number(y)||0;
+  const go=()=>{
+    const max=Math.max(0, (document.documentElement.scrollHeight||0)-window.innerHeight);
+    window.scrollTo(0, Math.min(n, max));
+  };
+  go();
+  [40,120,300,700,1400].forEach(t=>setTimeout(go, t));
+}
+window.addEventListener("scroll", ()=>{ clearTimeout(window.PIN_T); window.PIN_T=setTimeout(pinPick, 120); }, {passive:true});
+window.addEventListener("pagehide", pinPick);
 loadLocal();
+let spot=null;
+try{ spot=JSON.parse(sessionStorage.getItem("saucePick.spot")||"null"); }catch(e){}
+if(spot && spot.lg){ state.lg=spot.lg; loadLocal(); }
+if(spot && spot.screen && spot.screen!=="choose"){
+  const backTo=spot.screen==="match"?"board":spot.screen;
+  if(backTo==="board") hist=["choose","slate","board"];
+  else hist=["choose","slate"];
+  show(backTo, {back:true});
+  document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view===backTo));
+  load().then(async ()=>{
+    if(backTo==="board") await paintBoard();
+    if(spot.screen==="match" && spot.who) openCard(spot.who);
+    stickPick(spot.y||0);
+  });
+}
 </script>
 </body>
 </html>
