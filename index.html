@@ -2152,7 +2152,7 @@ async function loadLeague(lg){
     if($("mlsTabs")) $("mlsTabs").hidden = lg!=="mls";
     if($("ufcTabs")) $("ufcTabs").hidden = lg!=="ufc";
     if($("tssaaTabs")) $("tssaaTabs").hidden = true;
-    if($("tabEatAny")) $("tabEatAny").hidden = lg!=="ufc";
+    if($("tabEatAny")) $("tabEatAny").hidden = true;
     if($("boardPanel")) { $("boardPanel").hidden = true; $("boardPanel").innerHTML=""; }
     window.BOARD = "slate";
     if($("kitPanel")) $("kitPanel").hidden = true;
@@ -3186,6 +3186,7 @@ function showUfcLineup(card, games, box){
 function ufcTab(which){
   window.UFC_TAB=which;
   if(which!=="sched") window.UFC_OPEN=null;
+  if($("tabEatAny")) $("tabEatAny").hidden=true;
   if($("tabUfcCard")) $("tabUfcCard").classList.toggle("on", which==="card");
   if($("tabUfcSched")) $("tabUfcSched").classList.toggle("on", which==="sched");
   if($("tabUfcRank")) $("tabUfcRank").classList.toggle("on", which==="rank");
@@ -3265,21 +3266,42 @@ function parseUfcBoards(html){
   });
   return {updated, boards};
 }
+function wikiRows(text){
+  const rows=[];
+  const re=/!\s*(?:style="[^"]*"\|)?(?:\{\{Tooltip\|)?(C|\d+)[^\n]*\n\| \{\{flagicon\|[^}]+\}\}\n\| ?\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/g;
+  let m;
+  while((m=re.exec(text))) rows.push([m[1]==="C"?"C":m[1], (m[3]||m[2]).replace(/_/g," ")]);
+  return rows;
+}
 async function paintUfcRanks(){
   const host=$("boardPanel");
   if(!host) return;
   host.hidden=false;
   host.innerHTML="<p class='hint'>Loading official rankings…</p>";
+  const want=[
+    [16,"Men's Pound-for-Pound"],
+    [26,"Women's Pound-for-Pound"],
+    [10,"Flyweight"],[9,"Bantamweight"],[8,"Featherweight"],[7,"Lightweight"],
+    [6,"Welterweight"],[5,"Middleweight"],[4,"Light Heavyweight"],[3,"Heavyweight"],
+    [14,"Women's Strawweight"],[13,"Women's Flyweight"],[12,"Women's Bantamweight"]
+  ];
   try{
-    const r=await fetch("https://www.ufc.com/rankings",{cache:"no-store"});
-    if(!r.ok) throw new Error("Rankings did not load");
-    const pack=parseUfcBoards(await r.text());
-    if(!pack.boards.length) throw new Error("Rankings page was empty");
-    window.UFC_BOARDS=pack;
+    const packs=(await Promise.all(want.map(async pair=>{
+      try{
+        const r=await fetch("https://en.wikipedia.org/w/api.php?action=parse&page=UFC_rankings&prop=wikitext&format=json&origin=*&section="+pair[0],{cache:"no-store"});
+        if(!r.ok) return null;
+        const d=await r.json();
+        const text=((d.parse||{}).wikitext||{})["*"]||"";
+        const date=(text.match(/Rankings released on ([A-Za-z]+ \d{1,2}, \d{4})/)||[])[1]||"";
+        return {name:pair[1], rows:wikiRows(text), date};
+      }catch(e){ return null; }
+    }))).filter(Boolean);
+    const boards=packs.filter(b=>b.rows.length);
+    if(!boards.length) throw new Error("Rankings page was empty");
     if(window.UFC_TAB!=="rank") return;
     const ids={};
     (window.LIVE_GAMES||[]).forEach(g=>{ if(g.away) ids[g.away]=g.awayId; if(g.home) ids[g.home]=g.homeId; });
-    const block=boards=>boards.map(b=>{
+    const block=list=>list.map(b=>{
       const rows=b.rows.map(row=>{
         const name=row[1], pid=ids[name]||"";
         const img=pid?"<img alt='' src='https://a.espncdn.com/i/headshots/mma/players/full/"+pid+".png'/>":"<span></span>";
@@ -3287,9 +3309,10 @@ async function paintUfcRanks(){
       }).join("");
       return "<div class='rankdiv'><h3>"+b.name+"</h3>"+rows+"</div>";
     }).join("");
-    const p4p=pack.boards.filter(b=>/pound/i.test(b.name));
-    const divs=pack.boards.filter(b=>!/pound/i.test(b.name));
-    host.innerHTML="<div class='rankwrap'><p class='hint'>Official UFC rankings"+(pack.updated?" · updated "+pack.updated:"")+"</p>"+block(p4p)+"<div class='rankgrid'>"+block(divs)+"</div></div>";
+    const p4p=boards.filter(b=>/pound/i.test(b.name));
+    const divs=boards.filter(b=>!/pound/i.test(b.name));
+    const when=[...new Set(boards.map(b=>b.date).filter(Boolean))].join(" · ");
+    host.innerHTML="<div class='rankwrap'><p class='hint'>Official UFC rankings"+(when?" · "+when:"")+"</p>"+block(p4p)+"<div class='rankgrid'>"+block(divs)+"</div></div>";
   }catch(e){
     if(window.UFC_TAB==="rank") host.innerHTML="<p class='hint'>Rankings did not load. "+(e.message||"")+"</p>";
   }
