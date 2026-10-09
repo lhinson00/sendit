@@ -298,12 +298,13 @@ body{background:#07080c}
 .top em{color:var(--orange);font-style:normal}
 .top a{margin-left:auto;border:0;background:none;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-decoration:none}
 .weekline{margin:0;padding:10px 16px 0;color:#9b9288;font-size:12px;letter-spacing:.04em}
-body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
-.tabs{position:fixed;top:auto;left:50%;bottom:0;height:auto;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0 0 0 118px;box-sizing:border-box;background:#101218;border-top:2px solid var(--orange);z-index:25}
-.navback{position:fixed;left:14px;bottom:16px;z-index:50;height:46px;padding:0 18px;border:0;border-radius:999px;background:#ff7a18;color:#140c08;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:14px;box-shadow:0 10px 28px rgba(0,0,0,.45)}
-.tabs button{flex:none;height:auto;border:0;border-radius:0;background:transparent;color:#9b9288;padding:16px;font-weight:800;letter-spacing:.08em;font-size:13px}
+body{width:auto;max-width:1120px;background:#05060a;padding-bottom:88px}
+body:has(.lockbar.on){padding-bottom:156px}
+.tabs{position:fixed;top:auto;left:50%;bottom:0;height:auto;transform:translateX(-50%);width:min(760px,100%);display:grid;grid-template-columns:76px 1fr 1fr;gap:0;padding:0;box-sizing:border-box;background:#101218;border-top:2px solid var(--orange);z-index:30}
+.tabs button{flex:none;height:auto;border:0;border-radius:0;background:transparent;color:#9b9288;padding:16px 8px;font-weight:800;letter-spacing:.08em;font-size:13px}
 .tabs button.on{border-color:transparent;background:var(--orange);color:#140800}
-.lockbar{display:none;position:fixed;left:50%;bottom:54px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:6;background:#0c0a09;padding:8px;box-sizing:border-box}
+.tabs #navBack{color:#ffc46b;letter-spacing:.06em}
+.lockbar{display:none;position:fixed;left:50%;bottom:62px;transform:translateX(-50%);width:min(736px,calc(100% - 16px));z-index:20;background:transparent;padding:0 0 8px;box-sizing:border-box}
 .lockbar.on{display:block}
 .lockbar .go{width:100%;height:48px;border:0;border-radius:10px;background:var(--orange);color:#140800;font-weight:800}
 .lockbar .go:disabled{opacity:1}
@@ -329,9 +330,9 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:84px}
 </head>
 <body>
 <header class="top"><b>SAUCE <em>CAP</em></b><a href="/">HOME</a></header>
-<button type="button" class="navback" id="navBack">Back</button>
 <p class="weekline" id="weekLine">Loading this week’s NFL slate…</p>
 <nav class="tabs">
+  <button type="button" id="navBack">Back</button>
   <button type="button" class="on" data-tab="build">LINEUP</button>
   <button type="button" data-tab="stand">BOARD</button>
 </nav>
@@ -756,7 +757,7 @@ function tabTo(name, opt){
   STATE.viewCard=null;
   STATE.tab=name;
   try{ sessionStorage.setItem("sauceCap.tab", name); }catch(e){}
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===name));
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b=>b.classList.toggle("on", b.dataset.tab===name));
   const nav=document.querySelector(".tabs"); if(nav) nav.style.display="";
   $("tab-build").hidden = name!=="build";
   $("tab-live").hidden = true;
@@ -1310,7 +1311,6 @@ function openCardLive(name){
   $("tab-build").hidden=true;
   $("tab-stand").hidden=true;
   $("tab-live").hidden=false;
-  const nav=document.querySelector(".tabs"); if(nav) nav.style.display="none";
   const bar=$("lockbar"); if(bar) bar.classList.remove("on");
   if(hist[hist.length-1]!=="card") hist.push("card");
   paintLive();
@@ -1873,7 +1873,7 @@ async function openResearch(id){
 
 $("drawer").onclick=e=>{ if(e.target.id==="drawer"){ STATE.breakId=null; e.currentTarget.classList.remove("on"); } };
 $("navBack").onclick=goBack;
-document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tabTo(b.dataset.tab));
+document.querySelectorAll(".tabs button[data-tab]").forEach(b=>b.onclick=()=>tabTo(b.dataset.tab));
 $("posFilt").onchange=paintPool;
 $("qFilt").oninput=paintPool;
 $("btnLock").onclick=()=>{
