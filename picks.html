@@ -300,8 +300,7 @@ async function paintBoard(){
   const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0,done=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; done++; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l,done,picks}; }).sort((a,b)=>b.w-a.w||a.l-b.l||a.name.localeCompare(b.name));
   state.board=scored;
   $("boardList").innerHTML=scored.length?scored.map((x,i)=>{
-    const pct=x.done?Math.round(x.w/x.done*100):0;
-    return `<button class="seat" type="button" data-who="${x.name}"><div class="rk">${i+1}</div><div><b>${x.name}</b><span>${Object.keys(x.picks).length} picks</span><div class="meter"><i style="width:${pct}%"></i></div></div><div class="rec">${x.w}-${x.l}</div></button>`;
+    return `<button class="seat" type="button" data-who="${x.name}"><div class="rk">${i+1}</div><div><b>${x.name}</b></div><div class="rec">${x.w}-${x.l}</div></button>`;
   }).join(""):"<p style='padding:20px;color:#9b9288'>No locked cards in this league.</p>";
   $("boardList").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>openCard(b.dataset.who));
 }
