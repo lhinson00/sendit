@@ -1853,10 +1853,10 @@ function rosterSheet(groups){
 function parseTnBoard(html){
   const rows=[];
   const src=html||"";
-  const re=/data-eventid="(\d+)"[\s\S]{0,800}?gameStatus[^>]*>([^<]{0,40})[\s\S]{0,4000}?visitingname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?visitingscore[^>]*>([\s\d]*)[\s\S]{0,4000}?hostname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?hostscore[^>]*>([\s\d]*)/gi;
+  const re=/data-eventid="(\d+)"\s+data-sport="Football"[\s\S]{0,800}?gameStatus[^>]*>([^<]{0,40})[\s\S]{0,4000}?visitingname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?visitingscore[^>]*>([\s\d]*)[\s\S]{0,4000}?hostname[\s\S]{0,400}?<a[^>]*>([^<]+)<\/a>[\s\S]{0,500}?hostscore[^>]*>([\s\d]*)/gi;
   let m;
   while((m=re.exec(src))){
-    rows.push({id:m[1], status:(m[2]||"").trim()||"Final", away:m[3].trim(), as:(m[4]||"").trim(), home:m[5].trim(), hs:(m[6]||"").trim()});
+    rows.push({id:m[1], sport:"Football", status:(m[2]||"").trim()||"Final", away:m[3].trim(), as:(m[4]||"").trim(), home:m[5].trim(), hs:(m[6]||"").trim()});
   }
   if(rows.length) return rows;
   const ids=[...src.matchAll(/eventid=(\d+)/gi)];
@@ -1865,12 +1865,17 @@ function parseTnBoard(html){
     const id=hit[1];
     if(seen.has(id)) return;
     const chunk=src.slice(hit.index, hit.index+2200);
+    const lead=src.slice(Math.max(0,hit.index-800), hit.index);
+    const sport=(chunk.match(/data-sport="([^"]+)"/i)||[])[1]||((lead.match(/data-sport="([^"]+)"/gi)||[]).pop()||"").replace(/.*"/,"").replace(/".*/,"");
+    const named=(lead.match(/\b(Football|Soccer|Volleyball|Basketball|Softball|Baseball)\b/gi)||[]).pop()||"";
+    const which=sport||named;
+    if(!/football/i.test(which)) return;
     const teams=[...chunk.matchAll(/\[([^\]]+)\]\(https?:\/\/www\.coacht\.com\/[^)]*team\.cfm[^)]*\)\s+(\d+\s*-\s*\d+)/gi)];
     if(teams.length<2) return;
     seen.add(id);
     const time=(chunk.match(/\b\d{1,2}:\d{2}\s*[AP]M\b/i)||[])[0]||"";
     const final=/final/i.test(chunk);
-    rows.push({id, status:final?"Final":(time||"Tonight"), away:teams[0][1].trim(), as:"", home:teams[1][1].trim(), hs:"", ar:teams[0][2].replace(/\s/g,""), hr:teams[1][2].replace(/\s/g,"")});
+    rows.push({id, sport:"Football", status:final?"Final":(time||"Tonight"), away:teams[0][1].trim(), as:"", home:teams[1][1].trim(), hs:"", ar:teams[0][2].replace(/\s/g,""), hr:teams[1][2].replace(/\s/g,"")});
   });
   return rows;
 }
@@ -1883,7 +1888,8 @@ function applyTnScores(rows, day){
     let g=pack.games.find(x=>String(x.id)===String(r.id));
     if(!g) g=pack.games.find(x=>x.date===day && tnNameHit(x.home,r.home) && tnNameHit(x.away,r.away));
     if(!g){
-      g={id:String(r.id), date:day, region:"", status:r.status||"Tonight", away:r.away, home:r.home, as:r.as||"", hs:r.hs||"", ar:r.ar||"", hr:r.hr||"", aid:"", hid:""};
+      if(!/football/i.test(r.sport||"")) return;
+      g={id:String(r.id), date:day, region:"", sport:"Football", status:r.status||"Tonight", away:r.away, home:r.home, as:r.as||"", hs:r.hs||"", ar:r.ar||"", hr:r.hr||"", aid:"", hid:""};
       pack.games.push(g);
     }
     if(r.ar) g.ar=r.ar; if(r.hr) g.hr=r.hr;
@@ -1891,6 +1897,15 @@ function applyTnScores(rows, day){
     if(r.status) g.status=r.status.replace(/\s+/g," ");
     if((g.as!==""||g.hs!=="") && /final/i.test(g.status||"")) g.status="Final";
     hit++;
+  });
+  const ok=new Set(rows.filter(r=>/football/i.test(r.sport||"")).map(r=>String(r.id)));
+  pack.games=pack.games.filter(g=>{
+    if(!tnFootballGame(g)) return false;
+    if(g.date!==day) return true;
+    if(ok.has(String(g.id))) return true;
+    if(window.TN_IDS && window.TN_IDS.has(String(g.id))) return true;
+    if(String(g.region||"").trim()) return true;
+    return false;
   });
 pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
   pack.liveDay=day;
@@ -1959,6 +1974,13 @@ function tnDateKey(d){
 function tnLatestDate(games){
   return (games||[]).map(g=>g.date).filter(Boolean).sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)))[0]||"";
 }
+function tnFootballGame(g){
+  const blob=String((g&&g.region)||"")+" "+String((g&&g.sport)||"");
+  if(/district/i.test(blob)) return false;
+  if(/\b(soccer|volleyball|basketball|softball|baseball|golf|tennis|bowling|wrestling)\b/i.test(blob)) return false;
+  if(g&&g.sport && !/football/i.test(g.sport)) return false;
+  return true;
+}
 function tnCleanReg(r){
   const s=String(r||"").replace(/^2026 Football /i,"").replace(/\s+/g," ").trim();
   if(!s || s==="·" || /^independent/i.test(s)) return "Independent";
@@ -1981,7 +2003,7 @@ function tnGameReg(g, map){
 }
 function paintTnSlate(){
   const pack=window.TNFB||{games:[],standings:[]};
-  const games=pack.games||[];
+  const games=(pack.games||[]).filter(tnFootballGame);
   const map=tnRegMap(games);
   const latest=tnLatestDate(games);
   const today=fridaySelDate();
@@ -2055,7 +2077,7 @@ function paintTnStand(){
   if(!host) return;
   host.hidden=false;
   $("liveList").hidden=true;
-  const games=(window.TNFB||{}).games||[];
+  const games=((window.TNFB||{}).games||[]).filter(tnFootballGame);
   const cls=window.TN_CLASS||"1A";
   const reg=String(window.TN_RG||"1");
   const classes=["1A","2A","3A","4A","5A","6A"];
@@ -2101,11 +2123,7 @@ function openTnTeam(sid, name){
   if($("toGame")) $("toGame").textContent="← Back";
   show("player");
   const rawSid=String(sid||"").replace(/^n:/,"");
-  const games=((window.TNFB||{}).games||[]).filter(g=>{
-    if(g.away===name||g.home===name) return true;
-    if(rawSid && (g.aid===rawSid||g.hid===rawSid)) return true;
-    return false;
-  }).slice().sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)));
+  const games=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && (g.away===name||g.home===name||(rawSid && (g.aid===rawSid||g.hid===rawSid)))).slice().sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)));
   const rec={w:0,l:0,t:0};
   games.forEach(g=>{
     const home=g.home===name||g.hid===rawSid;
@@ -6806,7 +6824,11 @@ function keepTnLive(pack){
   if(!live||!live.games||!live.games.length) return pack;
   pack.games=pack.games||[];
   const ids=new Set(pack.games.map(g=>String(g.id)));
-  live.games.forEach(g=>{ if(!ids.has(String(g.id))) pack.games.push(g); });
+  live.games.forEach(g=>{
+    if(ids.has(String(g.id))) return;
+    const official=window.TN_IDS && window.TN_IDS.has(String(g.id));
+    if((official || /football/i.test(g.sport||"")) && (typeof tnFootballGame!=="function" || tnFootballGame(g))) pack.games.push(g);
+  });
   pack.asOf=live.asOf||pack.asOf;
   pack.liveDay=live.day;
   if(live.day) window.TN_WEEK=live.day;
@@ -6815,7 +6837,7 @@ function keepTnLive(pack){
 async function loadTnPack(){
   try{
     const r=await fetch("/data/tssaa.json",{cache:"no-store"});
-    if(r.ok){ const d=await r.json(); if(d&&d.games) window.TNFB=d; }
+    if(r.ok){ const d=await r.json(); if(d&&d.games){ d.games=d.games.filter(g=>typeof tnFootballGame!=="function" || tnFootballGame(g)); window.TN_IDS=new Set(d.games.map(g=>String(g.id))); window.TNFB=d; } }
   }catch(e){}
   window.TNFB=keepTnLive(window.TNFB||{games:[]});
   try{
