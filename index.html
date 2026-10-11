@@ -2407,8 +2407,8 @@ function renderFootball(g, sum){
     if(!isFinite(yte) || yte<0 || yte>100) return null;
     return goingRight ? (100-yte) : yte;
   };
-  const downTxt = spotNow.downDistanceText || spotSnap.downDistanceText || spotNow.shortDownDistanceText || "";
-  const ballYard = pinFromText(downTxt) ?? pinYard(spotNow) ?? pinYard(spotSnap);
+  const downTxt = spotNow.downDistanceText || spotNow.shortDownDistanceText || "";
+  const ballYard = pinFromText(downTxt) ?? pinYard(spotNow) ?? (spotNow.yardsToEndzone==null ? pinYard(spotSnap) : null);
   const toGoRaw = Number(spotNow.distance!=null?spotNow.distance:spotSnap.distance);
   const toGo = (isFinite(toGoRaw) && toGoRaw>=0 && toGoRaw<=99) ? toGoRaw : null;
   const fieldPct = ballYard==null ? null : yardPct(ballYard);
@@ -2539,7 +2539,7 @@ function renderFootball(g, sum){
   };
   const kind=kindOf(shownPlay);
   const rawPlay=shownPlay.text||"";
-  const scored=/touchdown/i.test(rawPlay);
+  const scored=/touchdown/i.test(rawPlay+" "+shownType);
   const snapSpot=shownPlay.start||{};
   const endSpot=shownPlay.end||{};
   const snapYard=pinYard(snapSpot);
