@@ -2364,10 +2364,13 @@ function renderFootball(g, sum){
   const possLogo = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss===aw?aLogo:poss===hm?hLogo:aLogo);
   const driveTxt = cur.description || "";
   const possIsAway = poss===aw || String((cur.team&&cur.team.id)||"")===String(away.id||(away.team&&away.team.id)||"");
-  const shownPlay=[...plays].reverse().find(p=>/Kickoff|Punt|Field Goal|Rushing|Rush|Pass|Sack|Intercept|Reception/i.test(((p.type||{}).text)||""))||lastPlay;
+  const noise=p=>/timeout|end quarter|end of|two-minute|warning|tv timeout/i.test(((p&&p.text)||"")+" "+(((p&&p.type)||{}).text||""));
+  const meaningful=(plays||[]).filter(p=>p&&p.text&&!noise(p));
+  const shownPlay=meaningful.length?meaningful[meaningful.length-1]:(lastPlay||{});
   const shownType=((shownPlay.type||{}).text)||"";
   const shownText=shownPlay.text||"";
   const isBoot=/punt|kickoff/i.test(shownType);
+  const isPenalty=/penalty/i.test(shownType+" "+shownText) && !/declined/i.test(shownText);
   const gotBack=(shownText.match(/recovered by\s+([A-Z]{2,4})/i)||[])[1]||"";
   const kickerKept=!!gotBack && String(gotBack).toUpperCase()===String(poss).toUpperCase();
   let offAb=poss, offLogo=possLogo, offAway=possIsAway;
@@ -2523,53 +2526,58 @@ function renderFootball(g, sum){
     const q=FP(x,26.6);
     return `<image href="${src}" x="${(q[0]-16).toFixed(1)}" y="${(q[1]-9).toFixed(1)}" width="32" height="18"/>`;
   };
-  const playStart=pinYard(shownPlay.start);
-  const playEnd=pinYard(shownPlay.end);
-  const snapY=playStart!=null?playStart:(ballYard==null?50:ballYard);
-  const finY=playEnd!=null?playEnd:snapY;
   const kindOf=p=>{
     const t=((p.type||{}).text)||"";
     const ab=((p.type||{}).abbreviation)||"";
     if(/Kickoff/i.test(t)||ab==="K") return "KICK";
     if(/Punt/i.test(t)) return "PUNT";
     if(/Field Goal/i.test(t)) return "FG";
+    if(/Penalty/i.test(t)) return "PENALTY";
     if(/Rush/i.test(t)) return "RUSH";
     if(/Pass|Sack|Intercept/i.test(t)||ab==="REC") return "PASS";
     return "PLAY";
   };
   const kind=kindOf(shownPlay);
   const rawPlay=shownPlay.text||"";
+  const originalYard=pinYard(shownPlay.start);
+  const currentYard=ballYard!=null?ballYard:(pinYard(shownPlay.end)!=null?pinYard(shownPlay.end):50);
+  const net= (originalYard==null) ? null : (goingRight ? (currentYard-originalYard) : (originalYard-currentYard));
+  const penHit=(rawPlay.match(/PENALTY on [^,]+,\s*([^,]+?)(?:,\s*(\d+)\s*yard)?/i)||[]);
+  const penName=(penHit[1]||"").replace(/\s+/g," ").trim().toUpperCase();
   let yds=null;
   const kick=rawPlay.match(/kicks (\d+) yard/i);
+  const puntY=rawPlay.match(/punts (\d+) yard/i);
   const gained=rawPlay.match(/for (-?\d+) yard/i);
   if(/incomplete/i.test(rawPlay)) yds=null;
   else if(kind==="KICK" && kick) yds=Number(kick[1]);
-  else if(gained) yds=Number(gained[1]);
-  else if(isFinite(Number(shownPlay.statYardage))) yds=Number(shownPlay.statYardage);
-  const tag=kind==="PUNT" ? ((rawPlay.match(/punts (\d+) yard/i)||[])[1] ? ((rawPlay.match(/punts (\d+) yard/i)||[])[1]+" PUNT") : "PUNT") : kind==="KICK" ? (yds==null?"KICK":(yds+" KICK")) : (/incomplete/i.test(rawPlay)?"INCOMPLETE":(yds==null?kind:(yds+" "+kind)));
-  const sx=10+Math.max(0,Math.min(100,snapY));
-  const ex=10+Math.max(0,Math.min(100,finY));
-  const losYard=ballYard!=null?ballYard:finY;
+  else if(kind==="PUNT" && puntY) yds=Number(puntY[1]);
+  else if(!isPenalty && gained) yds=Number(gained[1]);
+  else if(!isPenalty && isFinite(Number(shownPlay.statYardage))) yds=Number(shownPlay.statYardage);
+  const netTag=net==null?null:(Math.round(net)>0?("+"+Math.round(net)):String(Math.round(net)));
+  const tag=isBoot
+    ? (yds==null?kind:(yds+" "+kind))
+    : (isPenalty ? ((penName||"PENALTY")+(netTag?(" "+netTag):"")) : (/incomplete/i.test(rawPlay)?"INCOMPLETE":(netTag&&kind!=="PLAY"?(netTag.replace("+","")+" "+kind):(yds==null?kind:(yds+" "+kind)))));
+  const playCol=isBoot?"#d5d0c8":(net==null?"#f4efe6":(net>0.4?"#3ee0a0":(net<-0.4?"#ff5a3c":"#f4efe6")));
+  const losYard=currentYard;
   const losX=10+Math.max(0,Math.min(100,losYard));
   const fdX=fdYard==null?null:10+Math.max(0,Math.min(100,fdYard));
-  const a=FP(sx,26.6), b=FP(ex,26.6), mid=FP((sx+ex)/2,26.6);
-  const lift=kind==="KICK"||kind==="PUNT"?-34:kind==="FG"?-26:kind==="PASS"?-16:-6;
-  const fresh=String(window.LAST_ANIM||"")!==String(shownPlay.id||"x");
+  const startX=originalYard==null?losX:(10+Math.max(0,Math.min(100,originalYard)));
+  const showMove=!isBoot && originalYard!=null && Math.abs(originalYard-currentYard)>1.2;
+  const a=FP(startX,26.6), b=FP(losX,26.6), mid=FP((startX+losX)/2,26.6);
+  const lift=kind==="PASS"?-14:kind==="FG"?-22:-4;
   if(shownPlay.id) window.LAST_ANIM=shownPlay.id;
   const arc=`M ${a[0].toFixed(1)} ${a[1].toFixed(1)} Q ${mid[0].toFixed(1)} ${(mid[1]+lift).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
-  const playCol=isBoot?"#d5d0c8":(yds==null?"#f4efe6":(yds<0?"#ff5a3c":"#3ee0a0"));
   const ang=Math.atan2(b[1]-a[1], b[0]-a[0]);
   const travel=Math.hypot(b[0]-a[0], b[1]-a[1]);
   const headLen=9, wing=4.2;
-  const tip=[b[0]+Math.cos(ang)*1.5, b[1]+Math.sin(ang)*1.5];
+  const tip=[b[0]+Math.cos(ang)*1.2, b[1]+Math.sin(ang)*1.2];
   const left=[tip[0]-Math.cos(ang)*headLen+Math.sin(ang)*wing, tip[1]-Math.sin(ang)*headLen-Math.cos(ang)*wing];
   const right=[tip[0]-Math.cos(ang)*headLen-Math.sin(ang)*wing, tip[1]-Math.sin(ang)*headLen+Math.cos(ang)*wing];
-  const arrow=travel>16?`<polygon points="${tip.map(n=>n.toFixed(1)).join(",")} ${left.map(n=>n.toFixed(1)).join(",")} ${right.map(n=>n.toFixed(1)).join(",")}" fill="${playCol}"/>`:"";
-  const ball=fresh
-    ? `<g><circle r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="1.05s" fill="freeze" path="${arc}"/></circle></g>`
-    : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
-  const moved=Math.abs(sx-losX)>2.4 && !isBoot;
-  const orig=moved?`<path d="${fseg([[sx,1],[sx,52.2]])}" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
+  const arrow=showMove&&travel>12?`<polygon points="${tip.map(n=>n.toFixed(1)).join(",")} ${left.map(n=>n.toFixed(1)).join(",")} ${right.map(n=>n.toFixed(1)).join(",")}" fill="${playCol}"/>`:"";
+  const kickStart=pinYard(shownPlay.start), kickEnd=pinYard(shownPlay.end);
+  const kickArc=isBoot&&kickStart!=null&&kickEnd!=null?`M ${FP(10+kickStart,26.6)[0].toFixed(1)} ${FP(10+kickStart,26.6)[1].toFixed(1)} Q ${FP(10+(kickStart+kickEnd)/2,26.6)[0].toFixed(1)} ${(FP(10+(kickStart+kickEnd)/2,26.6)[1]-34).toFixed(1)} ${FP(10+kickEnd,26.6)[0].toFixed(1)} ${FP(10+kickEnd,26.6)[1].toFixed(1)}`:"";
+  const ball=`<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
+  const orig=showMove?`<path d="${fseg([[startX,1],[startX,52.2]])}" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
   const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.2],[Math.max(losX,fdX),1.2],[Math.max(losX,fdX),52],[Math.min(losX,fdX),52]])}Z" fill="rgba(255,196,40,.2)"/>`;
   const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="2.8"/>`;
   const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="2.8"/>`;
@@ -2582,7 +2590,8 @@ function renderFootball(g, sum){
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
       ${band}${orig}${fd}${fdTip}${los}
-      ${moved&&travel>16?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round"/>${arrow}`:""}
+      ${showMove&&travel>12?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.4" stroke-linecap="round"/>${arrow}`:""}
+      ${kickArc?`<path d="${kickArc}" fill="none" stroke="#d5d0c8" stroke-width="2.2" stroke-linecap="round"/>`:""}
       ${ball}
     </svg>
     <div class="attack${goingRight?"":" flip"}"><img alt="" src="${aLogo}" class="${goingRight?"":"goal"}"/><div class="rail"><i></i><b><span>${aw}</span><span>${goingRight?"▶":"◀"}</span><span>${hm}</span></b></div><img alt="" src="${hLogo}" class="${goingRight?"goal":""}"/></div>
@@ -2596,13 +2605,13 @@ function renderFootball(g, sum){
     <div class="scorebug mlb-bug${live?" islive":""}">
       <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
       <div class="castline">
-        <div class="cside${possIsAway?" hasball":""}"><div class="mark"><img alt="" src="${aLogo}"/>${possIsAway?'<span class="pigskin">🏈</span>':""}</div><div><b>${aw}</b><em>${aRec||""}</em></div><span class="cscore">${as}</span></div>
+        <div class="cside${offAway?" hasball":""}"><div class="mark"><img alt="" src="${aLogo}"/>${offAway?'<span class="pigskin">🏈</span>':""}</div><div><b>${aw}</b><em>${aRec||""}</em></div><span class="cscore">${as}</span></div>
         <table class="qtr mini">
           <tr><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}</tr>
           <tr><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}</tr>
           <tr><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}</tr>
         </table>
-        <div class="cside r${!possIsAway && poss?" hasball":""}"><span class="cscore">${hs}</span><div><b>${hm}</b><em>${hRec||""}</em></div><div class="mark"><img alt="" src="${hLogo}"/>${!possIsAway && poss?'<span class="pigskin">🏈</span>':""}</div></div>
+        <div class="cside r${!offAway && offAb?" hasball":""}"><span class="cscore">${hs}</span><div><b>${hm}</b><em>${hRec||""}</em></div><div class="mark"><img alt="" src="${hLogo}"/>${!offAway && offAb?'<span class="pigskin">🏈</span>':""}</div></div>
       </div>
     </div>
     ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
