@@ -2539,9 +2539,21 @@ function renderFootball(g, sum){
   };
   const kind=kindOf(shownPlay);
   const rawPlay=shownPlay.text||"";
-  const originalYard=pinYard(shownPlay.start);
-  const currentYard=ballYard!=null?ballYard:(pinYard(shownPlay.end)!=null?pinYard(shownPlay.end):50);
-  const net= (originalYard==null) ? null : (goingRight ? (currentYard-originalYard) : (originalYard-currentYard));
+  const scored=/touchdown/i.test(rawPlay);
+  const snapSpot=shownPlay.start||{};
+  const endSpot=shownPlay.end||{};
+  const snapYard=pinYard(snapSpot);
+  let endYard=pinYard(endSpot);
+  if(scored) endYard=goingRight?100:0;
+  if(endYard==null) endYard=snapYard!=null?snapYard:50;
+  const originalYard=snapYard!=null?snapYard:endYard;
+  const currentYard=endYard;
+  const goalToGo=/goal/i.test((snapSpot.shortDownDistanceText||"")+" "+(snapSpot.downDistanceText||""));
+  const nextDist=Number(endSpot.distance);
+  let stick=null;
+  if(scored||goalToGo) stick=goingRight?100:0;
+  else if(isFinite(nextDist)&&nextDist>=0&&nextDist<=99) stick=Math.max(0, Math.min(100, goingRight?currentYard+nextDist:currentYard-nextDist));
+  const net= snapYard==null ? null : (goingRight ? (currentYard-originalYard) : (originalYard-currentYard));
   const penHit=(rawPlay.match(/PENALTY on [^,]+,\s*([^,]+?)(?:,\s*(\d+)\s*yard)?/i)||[]);
   const penName=(penHit[1]||"").replace(/\s+/g," ").trim().toUpperCase();
   let yds=null;
@@ -2554,16 +2566,19 @@ function renderFootball(g, sum){
   else if(!isPenalty && gained) yds=Number(gained[1]);
   else if(!isPenalty && isFinite(Number(shownPlay.statYardage))) yds=Number(shownPlay.statYardage);
   const netTag=net==null?null:(Math.round(net)>0?("+"+Math.round(net)):String(Math.round(net)));
-  const tag=isBoot
+  const tag=scored
+    ? ((rawPlay.match(/for (\d+) yard/i)||[])[1] ? ((rawPlay.match(/for (\d+) yard/i)||[])[1]+" TD") : "TOUCHDOWN")
+    : (isBoot
     ? (yds==null?kind:(yds+" "+kind))
-    : (isPenalty ? ((penName||"PENALTY")+(netTag?(" "+netTag):"")) : (/incomplete/i.test(rawPlay)?"INCOMPLETE":(netTag&&kind!=="PLAY"?(netTag.replace("+","")+" "+kind):(yds==null?kind:(yds+" "+kind)))));
-  const playCol=isBoot?"#d5d0c8":(net==null?"#f4efe6":(net>0.4?"#3ee0a0":(net<-0.4?"#ff5a3c":"#f4efe6")));
+    : (isPenalty ? ((penName||"PENALTY")+(netTag?(" "+netTag):"")) : (/incomplete/i.test(rawPlay)?"INCOMPLETE":(netTag&&kind!=="PLAY"?(netTag.replace("+","")+" "+kind):(yds==null?kind:(yds+" "+kind))))));
+  const playCol=scored?"#3ee0a0":(isBoot?"#d5d0c8":(net==null?"#f4efe6":(net>0.4?"#3ee0a0":(net<-0.4?"#ff5a3c":"#f4efe6"))));
   const losYard=currentYard;
   const losX=10+Math.max(0,Math.min(100,losYard));
-  const fdX=fdYard==null?null:10+Math.max(0,Math.min(100,fdYard));
+  const fdX=stick==null?null:10+Math.max(0,Math.min(100,stick));
   const startX=originalYard==null?losX:(10+Math.max(0,Math.min(100,originalYard)));
   const showMove=!isBoot && originalYard!=null && Math.abs(originalYard-currentYard)>1.2;
-  const a=FP(startX,26.6), b=FP(losX,26.6), mid=FP((startX+losX)/2,26.6);
+  const ballX=scored?(goingRight?115:5):losX;
+  const a=FP(startX,26.6), b=FP(ballX,26.6), mid=FP((startX+ballX)/2,26.6);
   const lift=kind==="PASS"?-14:kind==="FG"?-22:-4;
   if(shownPlay.id) window.LAST_ANIM=shownPlay.id;
   const arc=`M ${a[0].toFixed(1)} ${a[1].toFixed(1)} Q ${mid[0].toFixed(1)} ${(mid[1]+lift).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
@@ -2583,7 +2598,7 @@ function renderFootball(g, sum){
   const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="2.8"/>`;
   const fdTip=fdX==null?"":(()=>{ const p=FP(fdX,2.2); return `<polygon points="${(p[0]-7).toFixed(1)},${(p[1]-1).toFixed(1)} ${(p[0]+7).toFixed(1)},${(p[1]-1).toFixed(1)} ${p[0].toFixed(1)},${(p[1]+10).toFixed(1)}" fill="#ffe14a"/>`; })();
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
-  const sit=[spotNow.shortDownDistanceText, spotNow.possessionText].filter(Boolean).join(" · ");
+  const sit=[(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||endSpot.shortDownDistanceText||""), (snapSpot.possessionText||endSpot.possessionText||"")].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
     <div class="possbar"><img alt="" src="${offLogo}"/><div><b>POSSESSION</b><span>${offAb||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}</span></div></div>
     <svg viewBox="28 4 384 176" aria-hidden="true">
