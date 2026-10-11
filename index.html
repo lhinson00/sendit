@@ -2546,6 +2546,20 @@ function renderFootball(g, sum){
   const snapYard=pinYard(snapSpot);
   let endYard=pinYard(endSpot);
   if(scored) endYard=goingRight?100:0;
+  const gainedNow=rawPlay.match(/for (-?\d+) yard/i);
+  const gainedN=!isPenalty && gainedNow && !/incomplete/i.test(rawPlay) ? Number(gainedNow[1]) : null;
+  let logged=null;
+  if(!scored){
+    const pm=isPenalty ? rawPlay.match(/enforced at\s+([A-Z]{2,4})\s+(\d{1,2})/i) : rawPlay.match(/\bto\s+([A-Z]{2,4})\s+(\d{1,2})\b/i);
+    if(pm){
+      const y=pinFromText("at "+pm[1]+" "+pm[2]);
+      if(y!=null) logged={y:y, label:pm[1].toUpperCase()+" "+pm[2]};
+    }
+  }
+  if(logged) endYard=logged.y;
+  else if(!scored && gainedN!=null && snapYard!=null && (endYard==null || Math.abs(endYard-snapYard)<1)){
+    endYard=Math.max(0, Math.min(100, goingRight?snapYard+gainedN:snapYard-gainedN));
+  }
   if(endYard==null) endYard=snapYard!=null?snapYard:50;
   const originalYard=snapYard!=null?snapYard:endYard;
   const currentYard=endYard;
@@ -2613,7 +2627,24 @@ function renderFootball(g, sum){
   const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="2.8"/>`;
   const fdTip=fdX==null?"":(()=>{ const p=FP(fdX,2.2); return `<polygon points="${(p[0]-7).toFixed(1)},${(p[1]-1).toFixed(1)} ${(p[0]+7).toFixed(1)},${(p[1]-1).toFixed(1)} ${p[0].toFixed(1)},${(p[1]+10).toFixed(1)}" fill="#ffe14a"/>`; })();
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
-  const sit=[(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||endSpot.shortDownDistanceText||""), (snapSpot.possessionText||endSpot.possessionText||"")].filter(Boolean).join(" · ");
+  const endDownTxt=endSpot.shortDownDistanceText||endSpot.downDistanceText||"";
+  const snapDownTxt=snapSpot.shortDownDistanceText||snapSpot.downDistanceText||"";
+  const endWhere=endSpot.possessionText||"";
+  const snapWhere=snapSpot.possessionText||"";
+  const endFresh=!!(endDownTxt && (endDownTxt!==snapDownTxt || (endWhere && snapWhere && endWhere!==snapWhere)));
+  const built=(()=>{
+    if(!logged || isPenalty || isBoot || gainedN==null) return "";
+    const m=String(snapDownTxt).match(/(\d)(?:st|nd|rd|th)?\s*&\s*(\d+)/i);
+    if(!m) return logged.label;
+    const down=Number(m[1]), need=Number(m[2]);
+    const ord=n=>n===1?"1ST":n===2?"2ND":n===3?"3RD":n===4?"4TH":"";
+    if(gainedN>=need) return "1ST & 10 · "+logged.label;
+    const nd=down+1;
+    return ord(nd) ? (ord(nd)+" & "+(need-gainedN)+" · "+logged.label) : logged.label;
+  })();
+  const sit=endFresh
+    ? [endDownTxt, endWhere||(logged&&logged.label)||""].filter(Boolean).join(" · ")
+    : (built || [endDownTxt||snapDownTxt, (logged&&logged.label)||endWhere||snapWhere].filter(Boolean).join(" · "));
   const gridiron=`<div class="gridiron">
     <div class="possbar"><img alt="" src="${offLogo}"/><div><b>POSSESSION</b><span>${offAb||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}${gotStick?` · <em style="color:#3ee0a0;font-style:normal">1ST DOWN</em>`:""}</span></div></div>
     <svg viewBox="28 4 384 176" aria-hidden="true">
