@@ -554,6 +554,13 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 @keyframes tagin{from{opacity:0}to{opacity:1}}
 .gridiron{margin:10px 0 12px;padding:6px 8px 10px;border-radius:18px;background:radial-gradient(80% 80% at 50% 0%,#1a3a24,#07080c 70%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .gridiron svg{width:100%;height:auto;display:block}
+.fkey{display:flex;justify-content:center;gap:16px;padding:8px 4px 0;color:#d5d0c8;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.fkey i{display:inline-block;width:16px;height:3px;margin-right:6px;vertical-align:middle;border-radius:2px}
+.fkey .o{height:0;border-top:2px dashed #fff;background:none}
+.fkey .c{background:#49d2ff}
+.fkey .f{background:#ffe14a}
+.fkey .d{width:0;height:0;background:none;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #fff}
+.fkey.flip .d{border-left:0;border-right:8px solid #fff}
 .attack{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:8px;margin:2px 6px 0}
 .attack img{width:32px;height:32px;object-fit:contain}
 .attack img.goal{filter:drop-shadow(0 0 8px rgba(255,225,74,.85))}
@@ -2550,9 +2557,23 @@ function renderFootball(g, sum){
   const ball=fresh
     ? `<g><circle r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="1.05s" fill="freeze" path="${arc}"/></circle></g>`
     : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
-  const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.5],[Math.max(losX,fdX),1.5],[Math.max(losX,fdX),51.8],[Math.min(losX,fdX),51.8]])}Z" fill="rgba(255,196,40,.22)"/>`;
-  const los=`<path d="${fseg([[losX,0.8],[losX,52.4]])}" fill="none" stroke="#49d2ff" stroke-width="2.6"/>`;
-  const fd=fdX==null?"":`<path d="${fseg([[fdX,0.8],[fdX,52.4]])}" fill="none" stroke="#ffe14a" stroke-width="2.6"/>`;
+  const moved=Math.abs(sx-losX)>2.4;
+  const orig=moved?`<path d="${fseg([[sx,1],[sx,52.2]])}" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
+  const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.2],[Math.max(losX,fdX),1.2],[Math.max(losX,fdX),52],[Math.min(losX,fdX),52]])}Z" fill="rgba(255,196,40,.2)"/>`;
+  const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="2.8"/>`;
+  const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="2.8"/>`;
+  const fdTip=fdX==null?"":(()=>{ const p=FP(fdX,2.2); return `<polygon points="${(p[0]-7).toFixed(1)},${(p[1]-1).toFixed(1)} ${(p[0]+7).toFixed(1)},${(p[1]-1).toFixed(1)} ${p[0].toFixed(1)},${(p[1]+10).toFixed(1)}" fill="#ffe14a"/>`; })();
+  const dirN=goingRight?1:-1;
+  let ay=(fdX==null?losYard:(fdX-10))+dirN*16;
+  ay=Math.max(14, Math.min(86, ay));
+  let drive="";
+  for(let k=0;k<2;k++){
+    const base=ay+dirN*k*7;
+    if(base<6||base>94) continue;
+    const x=10+base, tipX=x+dirN*6.5;
+    const p1=FP(x,17), p2=FP(tipX,26.6), p3=FP(x,36.2);
+    drive+=`<path d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} L ${p3[0].toFixed(1)} ${p3[1].toFixed(1)}" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
   const sit=[spotNow.shortDownDistanceText, spotNow.possessionText].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
@@ -2560,10 +2581,12 @@ function renderFootball(g, sum){
     <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
-      ${band}${fd}${los}
-      ${travel>16?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round"/>${arrow}`:""}
+      ${band}${orig}${fd}${fdTip}${los}
+      ${moved&&travel>16?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round"/>${arrow}`:""}
+      ${drive}
       ${ball}
     </svg>
+    <div class="fkey${goingRight?"":" flip"}"><span><i class="o"></i>Start</span><span><i class="c"></i>Line</span><span><i class="f"></i>1st</span><span><i class="d"></i>Drive</span></div>
   </div>`;
   const clips=videoClips(sum);
   const tab = window.FTAB || "live";
