@@ -2018,7 +2018,8 @@ function tnGameReg(g, map){
 }
 function paintTnSlate(){
   const pack=window.TNFB||{games:[],standings:[]};
-  const games=(pack.games||[]).filter(tnFootballGame);
+  const todayKey=tnDateKey(chiToday());
+  const games=(pack.games||[]).filter(g=>tnFootballGame(g) && ((g.as!=="" && g.as!=null) || (g.hs!=="" && g.hs!=null) || tnDateKey(g.date)<=todayKey));
   const map=tnRegMap(games);
   const latest=tnLatestDate(games);
   const today=fridaySelDate();
@@ -2138,25 +2139,31 @@ function openTnTeam(sid, name){
   if($("toGame")) $("toGame").textContent="← Back";
   show("player");
   const rawSid=String(sid||"").replace(/^n:/,"");
-  const games=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && (g.away===name||g.home===name||(rawSid && (g.aid===rawSid||g.hid===rawSid)))).slice().sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)));
-  const rec={w:0,l:0,t:0};
-  games.forEach(g=>{
-    const home=g.home===name||g.hid===rawSid;
-    const us=home?g.hs:g.as, them=home?g.as:g.hs;
-    if(us===""||them==="") return;
-    if(+us>+them) rec.w++; else if(+us<+them) rec.l++; else rec.t++;
+  const ids=new Set(rawSid?[rawSid]:[]);
+  ((window.TNFB||{}).games||[]).forEach(g=>{
+    if(name && g.away===name && g.aid) ids.add(String(g.aid));
+    if(name && g.home===name && g.hid) ids.add(String(g.hid));
   });
-  const rows=games.map(g=>{
-    const home=g.home===name||g.hid===rawSid;
+  const games=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && (g.away===name||g.home===name||(g.aid&&ids.has(String(g.aid)))||(g.hid&&ids.has(String(g.hid))))).slice();
+  const rec={w:0,l:0,t:0};
+  const upcoming=[], played=[];
+  games.forEach(g=>{
+    const home=g.home===name||(g.hid&&ids.has(String(g.hid)));
     const opp=home?g.away:g.home;
     const us=home?g.hs:g.as, them=home?g.as:g.hs;
-    const played=us!==""&&them!=="";
-    const dec=played?(Number(us)>Number(them)?"W":Number(us)<Number(them)?"L":"T"):"";
+    const done=us!==""&&them!=="";
+    if(done){ if(+us>+them) rec.w++; else if(+us<+them) rec.l++; else rec.t++; }
+    const dec=done?(Number(us)>Number(them)?"W":Number(us)<Number(them)?"L":"T"):"";
     const when=fmtTnDate(g.date);
-    const score=played?(us+" – "+them):((g.status||"Sched").replace(/kickoff|scheduled/ig,"Sched"));
-    return `<div class="tgame"><span>${when}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${home?"vs":"@"} ${tnOppName(opp)}</b></div><b class="tscore">${score}</b></div>`;
-  }).join("");
-  $("playerRoom").innerHTML=`<div class="tbook"><p class="kicker">TSSAA · Football</p><h2>${name}</h2><p class="hint">${rec.w}-${rec.l}${rec.t?"-"+rec.t:""} · ${games.length} games · newest first</p><div class="tlist">${rows||"<p class='hint'>No games on the board for this school yet.</p>"}</div></div>`;
+    const score=done?(us+" – "+them):((g.status||"Sched").replace(/kickoff|scheduled/ig,"Sched"));
+    const still=!done && tnDateKey(g.date) >= tnDateKey(chiToday());
+    const row={key:tnDateKey(g.date), html:`<div class="tgame"><span>${when}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${home?"vs":"@"} ${tnOppName(opp)}</b></div><b class="tscore">${score}</b></div>`};
+    (still?upcoming:played).push(row);
+  });
+  upcoming.sort((a,b)=>String(a.key).localeCompare(String(b.key)));
+  played.sort((a,b)=>String(b.key).localeCompare(String(a.key)));
+  const block=(title, list)=>list.length?`<p class="kicker" style="margin:16px 0 6px">${title}</p><div class="tlist">${list.map(x=>x.html).join("")}</div>`:"";
+  $("playerRoom").innerHTML=`<div class="tbook"><p class="kicker">TSSAA · Football</p><h2>${name}</h2><p class="hint">${rec.w}-${rec.l}${rec.t?"-"+rec.t:""} · ${upcoming.length} remaining</p>${block("Remaining", upcoming)}${block("Played", played)}${games.length?"":"<p class='hint'>No games on the board for this school yet.</p>"}</div>`;
 }
 function fmtTnDate(s){
   const m=String(s||"").match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
