@@ -2364,7 +2364,19 @@ function renderFootball(g, sum){
   const possLogo = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss===aw?aLogo:poss===hm?hLogo:aLogo);
   const driveTxt = cur.description || "";
   const possIsAway = poss===aw || String((cur.team&&cur.team.id)||"")===String(away.id||(away.team&&away.team.id)||"");
-  const goingRight = possIsAway;
+  const shownPlay=[...plays].reverse().find(p=>/Kickoff|Punt|Field Goal|Rushing|Rush|Pass|Sack|Intercept|Reception/i.test(((p.type||{}).text)||""))||lastPlay;
+  const shownType=((shownPlay.type||{}).text)||"";
+  const shownText=shownPlay.text||"";
+  const isBoot=/punt|kickoff/i.test(shownType);
+  const gotBack=(shownText.match(/recovered by\s+([A-Z]{2,4})/i)||[])[1]||"";
+  const kickerKept=!!gotBack && String(gotBack).toUpperCase()===String(poss).toUpperCase();
+  let offAb=poss, offLogo=possLogo, offAway=possIsAway;
+  if(isBoot && !kickerKept){
+    offAb=possIsAway?hm:aw;
+    offLogo=possIsAway?hLogo:aLogo;
+    offAway=!possIsAway;
+  }
+  const goingRight = offAway;
   const yardPct = y => 8 + (Math.max(0, Math.min(100, Number(y)))/100)*84;
   const sideOf = ab => {
     if(!ab) return null;
@@ -2511,7 +2523,6 @@ function renderFootball(g, sum){
     const q=FP(x,26.6);
     return `<image href="${src}" x="${(q[0]-16).toFixed(1)}" y="${(q[1]-9).toFixed(1)}" width="32" height="18"/>`;
   };
-  const shownPlay=[...plays].reverse().find(p=>/Kickoff|Punt|Field Goal|Rushing|Rush|Pass|Sack|Intercept|Reception/i.test(((p.type||{}).text)||""))||lastPlay;
   const playStart=pinYard(shownPlay.start);
   const playEnd=pinYard(shownPlay.end);
   const snapY=playStart!=null?playStart:(ballYard==null?50:ballYard);
@@ -2535,7 +2546,7 @@ function renderFootball(g, sum){
   else if(kind==="KICK" && kick) yds=Number(kick[1]);
   else if(gained) yds=Number(gained[1]);
   else if(isFinite(Number(shownPlay.statYardage))) yds=Number(shownPlay.statYardage);
-  const tag=/incomplete/i.test(rawPlay)?"INCOMPLETE":(yds==null?kind:(yds+" "+kind));
+  const tag=kind==="PUNT" ? ((rawPlay.match(/punts (\d+) yard/i)||[])[1] ? ((rawPlay.match(/punts (\d+) yard/i)||[])[1]+" PUNT") : "PUNT") : kind==="KICK" ? (yds==null?"KICK":(yds+" KICK")) : (/incomplete/i.test(rawPlay)?"INCOMPLETE":(yds==null?kind:(yds+" "+kind)));
   const sx=10+Math.max(0,Math.min(100,snapY));
   const ex=10+Math.max(0,Math.min(100,finY));
   const losYard=ballYard!=null?ballYard:finY;
@@ -2546,7 +2557,7 @@ function renderFootball(g, sum){
   const fresh=String(window.LAST_ANIM||"")!==String(shownPlay.id||"x");
   if(shownPlay.id) window.LAST_ANIM=shownPlay.id;
   const arc=`M ${a[0].toFixed(1)} ${a[1].toFixed(1)} Q ${mid[0].toFixed(1)} ${(mid[1]+lift).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
-  const playCol=yds==null?"#f4efe6":(yds<0?"#ff5a3c":"#3ee0a0");
+  const playCol=isBoot?"#d5d0c8":(yds==null?"#f4efe6":(yds<0?"#ff5a3c":"#3ee0a0"));
   const ang=Math.atan2(b[1]-a[1], b[0]-a[0]);
   const travel=Math.hypot(b[0]-a[0], b[1]-a[1]);
   const headLen=9, wing=4.2;
@@ -2557,7 +2568,7 @@ function renderFootball(g, sum){
   const ball=fresh
     ? `<g><circle r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="1.05s" fill="freeze" path="${arc}"/></circle></g>`
     : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
-  const moved=Math.abs(sx-losX)>2.4;
+  const moved=Math.abs(sx-losX)>2.4 && !isBoot;
   const orig=moved?`<path d="${fseg([[sx,1],[sx,52.2]])}" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
   const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.2],[Math.max(losX,fdX),1.2],[Math.max(losX,fdX),52],[Math.min(losX,fdX),52]])}Z" fill="rgba(255,196,40,.2)"/>`;
   const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="2.8"/>`;
@@ -2577,7 +2588,7 @@ function renderFootball(g, sum){
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
   const sit=[spotNow.shortDownDistanceText, spotNow.possessionText].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
-    <div class="possbar"><img alt="" src="${possLogo}"/><div><b>POSSESSION</b><span>${poss||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}</span></div></div>
+    <div class="possbar"><img alt="" src="${offLogo}"/><div><b>POSSESSION</b><span>${offAb||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}</span></div></div>
     <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
