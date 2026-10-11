@@ -2540,66 +2540,30 @@ function renderFootball(g, sum){
   if(shownPlay.id) window.LAST_ANIM=shownPlay.id;
   const arc=`M ${a[0].toFixed(1)} ${a[1].toFixed(1)} Q ${mid[0].toFixed(1)} ${(mid[1]+lift).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
   const playCol=yds==null?"#f4efe6":(yds<0?"#ff5a3c":"#3ee0a0");
-  const ang=Math.atan2((b[1]+lift*0.15)-a[1], b[0]-a[0]);
-  const headLen=13;
-  const wing=6.5;
-  const tip=[b[0]+Math.cos(ang)*2, b[1]+Math.sin(ang)*2];
+  const ang=Math.atan2(b[1]-a[1], b[0]-a[0]);
+  const travel=Math.hypot(b[0]-a[0], b[1]-a[1]);
+  const headLen=9, wing=4.2;
+  const tip=[b[0]+Math.cos(ang)*1.5, b[1]+Math.sin(ang)*1.5];
   const left=[tip[0]-Math.cos(ang)*headLen+Math.sin(ang)*wing, tip[1]-Math.sin(ang)*headLen-Math.cos(ang)*wing];
   const right=[tip[0]-Math.cos(ang)*headLen-Math.sin(ang)*wing, tip[1]-Math.sin(ang)*headLen+Math.cos(ang)*wing];
-  const arrow=`<polygon points="${tip.map(n=>n.toFixed(1)).join(",")} ${left.map(n=>n.toFixed(1)).join(",")} ${right.map(n=>n.toFixed(1)).join(",")}" fill="${playCol}"/>`;
+  const arrow=travel>16?`<polygon points="${tip.map(n=>n.toFixed(1)).join(",")} ${left.map(n=>n.toFixed(1)).join(",")} ${right.map(n=>n.toFixed(1)).join(",")}" fill="${playCol}"/>`:"";
   const ball=fresh
-    ? `<g><circle r="6" fill="#6b3414" stroke="#fff" stroke-width="1.6"><animateMotion dur="1.05s" fill="freeze" path="${arc}"/></circle></g>`
-    : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="6" fill="#6b3414" stroke="#fff" stroke-width="1.6"/>`;
-  const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),2.2],[Math.max(losX,fdX),2.2],[Math.max(losX,fdX),51],[Math.min(losX,fdX),51]])}Z" fill="rgba(255,196,40,.30)"/>`;
-  const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="3.2"/>`;
-  const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="3.2"/>`;
-  const pill=(pt,label,fill,ink)=>{
-    const w=label.length>3?46:34;
-    let x=Math.max(40, Math.min(392-w, pt[0]-w/2));
-    let y=Math.max(6, pt[1]-8);
-    return `<g><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="16" rx="8" fill="${fill}"/><text x="${(x+w/2).toFixed(1)}" y="${(y+12).toFixed(1)}" fill="${ink}" font-size="9" font-weight="800" text-anchor="middle" font-family="Manrope,sans-serif" letter-spacing="0.6">${label}</text></g>`;
-  };
-  const losPt=FP(losX,0.4);
-  const fdPt=fdX==null?null:FP(fdX,0.4);
-  let losPill=pill(losPt,"LOS","#083044","#49d2ff");
-  let fdPill=fdPt?pill(fdPt,"1ST","#3a2e08","#ffe14a"):"";
-  if(fdPt && Math.abs(losPt[0]-fdPt[0])<42){
-    fdPill=pill([fdPt[0], fdPt[1]+18],"1ST","#3a2e08","#ffe14a");
-  }
-  let flow="";
-  const dir=goingRight?1:-1;
-  for(let i=1;i<=3;i++){
-    const base=losYard+dir*((toGo==null?10:toGo)+6+i*8);
-    if(base<4||base>96) continue;
-    const x=10+base, tipX=x+dir*4.2;
-    const p1=FP(x,21.5), p2=FP(tipX,26.6), p3=FP(x,31.7);
-    flow+=`<path d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} L ${p3[0].toFixed(1)} ${p3[1].toFixed(1)}" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`;
-  }
-  const goalBox=goingRight?[[110,0],[120,0],[120,53.3],[110,53.3]]:[[0,0],[10,0],[10,53.3],[0,53.3]];
-  const goalRing=`<path d="${fseg(goalBox)}Z" fill="none" stroke="#ffe14a" stroke-width="2.6"/>`;
+    ? `<g><circle r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="1.05s" fill="freeze" path="${arc}"/></circle></g>`
+    : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
+  const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.5],[Math.max(losX,fdX),1.5],[Math.max(losX,fdX),51.8],[Math.min(losX,fdX),51.8]])}Z" fill="rgba(255,196,40,.22)"/>`;
+  const los=`<path d="${fseg([[losX,0.8],[losX,52.4]])}" fill="none" stroke="#49d2ff" stroke-width="2.6"/>`;
+  const fd=fdX==null?"":`<path d="${fseg([[fdX,0.8],[fdX,52.4]])}" fill="none" stroke="#ffe14a" stroke-width="2.6"/>`;
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
-  const chipW=tag.length>8?112:90;
-  const chipX=Math.max(34, Math.min(400-chipW, b[0]-chipW/2));
-  const chipY=Math.max(6, b[1]-42);
-  const atkLogo=possIsAway?aLogo:hLogo;
-  const defLogo=possIsAway?hLogo:aLogo;
-  const atkAb=poss||(possIsAway?aw:hm);
-  const defAb=possIsAway?hm:aw;
-  const leftLogo=goingRight?atkLogo:defLogo;
-  const rightLogo=goingRight?defLogo:atkLogo;
+  const sit=[spotNow.shortDownDistanceText, spotNow.possessionText].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
-    <div class="possbar"><img alt="" src="${possLogo}"/><div><b>POSSESSION</b><span>${poss||"BALL"}${spotNow.shortDownDistanceText?(" · "+spotNow.shortDownDistanceText):""}${spotNow.possessionText?(" · "+spotNow.possessionText):""}</span></div></div>
+    <div class="possbar"><img alt="" src="${possLogo}"/><div><b>POSSESSION</b><span>${poss||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}</span></div></div>
     <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
-      ${band}${flow}${fd}${los}${goalRing}
-      <path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.4" stroke-linecap="round"/>
-      ${arrow}
-      ${losPill}${fdPill}
-      <g class="playtag"><rect x="${chipX.toFixed(1)}" y="${chipY.toFixed(1)}" width="${chipW}" height="26" rx="6" fill="#10140f" stroke="${playCol}"/><text x="${(chipX+chipW/2).toFixed(1)}" y="${(chipY+18).toFixed(1)}" fill="${playCol}" font-size="15" text-anchor="middle" font-family="Bebas Neue,sans-serif">${tag}</text></g>
+      ${band}${fd}${los}
+      ${travel>16?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round"/>${arrow}`:""}
       ${ball}
     </svg>
-    <div class="attack${goingRight?"":" flip"}"><img alt="" src="${leftLogo}" class="${goingRight?"":"goal"}"/><div class="rail"><i></i><b><span>${goingRight?atkAb:defAb}</span><span>${goingRight?"▶":"◀"}</span><span>${goingRight?defAb:atkAb}</span></b></div><img alt="" src="${rightLogo}" class="${goingRight?"goal":""}"/></div>
   </div>`;
   const clips=videoClips(sum);
   const tab = window.FTAB || "live";
