@@ -2574,17 +2574,6 @@ function renderFootball(g, sum){
   const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="2.8"/>`;
   const fd=fdX==null?"":`<path d="${fseg([[fdX,0.6],[fdX,52.6]])}" fill="none" stroke="#ffe14a" stroke-width="2.8"/>`;
   const fdTip=fdX==null?"":(()=>{ const p=FP(fdX,2.2); return `<polygon points="${(p[0]-7).toFixed(1)},${(p[1]-1).toFixed(1)} ${(p[0]+7).toFixed(1)},${(p[1]-1).toFixed(1)} ${p[0].toFixed(1)},${(p[1]+10).toFixed(1)}" fill="#ffe14a"/>`; })();
-  const dirN=goingRight?1:-1;
-  let ay=(fdX==null?losYard:(fdX-10))+dirN*16;
-  ay=Math.max(14, Math.min(86, ay));
-  let drive="";
-  for(let k=0;k<2;k++){
-    const base=ay+dirN*k*7;
-    if(base<6||base>94) continue;
-    const x=10+base, tipX=x+dirN*6.5;
-    const p1=FP(x,17), p2=FP(tipX,26.6), p3=FP(x,36.2);
-    drive+=`<path d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L ${p2[0].toFixed(1)} ${p2[1].toFixed(1)} L ${p3[0].toFixed(1)} ${p3[1].toFixed(1)}" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
-  }
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
   const sit=[spotNow.shortDownDistanceText, spotNow.possessionText].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
@@ -2594,10 +2583,10 @@ function renderFootball(g, sum){
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
       ${band}${orig}${fd}${fdTip}${los}
       ${moved&&travel>16?`<path d="${arc}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round"/>${arrow}`:""}
-      ${drive}
       ${ball}
     </svg>
-    <div class="fkey${goingRight?"":" flip"}"><span><i class="o"></i>Start</span><span><i class="c"></i>Line</span><span><i class="f"></i>1st</span><span><i class="d"></i>Drive</span></div>
+    <div class="attack${goingRight?"":" flip"}"><img alt="" src="${aLogo}" class="${goingRight?"":"goal"}"/><div class="rail"><i></i><b><span>${aw}</span><span>${goingRight?"▶":"◀"}</span><span>${hm}</span></b></div><img alt="" src="${hLogo}" class="${goingRight?"goal":""}"/></div>
+    <div class="fkey"><span><i class="o"></i>Start</span><span><i class="c"></i>Line</span><span><i class="f"></i>1st</span></div>
   </div>`;
   const clips=videoClips(sum);
   const tab = window.FTAB || "live";
