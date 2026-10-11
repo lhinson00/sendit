@@ -2550,10 +2550,24 @@ function renderFootball(g, sum){
   const originalYard=snapYard!=null?snapYard:endYard;
   const currentYard=endYard;
   const goalToGo=/goal/i.test((snapSpot.shortDownDistanceText||"")+" "+(snapSpot.downDistanceText||""));
+  const yardsNeeded=(()=>{
+    const n=Number(snapSpot.distance);
+    if(isFinite(n)&&n>0&&n<=99) return n;
+    const t=String(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||"");
+    const m=t.match(/&\s*(\d+)/);
+    return m?Number(m[1]):null;
+  })();
   const nextDist=Number(endSpot.distance);
   let stick=null;
   if(scored||goalToGo) stick=goingRight?100:0;
-  else if(isFinite(nextDist)&&nextDist>=0&&nextDist<=99) stick=Math.max(0, Math.min(100, goingRight?currentYard+nextDist:currentYard-nextDist));
+  else if(isBoot){
+    if(isFinite(nextDist)&&nextDist>=0&&nextDist<=99) stick=Math.max(0, Math.min(100, goingRight?currentYard+nextDist:currentYard-nextDist));
+  }else if(yardsNeeded!=null && originalYard!=null){
+    stick=Math.max(0, Math.min(100, goingRight?originalYard+yardsNeeded:originalYard-yardsNeeded));
+  }else if(isFinite(nextDist)&&nextDist>=0&&nextDist<=99){
+    stick=Math.max(0, Math.min(100, goingRight?currentYard+nextDist:currentYard-nextDist));
+  }
+  const gotStick=!isBoot && !scored && !isPenalty && stick!=null && (goingRight?currentYard+0.4>=stick:currentYard-0.4<=stick);
   const net= snapYard==null ? null : (goingRight ? (currentYard-originalYard) : (originalYard-currentYard));
   const penHit=(rawPlay.match(/PENALTY on [^,]+,\s*([^,]+?)(?:,\s*(\d+)\s*yard)?/i)||[]);
   const penName=(penHit[1]||"").replace(/\s+/g," ").trim().toUpperCase();
@@ -2601,7 +2615,7 @@ function renderFootball(g, sum){
   const outline=`<path d="${fseg([[0,0],[120,0],[120,53.3],[0,53.3],[0,0]])}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4"/>`;
   const sit=[(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||endSpot.shortDownDistanceText||""), (snapSpot.possessionText||endSpot.possessionText||"")].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
-    <div class="possbar"><img alt="" src="${offLogo}"/><div><b>POSSESSION</b><span>${offAb||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}</span></div></div>
+    <div class="possbar"><img alt="" src="${offLogo}"/><div><b>POSSESSION</b><span>${offAb||"BALL"}${sit?(" · "+sit):""}${tag?` · <em style="color:${playCol};font-style:normal">${tag}</em>`:""}${gotStick?` · <em style="color:#3ee0a0;font-style:normal">1ST DOWN</em>`:""}</span></div></div>
     <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
