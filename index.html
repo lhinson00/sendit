@@ -2437,20 +2437,23 @@ function renderFootball(g, sum){
   const gotBack=(shownText.match(/recovered by\s+([A-Z]{2,4})/i)||[])[1]||"";
   const kickerKept=!!gotBack && String(gotBack).toUpperCase()===String(poss).toUpperCase();
   let offAb=poss, offLogo=possLogo, offAway=possIsAway;
-  if(isBoot && !kickerKept){
+  const yardPct = y => 8 + (Math.max(0, Math.min(100, Number(y)))/100)*84;
+  const sideOf = ab => {
+    if(!ab) return null;
+    const nick={BLT:"BAL",JAC:"JAX",WSH:"WAS",WAS:"WSH",ARZ:"ARI",CLV:"CLE",HST:"HOU",NWE:"NE"};
+    const A=nick[String(ab).toUpperCase()]||String(ab).toUpperCase();
+    if(A===aw || A===String(g.away||"").toUpperCase()) return "away";
+    if(A===hm || A===String(g.home||"").toUpperCase()) return "home";
+    return null;
+  };
+  const kickedFrom=((shownText.match(/\bfrom\s+([A-Z]{2,4})\s+\d{1,2}/i)||[])[1]||"").toUpperCase();
+  const possIsKicker=!!kickedFrom && sideOf(kickedFrom)===(possIsAway?"away":"home");
+  if(isBoot && !kickerKept && (possIsKicker || !kickedFrom)){
     offAb=possIsAway?hm:aw;
     offLogo=possIsAway?hLogo:aLogo;
     offAway=!possIsAway;
   }
   const goingRight = offAway;
-  const yardPct = y => 8 + (Math.max(0, Math.min(100, Number(y)))/100)*84;
-  const sideOf = ab => {
-    if(!ab) return null;
-    const A=String(ab).toUpperCase();
-    if(A===aw || A===String(g.away||"").toUpperCase()) return "away";
-    if(A===hm || A===String(g.home||"").toUpperCase()) return "home";
-    return null;
-  };
   const pinFromText = blob => {
     if(!blob) return null;
     const m = String(blob).toUpperCase().match(/AT\s+([A-Z]{2,4})\s+(\d{1,2})/) || String(blob).toUpperCase().match(/\b([A-Z]{2,4})\s+(\d{1,2})\b/);
@@ -2612,7 +2615,16 @@ function renderFootball(g, sum){
   const gainedNow=rawPlay.match(/for (-?\d+) yard/i);
   const gainedN=!isPenalty && gainedNow && !/incomplete/i.test(rawPlay) ? Number(gainedNow[1]) : null;
   let logged=null;
-  if(isPenalty){
+  const bootSpots=isBoot?[...String(rawPlay).matchAll(/\bto\s+([A-Z]{2,4})\s+(\d{1,2})\b/gi)]:[];
+  const bootFrom=isBoot?rawPlay.match(/\bfrom\s+([A-Z]{2,4})\s+(\d{1,2})\b/i):null;
+  const catchYard=bootSpots[0]?pinFromText("at "+bootSpots[0][1]+" "+bootSpots[0][2]):null;
+  const returnYard=bootSpots.length>1?pinFromText("at "+bootSpots[bootSpots.length-1][1]+" "+bootSpots[bootSpots.length-1][2]):null;
+  const kickFromYard=bootFrom?pinFromText("at "+bootFrom[1]+" "+bootFrom[2]):null;
+  const isReturn=isBoot && catchYard!=null && returnYard!=null && Math.abs(returnYard-catchYard)>2 && !/touchback|fair catch/i.test(rawPlay);
+  if(isBoot && !/touchback/i.test(rawPlay)){
+    const landed=isReturn?returnYard:catchYard;
+    if(landed!=null) endYard=landed;
+  }else if(isPenalty){
     const penYds=Number((rawPlay.match(/(\d+)\s*yards?/i)||[])[1]);
     const moved=endYard!=null && snapYard!=null && Math.abs(endYard-snapYard)>=1;
     if(!moved && snapYard!=null && isFinite(Number(shownPlay.statYardage)) && Number(shownPlay.statYardage)!==0){
@@ -2715,26 +2727,33 @@ function renderFootball(g, sum){
   };
   const ground=track(startX, ballX);
   const air=bow(startX, ballX, -46);
-  const kick0=(()=>{ const y=pinYard(shownPlay.start); return y==null?startX:10+y; })();
-  const kick1=(()=>{ const y=pinYard(shownPlay.end); if(kind==="FG" && (scored||/good|made/i.test(rawPlay))) return goingRight?114:6; return y==null?ballX:10+Math.max(0,Math.min(100,y)); })();
+  const xPin=y=>10+Math.max(0, Math.min(100, y));
+  const kick0=kickFromYard!=null?xPin(kickFromYard):(()=>{ const y=pinYard(shownPlay.start); return y==null?startX:xPin(y); })();
+  const catchX=catchYard!=null?xPin(catchYard):(()=>{ const y=pinYard(shownPlay.end); if(kind==="FG" && (scored||/good|made/i.test(rawPlay))) return goingRight?114:6; return y==null?ballX:xPin(y); })();
+  const backX=isReturn?xPin(returnYard):catchX;
   const kickLift=isPunt?-76:kind==="FG"?-52:-62;
-  const kickAir=bow(kick0, kick1, kickLift);
-  const kickGround=track(kick0, kick1);
+  const KS=FP(kick0,26.6), KC=FP(catchX,26.6), KR=FP(backX,26.6), KM=FP((kick0+catchX)/2,26.6);
+  const kickAir=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} Q ${KM[0].toFixed(1)} ${(KM[1]+kickLift).toFixed(1)} ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
+  const kickPlay=isReturn?`${kickAir} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`:kickAir;
+  const kickGround=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} L ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
+  const returnLeg=`M ${KC[0].toFixed(1)} ${KC[1].toFixed(1)} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`;
   const playKey=String(shownPlay.id||rawPlay||"");
   const fresh=!!playKey && playKey!==window.FIELD_SEEN;
   if(playKey) window.FIELD_SEEN=playKey;
   const a=FP(startX,26.6), b=FP(ballX,lat);
   const travel=Math.hypot(b[0]-a[0], b[1]-a[1])+(isPass?28:0)+(isKick?36:0);
   const yardsMoved=Math.abs((currentYard||0)-(originalYard||0));
-  const kickYards=Math.abs(kick1-kick0);
+  const kickYards=Math.abs(catchX-kick0)+(isReturn?Math.abs(backX-catchX):0);
+  const flightDur=kind==="FG"?1.15:Math.max(1.05, Math.min(1.4, 0.85+Math.abs(catchX-kick0)*0.006));
+  const returnDur=isReturn?Math.max(0.9, Math.min(1.25, 0.75+Math.abs(backX-catchX)*0.006)):0;
   const runDur=(Math.max(0.95, Math.min(1.35, 0.85+yardsMoved*0.02))).toFixed(2);
   const passDur=(Math.max(0.9, Math.min(1.2, 0.72+yardsMoved*0.01))).toFixed(2);
-  const kickDur=(kind==="FG"?1.15:Math.max(isPunt?1.55:1.35, Math.min(isPunt?2.05:1.8, 1.15+kickYards*0.01))).toFixed(2);
+  const kickDur=(flightDur+returnDur).toFixed(2);
   const ball=fresh && travel>8
     ? (isPass
       ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${ground}"/></ellipse><circle r="4.4" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${passDur}s" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.2 0.15 0.2 1" calcMode="spline"/><animate attributeName="r" values="4.2;9;5.2" keyTimes="0;0.42;1" dur="${passDur}s" fill="freeze"/></circle>`
       : isKick
-      ? `<ellipse rx="8" ry="2.6" fill="rgba(0,0,0,.32)"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickGround}"/></ellipse><circle r="4.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickAir}" keyTimes="0;1" keySplines="0.15 0.05 0.2 1" calcMode="spline"/><animate attributeName="r" values="4;${isPunt?11.5:kind==="FG"?7.5:9.5};5" keyTimes="0;0.5;1" dur="${kickDur}s" fill="freeze"/></circle>`
+      ? `<ellipse rx="8" ry="2.6" fill="rgba(0,0,0,.32)"><animateMotion dur="${flightDur.toFixed(2)}s" fill="freeze" path="${kickGround}"/><animate attributeName="opacity" from=".32" to="0" begin="${flightDur.toFixed(2)}s" dur="0.12s" fill="freeze"/></ellipse><circle r="4.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickPlay}" calcMode="linear"/><animate attributeName="r" values="${isReturn?"4.2;10.5;5.2;5.2":"4;"+((isPunt?11.5:kind==="FG"?7.5:9.5))+";5"}" keyTimes="${isReturn?"0;0.34;0.52;1":"0;0.5;1"}" dur="${kickDur}s" fill="freeze"/></circle>`
       : `<circle r="5.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${runDur}s" fill="freeze" path="${runPath}" calcMode="linear"/></circle>`)
     : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
   const orig=showMove?`<path d="${fseg([[startX,1],[startX,52.2]])}" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
@@ -2761,9 +2780,11 @@ function renderFootball(g, sum){
   const sit=endFresh
     ? [endDownTxt, endWhere||(logged&&logged.label)||""].filter(Boolean).join(" · ")
     : (built || [endDownTxt||snapDownTxt, (logged&&logged.label)||endWhere||snapWhere].filter(Boolean).join(" · "));
-  const face=(isPenalty && endDownTxt ? endDownTxt : (snapSpot.shortDownDistanceText||snapSpot.downDistanceText||sit||"BALL")).toUpperCase();
+  const snapOnly=(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||"").toUpperCase();
+  const face=(isPenalty && endDownTxt ? String(endDownTxt).toUpperCase() : snapOnly) || (kind==="KICK"?"KICKOFF":kind==="PUNT"?"PUNT":kind==="FG"?"FIELD GOAL":(sit||"BALL").toUpperCase());
   const liveSpot=(latestPlay&&(latestPlay.end||latestPlay.start))||{};
   const liveNow=[liveSpot.shortDownDistanceText||liveSpot.downDistanceText||"", liveSpot.possessionText||""].filter(Boolean).join(" · ").toUpperCase();
+  const showLive=!!liveNow && liveNow!==face;
   const toAb=offAway?hm:aw;
   const way=goingRight?`<span>${offAb||""}</span><i></i><span>${toAb}</span>`:`<span>${offAb||""}</span><i class="back"></i><span>${toAb}</span>`;
   const markOf=p=>{
@@ -2804,10 +2825,11 @@ function renderFootball(g, sum){
       ${isRun&&!isSack&&fresh&&travel>8?`<path d="${runPath}" fill="none" stroke="${playCol}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="520" stroke-dashoffset="520" opacity="1"><animate attributeName="stroke-dashoffset" from="520" to="0" dur="${runDur}s" fill="freeze"/><animate attributeName="opacity" from="1" to="0" begin="${runDur}s" dur="0.4s" fill="freeze"/></path>`:""}
       ${isPass&&travel>8?`<path d="${air}" fill="none" stroke="${playCol}" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.5 3" opacity=".9"/>`:""}
       ${isKick&&travel>8?`<path d="${kickAir}" fill="none" stroke="#d5d0c8" stroke-width="1.7" stroke-linecap="round"/>`:""}
+      ${isReturn&&fresh?`<path d="${returnLeg}" fill="none" stroke="${playCol}" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="520" stroke-dashoffset="520"><animate attributeName="stroke-dashoffset" from="520" to="0" begin="${flightDur.toFixed(2)}s" dur="${returnDur.toFixed(2)}s" fill="freeze"/><animate attributeName="opacity" from="1" to="0" begin="${kickDur}s" dur="0.35s" fill="freeze"/></path>`:""}
       ${ball}
     </svg>
     </div>
-    <div class="onsit"><img alt="" src="${offLogo}"/><div><b>${face}</b>${liveNow?`<em><i>LIVE</i>${liveNow}</em>`:""}</div><span class="way">${way}</span></div>
+    <div class="onsit"><img alt="" src="${offLogo}"/><div><b>${face}</b>${showLive?`<em><i>LIVE</i>${liveNow}</em>`:""}</div><span class="way">${way}</span></div>
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
