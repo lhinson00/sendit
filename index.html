@@ -2750,15 +2750,16 @@ function renderFootball(g, sum){
   const flightDur=kind==="FG"?1.15:Math.max(1.05, Math.min(1.4, 0.85+Math.abs(catchX-kick0)*0.006));
   const returnDur=isReturn?Math.max(0.9, Math.min(1.25, 0.75+Math.abs(backX-catchX)*0.006)):0;
   const runDur=(Math.max(0.95, Math.min(1.35, 0.85+yardsMoved*0.02))).toFixed(2);
-  const passDur=(Math.max(0.9, Math.min(1.2, 0.72+yardsMoved*0.01))).toFixed(2);
+  const passDur=(Math.max(1.65, Math.min(2.15, 1.45+yardsMoved*0.016))).toFixed(2);
   const kickDur=(flightDur+returnDur).toFixed(2);
+  const pig=`<ellipse rx="8.2" ry="4.5" fill="#6b3414" stroke="#f3e6c8" stroke-width=".65"/><path d="M-2.3 0H2.3" stroke="#fff" stroke-width=".75"/><path d="M-1.15-2.15v4.3M0-2.55v5.1M1.15-2.15v4.3" stroke="#fff" stroke-width=".5" fill="none"/>`;
   const ball=fresh && travel>8
     ? (isPass
-      ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${ground}"/></ellipse><circle r="4.4" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${passDur}s" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.2 0.15 0.2 1" calcMode="spline"/><animate attributeName="r" values="4.2;9;5.2" keyTimes="0;0.42;1" dur="${passDur}s" fill="freeze"/></circle>`
+      ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${ground}"/></ellipse><g><animateMotion dur="${passDur}s" rotate="auto" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.22 0.08 0.2 1" calcMode="spline"/><g>${pig}<animateTransform attributeName="transform" type="scale" values="1;1.7;1" keyTimes="0;0.46;1" dur="${passDur}s" fill="freeze"/></g></g>`
       : isKick
-      ? `<ellipse rx="8" ry="2.6" fill="rgba(0,0,0,.32)"><animateMotion dur="${flightDur.toFixed(2)}s" fill="freeze" path="${kickGround}"/><animate attributeName="opacity" from=".32" to="0" begin="${flightDur.toFixed(2)}s" dur="0.12s" fill="freeze"/></ellipse><circle r="4.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickPlay}" calcMode="linear"/><animate attributeName="r" values="${isReturn?"4.2;10.5;5.2;5.2":"4;"+((isPunt?11.5:kind==="FG"?7.5:9.5))+";5"}" keyTimes="${isReturn?"0;0.34;0.52;1":"0;0.5;1"}" dur="${kickDur}s" fill="freeze"/></circle>`
-      : `<circle r="5.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${runDur}s" fill="freeze" path="${runPath}" calcMode="linear"/></circle>`)
-    : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
+      ? `<ellipse rx="8" ry="2.6" fill="rgba(0,0,0,.32)"><animateMotion dur="${flightDur.toFixed(2)}s" fill="freeze" path="${kickGround}"/><animate attributeName="opacity" from=".32" to="0" begin="${flightDur.toFixed(2)}s" dur="0.12s" fill="freeze"/></ellipse><g><animateMotion dur="${kickDur}s" rotate="auto" fill="freeze" path="${kickPlay}" calcMode="linear"/><g>${pig}<animateTransform attributeName="transform" type="scale" values="${isReturn?"1;1.85;1;1":"1;1.7;1"}" keyTimes="${isReturn?"0;0.34;0.52;1":"0;0.5;1"}" dur="${kickDur}s" fill="freeze"/></g></g>`
+      : `<g><animateMotion dur="${runDur}s" rotate="auto" fill="freeze" path="${runPath}" calcMode="linear"/>${pig}</g>`)
+    : `<g transform="translate(${b[0].toFixed(1)} ${b[1].toFixed(1)}) rotate(-32)">${pig}</g>`;
   const orig=showMove?`<path d="${fseg([[startX,1],[startX,52.2]])}" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
   const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.2],[Math.max(losX,fdX),1.2],[Math.max(losX,fdX),52],[Math.min(losX,fdX),52]])}Z" fill="rgba(255,196,40,.2)"/>`;
   const los=`<path d="${fseg([[losX,0.6],[losX,52.6]])}" fill="none" stroke="#49d2ff" stroke-width="2.8"/>`;
