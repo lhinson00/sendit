@@ -2739,25 +2739,41 @@ function renderFootball(g, sum){
   const isFG=kind==="FG"||/field goal|extra point/i.test(shownType+" "+rawPlay);
   const fgMade=isFG&&/good/i.test(rawPlay)&&!/no good/i.test(rawPlay);
   const fgSide=/wide right|right upright/i.test(rawPlay)?"right":/wide left|left upright/i.test(rawPlay)?"left":"";
-  const goalX=goingRight?118:2;
-  const fgWide=fgSide==="right"?(goingRight?40:13):fgSide==="left"?(goingRight?13:40):26.6;
-  const fgX=!isFG?null:(fgMade||fgSide)?goalX:(goingRight?106:14);
-  const catchX=isFG?fgX:(catchYard!=null?xPin(catchYard):(()=>{ const y=pinYard(shownPlay.end); return y==null?ballX:xPin(y); })());
-  const aimW=isFG?fgWide:26.6;
+  const postsOf=(fieldX)=>{
+    const ground=FP(fieldX,26.65);
+    const far=FP(fieldX,21), near=FP(fieldX,32);
+    const farBar=[far[0], far[1]-14], nearBar=[near[0], near[1]-18];
+    const midBar=[(farBar[0]+nearBar[0])/2, (farBar[1]+nearBar[1])/2];
+    const dx=nearBar[0]-farBar[0], dy=nearBar[1]-farBar[1];
+    return {
+      ground, farBar, nearBar, midBar,
+      through:[midBar[0], midBar[1]-10],
+      pastFar:[farBar[0]-dx*0.7, farBar[1]-dy*0.7-8],
+      pastNear:[nearBar[0]+dx*0.7, nearBar[1]+dy*0.7-8]
+    };
+  };
+  const leftPosts=postsOf(0.8), rightPosts=postsOf(119.2);
+  const fgPosts=goingRight?rightPosts:leftPosts;
+  const fgTarget=!isFG?null:fgMade?fgPosts.through:(fgSide==="left"?(goingRight?fgPosts.pastFar:fgPosts.pastNear):fgSide==="right"?(goingRight?fgPosts.pastNear:fgPosts.pastFar):FP(goingRight?106:14,26.6));
+  const catchX=isFG?((goingRight?119.2:0.8)):(catchYard!=null?xPin(catchYard):(()=>{ const y=pinYard(shownPlay.end); return y==null?ballX:xPin(y); })());
   const backX=isReturn?xPin(returnYard):catchX;
-  const kickLift=isPunt?-76:isFG?(fgMade||fgSide?-60:-32):-62;
-  const KS=FP(kick0,26.6), KC=FP(catchX,aimW), KR=FP(backX,26.6), KM=FP((kick0+catchX)/2,(26.6+aimW)/2);
-  const kickAir=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} Q ${KM[0].toFixed(1)} ${(KM[1]+kickLift).toFixed(1)} ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
+  const kickLift=isPunt?-76:isFG?(fgMade||fgSide?-46:-24):-62;
+  const KS=FP(kick0,26.6);
+  const KC=isFG?fgTarget:FP(catchX,26.6);
+  const KR=FP(backX,26.6);
+  const peak=[(KS[0]+KC[0])/2, Math.min(KS[1],KC[1])+kickLift];
+  const KM=isFG?peak:FP((kick0+catchX)/2,26.6);
+  if(!isFG) KM[1]+=kickLift;
+  const kickAir=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} Q ${KM[0].toFixed(1)} ${KM[1].toFixed(1)} ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
   const kickPlay=isReturn?`${kickAir} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`:kickAir;
   const kickGround=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} L ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
   const returnLeg=`M ${KC[0].toFixed(1)} ${KC[1].toFixed(1)} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`;
-  const goal=(fieldX)=>{
-    const G=FP(fieldX,26.65);
-    const cx=G[0], base=G[1];
-    const stem=14, bar=13, up=20, yb=base-stem;
-    return `<g stroke-linecap="round" stroke-linejoin="round"><ellipse cx="${cx.toFixed(1)}" cy="${base.toFixed(1)}" rx="4.5" ry="1.7" fill="#c9a227"/><path d="M ${cx.toFixed(1)} ${base.toFixed(1)} L ${cx.toFixed(1)} ${yb.toFixed(1)}" stroke="#9a7208" stroke-width="4.2"/><path d="M ${cx.toFixed(1)} ${base.toFixed(1)} L ${cx.toFixed(1)} ${yb.toFixed(1)}" stroke="#ffe14a" stroke-width="2.3"/><path d="M ${(cx-bar).toFixed(1)} ${yb.toFixed(1)} L ${(cx+bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#9a7208" stroke-width="3.8"/><path d="M ${(cx-bar).toFixed(1)} ${yb.toFixed(1)} L ${(cx+bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#ffe14a" stroke-width="2.1"/><path d="M ${(cx-bar).toFixed(1)} ${(yb-up).toFixed(1)} L ${(cx-bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#9a7208" stroke-width="3.2"/><path d="M ${(cx-bar).toFixed(1)} ${(yb-up).toFixed(1)} L ${(cx-bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#ffe14a" stroke-width="1.8"/><path d="M ${(cx+bar).toFixed(1)} ${(yb-up).toFixed(1)} L ${(cx+bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#9a7208" stroke-width="3.2"/><path d="M ${(cx+bar).toFixed(1)} ${(yb-up).toFixed(1)} L ${(cx+bar).toFixed(1)} ${yb.toFixed(1)}" stroke="#ffe14a" stroke-width="1.8"/></g>`;
+  const drawPosts=(p)=>{
+    const farTop=[p.farBar[0], p.farBar[1]-22], nearTop=[p.nearBar[0], p.nearBar[1]-30];
+    const n=v=>v.toFixed(1);
+    return `<g stroke-linecap="round" stroke-linejoin="round"><ellipse cx="${n(p.ground[0])}" cy="${n(p.ground[1])}" rx="3.4" ry="1.4" fill="#c9a227"/><path d="M ${n(p.ground[0])} ${n(p.ground[1])} L ${n(p.midBar[0])} ${n(p.midBar[1])}" stroke="#9a7208" stroke-width="4"/><path d="M ${n(p.ground[0])} ${n(p.ground[1])} L ${n(p.midBar[0])} ${n(p.midBar[1])}" stroke="#ffe14a" stroke-width="2.2"/><path d="M ${n(p.farBar[0])} ${n(p.farBar[1])} L ${n(p.nearBar[0])} ${n(p.nearBar[1])}" stroke="#9a7208" stroke-width="3.4"/><path d="M ${n(p.farBar[0])} ${n(p.farBar[1])} L ${n(p.nearBar[0])} ${n(p.nearBar[1])}" stroke="#ffe14a" stroke-width="1.9"/><path d="M ${n(farTop[0])} ${n(farTop[1])} L ${n(p.farBar[0])} ${n(p.farBar[1])}" stroke="#9a7208" stroke-width="2.6"/><path d="M ${n(farTop[0])} ${n(farTop[1])} L ${n(p.farBar[0])} ${n(p.farBar[1])}" stroke="#ffe14a" stroke-width="1.5"/><path d="M ${n(nearTop[0])} ${n(nearTop[1])} L ${n(p.nearBar[0])} ${n(p.nearBar[1])}" stroke="#9a7208" stroke-width="3.3"/><path d="M ${n(nearTop[0])} ${n(nearTop[1])} L ${n(p.nearBar[0])} ${n(p.nearBar[1])}" stroke="#ffe14a" stroke-width="1.9"/></g>`;
   };
-  const uprights=goal(0.6)+goal(119.4);
+  const uprights=drawPosts(leftPosts)+drawPosts(rightPosts);
   const playKey=String(shownPlay.id||rawPlay||"");
   const fresh=!!playKey && playKey!==window.FIELD_SEEN;
   if(playKey) window.FIELD_SEEN=playKey;
