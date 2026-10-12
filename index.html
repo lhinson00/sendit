@@ -561,8 +561,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .onsit{display:flex;align-items:center;gap:10px;margin:8px 2px 0}
 .onsit img{width:22px;height:22px;object-fit:contain}
 .onsit b{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.04em;line-height:1}
-.onsit em{display:block;margin-top:3px;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;color:#c8c2b8}
-.onsit em i{font-style:normal;color:#ff7a18;margin-right:6px}
+.livenow{display:flex;align-items:center;gap:8px;margin:2px 2px 8px}
+.livenow img{width:22px;height:22px;object-fit:contain}
+.livenow i{font-style:normal;color:#ff7a18;font-size:11px;font-weight:800;letter-spacing:.14em}
+.livenow b{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;line-height:1}
 .onsit .way{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.08em;color:#ff7a18}
 .onsit .way i{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #ff7a18}
 .onsit .way i.back{border-left:0;border-right:8px solid #ff7a18}
@@ -2817,6 +2819,7 @@ function renderFootball(g, sum){
   }).join("");
   const line=String(shownPlay.text||"").replace(/&/g,"&").replace(/</g,"<");
   const gridiron=`<div class="gridiron">
+    ${liveNow?`<div class="livenow"><img alt="" src="${possLogo0}"/><i>LIVE</i><b>${liveNow}</b></div>`:""}
     <div class="fpicture">
     <svg viewBox="28 4 384 176" aria-hidden="true">
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
@@ -2829,7 +2832,7 @@ function renderFootball(g, sum){
       ${ball}
     </svg>
     </div>
-    <div class="onsit"><img alt="" src="${offLogo}"/><div><b>${face}</b>${showLive?`<em><i>LIVE</i>${liveNow}</em>`:""}</div><span class="way">${way}</span></div>
+    <div class="onsit"><img alt="" src="${offLogo}"/><b>${face}</b><span class="way">${way}</span></div>
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
