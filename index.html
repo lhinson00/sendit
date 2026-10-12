@@ -2663,34 +2663,58 @@ function renderFootball(g, sum){
   const isSack=/sack/i.test(shownType+" "+rawPlay);
   const isPass=kind==="PASS" && !isSack && !/scramble/i.test(rawPlay);
   const isRun=kind==="RUSH" || isSack || /scramble/i.test(rawPlay);
+  const isKick=isBoot || kind==="FG";
+  const isPunt=kind==="PUNT";
   const sideHits=rawPlay.match(/\b(left|right)\b/ig);
   const sideWord=sideHits?sideHits[sideHits.length-1].toLowerCase():"";
   const edge=isPass?8:isRun?15:22;
   const lat=isBoot||isPenalty?26.6:sideWord==="left"?(goingRight?edge:53.3-edge):sideWord==="right"?(goingRight?53.3-edge:edge):26.6;
   const ballX=scored?(goingRight?115:5):losX;
-  const a=FP(startX,26.6), b=FP(ballX,lat);
-  const ground=[0,0.35,0.7,1].map((t,i)=>{
-    const p=FP(startX+(ballX-startX)*t, 26.6+(lat-26.6)*t);
-    return (i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1);
-  }).join(" ");
-  const mid=FP((startX+ballX)/2,(26.6+lat)/2);
-  const airLift=isPass?-46:(kind==="FG"||kind==="PUNT"||kind==="KICK"?-30:0);
-  const air=`M ${a[0].toFixed(1)} ${a[1].toFixed(1)} Q ${mid[0].toFixed(1)} ${(mid[1]+airLift).toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
+  const cutSign=(sideWord==="right"?1:sideWord==="left"?-1:1)*(goingRight?1:-1);
+  const track=(x0,x1,wobble)=>{
+    const steps=wobble?14:7;
+    let d="";
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const x=x0+(x1-x0)*t;
+      let w=26.6+(lat-26.6)*t;
+      if(wobble){
+        const amp=Math.max(4.5, Math.min(7.2, 4.2+Math.abs(x1-x0)*0.05));
+        w+=Math.sin(t*Math.PI*2)*Math.sin(Math.PI*t)*amp*cutSign;
+      }
+      w=Math.max(3, Math.min(50.3, w));
+      const p=FP(x,w);
+      d+=(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)+" ";
+    }
+    return d;
+  };
+  const bow=(x0,x1,lift)=>{
+    const A=FP(x0,26.6), B=FP(x1,lat), M=FP((x0+x1)/2,(26.6+lat)/2);
+    return `M ${A[0].toFixed(1)} ${A[1].toFixed(1)} Q ${M[0].toFixed(1)} ${(M[1]+lift).toFixed(1)} ${B[0].toFixed(1)} ${B[1].toFixed(1)}`;
+  };
+  const ground=track(startX, ballX, isRun && !isSack);
+  const air=bow(startX, ballX, -46);
+  const kick0=(()=>{ const y=pinYard(shownPlay.start); return y==null?startX:10+y; })();
+  const kick1=(()=>{ const y=pinYard(shownPlay.end); if(kind==="FG" && (scored||/good|made/i.test(rawPlay))) return goingRight?114:6; return y==null?ballX:10+Math.max(0,Math.min(100,y)); })();
+  const kickLift=isPunt?-76:kind==="FG"?-52:-62;
+  const kickAir=bow(kick0, kick1, kickLift);
+  const kickGround=track(kick0, kick1, false);
   const playKey=String(shownPlay.id||rawPlay||"");
   const fresh=!!playKey && playKey!==window.FIELD_SEEN;
   if(playKey) window.FIELD_SEEN=playKey;
-  const travel=Math.hypot(b[0]-a[0], b[1]-a[1])+(isPass?28:0);
+  const a=FP(startX,26.6), b=FP(ballX,lat);
+  const travel=Math.hypot(b[0]-a[0], b[1]-a[1])+(isPass?28:0)+(isKick?36:0);
   const yardsMoved=Math.abs((currentYard||0)-(originalYard||0));
-  const runDur=(Math.max(0.34, Math.min(0.58, 0.26+yardsMoved*0.012))).toFixed(2);
+  const kickYards=Math.abs(kick1-kick0);
+  const runDur=(Math.max(1.25, Math.min(1.9, 1.05+yardsMoved*0.035))).toFixed(2);
   const passDur=(Math.max(0.9, Math.min(1.2, 0.72+yardsMoved*0.01))).toFixed(2);
-  const kickStart=pinYard(shownPlay.start), kickEnd=pinYard(shownPlay.end);
-  const kickArc=isBoot&&kickStart!=null&&kickEnd!=null?`M ${FP(10+kickStart,26.6)[0].toFixed(1)} ${FP(10+kickStart,26.6)[1].toFixed(1)} Q ${FP(10+(kickStart+kickEnd)/2,26.6)[0].toFixed(1)} ${(FP(10+(kickStart+kickEnd)/2,26.6)[1]-38).toFixed(1)} ${FP(10+kickEnd,26.6)[0].toFixed(1)} ${FP(10+kickEnd,26.6)[1].toFixed(1)}`:"";
-  const motionPath=kickArc||(isPass?air:ground);
-  const motionDur=isPass?passDur+"s":isRun?runDur+"s":"0.7s";
+  const kickDur=(kind==="FG"?1.15:Math.max(isPunt?1.55:1.35, Math.min(isPunt?2.05:1.8, 1.15+kickYards*0.01))).toFixed(2);
   const ball=fresh && travel>8
     ? (isPass
-      ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${ground}"/></ellipse><circle r="4.4" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${passDur}s" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.2 0.15 0.2 1" calcMode="spline"/><animate attributeName="r" values="4.2;9;5.2" keyTimes="0;0.42;1" dur="${passDur}s" fill="freeze"/></circle>`
-      : `<circle r="5.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${motionDur}" fill="freeze" path="${motionPath}" keyTimes="0;1" keySplines="${isRun?"0.05 0.85 0.15 1":"0.2 0.2 0.2 1"}" calcMode="spline"/></circle>`)
+      ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${track(startX,ballX,false)}"/></ellipse><circle r="4.4" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${passDur}s" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.2 0.15 0.2 1" calcMode="spline"/><animate attributeName="r" values="4.2;9;5.2" keyTimes="0;0.42;1" dur="${passDur}s" fill="freeze"/></circle>`
+      : isKick
+      ? `<ellipse rx="8" ry="2.6" fill="rgba(0,0,0,.32)"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickGround}"/></ellipse><circle r="4.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${kickDur}s" fill="freeze" path="${kickAir}" keyTimes="0;1" keySplines="0.15 0.05 0.2 1" calcMode="spline"/><animate attributeName="r" values="4;${isPunt?11.5:kind==="FG"?7.5:9.5};5" keyTimes="0;0.5;1" dur="${kickDur}s" fill="freeze"/></circle>`
+      : `<circle r="5.2" fill="#6b3414" stroke="#fff" stroke-width="1.4"><animateMotion dur="${runDur}s" fill="freeze" path="${ground}" calcMode="linear"/></circle>`)
     : `<circle cx="${b[0].toFixed(1)}" cy="${b[1].toFixed(1)}" r="5.5" fill="#6b3414" stroke="#fff" stroke-width="1.4"/>`;
   const orig=showMove?`<path d="${fseg([[startX,1],[startX,52.2]])}" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="1.7" stroke-dasharray="3 2.4"/>`:"";
   const band=fdX==null?"":`<path d="${fseg([[Math.min(losX,fdX),1.2],[Math.max(losX,fdX),1.2],[Math.max(losX,fdX),52],[Math.min(losX,fdX),52]])}Z" fill="rgba(255,196,40,.2)"/>`;
@@ -2754,9 +2778,9 @@ function renderFootball(g, sum){
       ${stripes}${ezL}${ezR}${ylines}${outline}${nums}
       ${ezMark(5,aLogo)}${ezMark(115,hLogo)}
       ${band}${orig}${fd}${fdTip}${los}
-      ${isRun&&showMove&&travel>8?`<path d="${ground}" fill="none" stroke="${playCol}" stroke-width="3" stroke-linecap="round"/>`:""}
+      ${isRun&&!isSack&&showMove&&travel>8?`<path d="${ground}" fill="none" stroke="${playCol}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`:""}
       ${isPass&&travel>8?`<path d="${air}" fill="none" stroke="${playCol}" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1.5 3" opacity=".9"/>`:""}
-      ${kickArc?`<path d="${kickArc}" fill="none" stroke="#d5d0c8" stroke-width="2.2" stroke-linecap="round"/>`:""}
+      ${isKick&&travel>8?`<path d="${kickAir}" fill="none" stroke="#d5d0c8" stroke-width="1.7" stroke-linecap="round"/>`:""}
       ${ball}
     </svg>
     </div>
