@@ -383,6 +383,8 @@ table.bx{width:100%;border-collapse:collapse;font-size:12px}
 table.bx th,table.bx td{padding:7px 8px;border-top:1px solid #1c1c22;text-align:left}
 table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 .play{margin:0 var(--pad) 8px;padding:10px 12px;background:#101218;border:1px solid #222}
+.play.pickable{cursor:pointer}
+.play.pickable.on{border-color:#ff7a18;background:#2a160c}
 .play span{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
 .play p{margin:4px 0 0;font-size:14px}
 .pname{border:0;background:0;color:var(--ember);font:inherit;font-weight:800;padding:0;text-align:left}
@@ -2385,10 +2387,20 @@ function renderFootball(g, sum){
   const firstPlay = plays[0] || {};
   const spotNow = lastPlay.end || lastPlay.start || {};
   const spotSnap = lastPlay.start || lastPlay.end || {};
-  const poss = (cur.team && (cur.team.abbreviation || cur.team.shortDisplayName)) || "";
-  const possLogo = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss===aw?aLogo:poss===hm?hLogo:aLogo);
+  const poss0 = (cur.team && (cur.team.abbreviation || cur.team.shortDisplayName)) || "";
+  const possLogo0 = (cur.team && (cur.team.logo || (cur.team.logos && cur.team.logos[0] && cur.team.logos[0].href))) || (poss0===aw?aLogo:poss0===hm?hLogo:aLogo);
+  let poss = poss0, possLogo = possLogo0;
+  let possIsAway = poss===aw || String((cur.team&&cur.team.id)||"")===String(away.id||(away.team&&away.team.id)||"");
+  const playIndex=[];
+  const indexDrive=drv=>{
+    if(!drv) return;
+    const team=(drv.team&&(drv.team.abbreviation||drv.team.shortDisplayName))||"";
+    const logo=(drv.team&&(drv.team.logo||(drv.team.logos&&drv.team.logos[0]&&drv.team.logos[0].href)))||(team===aw?aLogo:team===hm?hLogo:"");
+    (drv.plays||[]).forEach(p=>{ if(p&&p.id) playIndex.push({id:String(p.id), play:p, team, logo}); });
+  };
+  indexDrive(cur);
+  (Array.isArray(drives.previous)?drives.previous:[]).forEach(indexDrive);
   const driveTxt = cur.description || "";
-  const possIsAway = poss===aw || String((cur.team&&cur.team.id)||"")===String(away.id||(away.team&&away.team.id)||"");
   const noise=p=>/timeout|end quarter|end of|two-minute|warning|tv timeout/i.test(((p&&p.text)||"")+" "+(((p&&p.type)||{}).text||""));
   const meaningful=(plays||[]).filter(p=>p&&p.text&&!noise(p));
   if(window.DRIVE_GAME!==String(g.id||"")){
@@ -2405,9 +2417,15 @@ function renderFootball(g, sum){
   }
   let shownPlay=latestPlay;
   if(window.DRIVE_PICK){
-    const picked=meaningful.find(p=>String(p.id)===String(window.DRIVE_PICK));
-    if(picked) shownPlay=picked;
-    else window.DRIVE_PICK="";
+    const picked=playIndex.find(x=>x.id===String(window.DRIVE_PICK));
+    if(picked){
+      shownPlay=picked.play;
+      if(picked.team && picked.team!==poss){
+        poss=picked.team;
+        possLogo=picked.logo||(poss===aw?aLogo:hLogo);
+        possIsAway=poss===aw;
+      }
+    }else window.DRIVE_PICK="";
   }
   window.DRIVE_FOLLOW = shownPlay===latestPlay ? String(latestPlay.id||"") : "";
   const shownType=((shownPlay.type||{}).text)||"";
@@ -2475,7 +2493,8 @@ function renderFootball(g, sum){
       const clk=(p.clock&&p.clock.displayValue)||"";
       const q=p.period&&p.period.number?("Q"+p.period.number):"";
       const sit=(p.start&&(p.start.shortDownDistanceText||p.start.downDistanceText))||"";
-      return "<div class='play"+(p.scoringPlay?" hot":"")+"'><span>"+q+" "+clk+(sit?(" · "+sit):"")+"</span><p>"+(p.text||"")+"</p></div>";
+      const on=p.id && String(p.id)===String(window.DRIVE_PICK||"");
+      return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+(sit?(" · "+sit):"")+"</span><p>"+(p.text||"")+"</p></div>";
     }).join("");
     return "<div class='drivebook'><p class='hint'>"+head+"</p>"+(rows||"<p class='hint'>No plays yet.</p>")+"</div>";
   };
@@ -2536,7 +2555,7 @@ function renderFootball(g, sum){
     const clk = (p.clock&&p.clock.displayValue)||"";
     const tm = (p.team&&p.team.abbreviation)||"";
     const kind = (p.type&&p.type.abbreviation)||"";
-    return "<div class='play"+(kind==="TD"||kind==="FG"?" hot":"")+"'><span>"+tm+" "+kind+" · "+q+" "+clk+" · "+p.awayScore+"–"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
+    return "<div class='play pickable"+(kind==="TD"||kind==="FG"?" hot":"")+(p.id&&String(p.id)===String(window.DRIVE_PICK||"")?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+tm+" "+kind+" · "+q+" "+clk+" · "+p.awayScore+"–"+p.homeScore+"</span><p>"+(p.text||"")+"</p></div>";
   }).join("");
   const colOf=c=>{
     const raw=((c.team||{}).color)||"";
@@ -2855,11 +2874,15 @@ function renderFootball(g, sum){
   const tapeEl=document.querySelector("#gameBody .dtape");
   const onMark=tapeEl&&tapeEl.querySelector(".dmark.on");
   if(tapeEl&&onMark) tapeEl.scrollLeft=Math.max(0, onMark.offsetLeft-tapeEl.clientWidth/2+onMark.offsetWidth/2);
-  document.querySelectorAll("#gameBody .dmark").forEach(btn=>{
+  document.querySelectorAll("#gameBody [data-pid]").forEach(btn=>{
     btn.onclick=()=>{
-      window.DRIVE_PICK=btn.dataset.pid||"";
+      if(!btn.dataset.pid) return;
+      window.DRIVE_PICK=btn.dataset.pid;
+      window.DRIVE_FOLLOW="";
       window.FIELD_SEEN="";
       if(window.FB_LAST) renderFootball(window.FB_LAST.g, window.FB_LAST.sum);
+      const pic=document.querySelector("#gameBody .fpicture");
+      if(pic) pic.scrollIntoView({block:"nearest", behavior:"smooth"});
     };
   });
 }
