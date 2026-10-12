@@ -558,9 +558,10 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .gridiron{position:relative}
 .gridiron svg{width:100%;height:auto;display:block}
 .fpicture{position:relative}
-.onsit{display:flex;align-items:center;gap:10px;margin:8px 2px 0}
-.onsit img{width:22px;height:22px;object-fit:contain}
-.onsit b{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.04em;line-height:1}
+.onsit{display:flex;align-items:center;gap:8px;margin:8px 2px 0}
+.onsit img{width:18px;height:18px;object-fit:contain}
+.onsit > i{font-style:normal;color:#9b9288;font-size:11px;font-weight:800;letter-spacing:.14em}
+.onsit b{font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.04em;line-height:1;color:#f4efe6}
 .livenow{display:flex;align-items:center;gap:8px;margin:2px 2px 8px}
 .livenow img{width:22px;height:22px;object-fit:contain}
 .livenow i{font-style:normal;color:#ff7a18;font-size:11px;font-weight:800;letter-spacing:.14em}
@@ -2832,7 +2833,7 @@ function renderFootball(g, sum){
       ${ball}
     </svg>
     </div>
-    <div class="onsit"><img alt="" src="${offLogo}"/><b>${face}</b><span class="way">${way}</span></div>
+    <div class="onsit"><img alt="" src="${offLogo}"/><i>PLAY</i><b>${face}</b><span class="way">${way}</span></div>
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
