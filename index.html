@@ -556,11 +556,12 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .gridiron{position:relative}
 .gridiron svg{width:100%;height:auto;display:block}
 .fpicture{position:relative}
-.onsit{position:absolute;left:8px;top:8px;display:flex;align-items:center;gap:8px;max-width:86%;padding:6px 10px 6px 6px;border-radius:12px;background:rgba(7,8,12,.82)}
-.onsit img{width:28px;height:28px;object-fit:contain}
-.onsit b{display:block;font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.06em;line-height:.85}
-.onsit em{display:block;margin-top:2px;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.08em}
-.onsit .way{margin-left:8px;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.08em;color:#ff7a18;white-space:nowrap}
+.onsit{display:flex;align-items:center;gap:10px;margin:8px 2px 0}
+.onsit img{width:22px;height:22px;object-fit:contain}
+.onsit b{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.04em;line-height:1}
+.onsit .way{margin-left:auto;display:flex;align-items:center;gap:6px;font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:.08em;color:#ff7a18}
+.onsit .way i{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #ff7a18}
+.onsit .way i.back{border-left:0;border-right:8px solid #ff7a18}
 .dtape{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .dtape::-webkit-scrollbar{display:none}
 .dmark{flex:0 0 auto;min-width:54px;height:46px;padding:0 8px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#12110f;color:#f4efe6;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -2590,8 +2591,20 @@ function renderFootball(g, sum){
   const gainedNow=rawPlay.match(/for (-?\d+) yard/i);
   const gainedN=!isPenalty && gainedNow && !/incomplete/i.test(rawPlay) ? Number(gainedNow[1]) : null;
   let logged=null;
-  if(!scored){
-    const pm=isPenalty ? rawPlay.match(/enforced at\s+([A-Z]{2,4})\s+(\d{1,2})/i) : rawPlay.match(/\bto\s+([A-Z]{2,4})\s+(\d{1,2})\b/i);
+  if(isPenalty){
+    const penYds=Number((rawPlay.match(/(\d+)\s*yards?/i)||[])[1]);
+    const moved=endYard!=null && snapYard!=null && Math.abs(endYard-snapYard)>=1;
+    if(!moved && snapYard!=null && isFinite(Number(shownPlay.statYardage)) && Number(shownPlay.statYardage)!==0){
+      const s=Number(shownPlay.statYardage);
+      endYard=Math.max(0, Math.min(100, goingRight?snapYard+s:snapYard-s));
+    }else if(!moved && snapYard!=null && isFinite(penYds) && penYds>0){
+      const flagged=((rawPlay.match(/PENALTY on\s+([A-Z]{2,4})/i)||[])[1]||"").toUpperCase();
+      const onOffense=!flagged || flagged===String(offAb||"").toUpperCase();
+      const sign=onOffense?-1:1;
+      endYard=Math.max(0, Math.min(100, goingRight?snapYard+sign*penYds:snapYard-sign*penYds));
+    }
+  }else if(!scored){
+    const pm=rawPlay.match(/\bto\s+([A-Z]{2,4})\s+(\d{1,2})\b/i);
     if(pm){
       const y=pinFromText("at "+pm[1]+" "+pm[2]);
       if(y!=null) logged={y:y, label:pm[1].toUpperCase()+" "+pm[2]};
@@ -2689,8 +2702,9 @@ function renderFootball(g, sum){
   const sit=endFresh
     ? [endDownTxt, endWhere||(logged&&logged.label)||""].filter(Boolean).join(" · ")
     : (built || [endDownTxt||snapDownTxt, (logged&&logged.label)||endWhere||snapWhere].filter(Boolean).join(" · "));
-  const face=(snapSpot.shortDownDistanceText||snapSpot.downDistanceText||sit||"BALL").toUpperCase();
+  const face=(isPenalty && endDownTxt ? endDownTxt : (snapSpot.shortDownDistanceText||snapSpot.downDistanceText||sit||"BALL")).toUpperCase();
   const toAb=offAway?hm:aw;
+  const way=goingRight?`<span>${offAb||""}</span><i></i><span>${toAb}</span>`:`<span>${offAb||""}</span><i class="back"></i><span>${toAb}</span>`;
   const markOf=p=>{
     const t=p.text||"";
     const ty=((p.type||{}).text)||"";
@@ -2700,7 +2714,11 @@ function renderFootball(g, sum){
     if(/punt/i.test(ty)) return {lab:"PUNT", cls:""};
     if(/field goal/i.test(ty)) return {lab:/good|made/i.test(t)?"FG":"MISS", cls:/good|made/i.test(t)?"made":"bad"};
     if(/kickoff/i.test(ty)) return {lab:"KO", cls:""};
-    if(/penalty/i.test(ty)) return {lab:"PEN", cls:""};
+    if(/penalty/i.test(ty)){
+      const s=Number(p.statYardage);
+      if(isFinite(s)&&s!==0) return {lab:(s>0?"+":"")+s, cls:s<0?"bad":"made"};
+      return {lab:"PEN", cls:"bad"};
+    }
     const m=t.match(/for (-?\d+) yard/i);
     if(m){
       const n=Number(m[1]);
@@ -2726,8 +2744,8 @@ function renderFootball(g, sum){
       ${kickArc?`<path d="${kickArc}" fill="none" stroke="#d5d0c8" stroke-width="2.2" stroke-linecap="round"/>`:""}
       ${ball}
     </svg>
-    <div class="onsit"><img alt="" src="${offLogo}"/><div><b>${face}</b><em style="color:${playCol}">${tag||""}${gotStick?" · 1ST":""}</em></div><span class="way">${offAb||""} ▶ ${toAb}</span></div>
     </div>
+    <div class="onsit"><img alt="" src="${offLogo}"/><b>${face}</b><span class="way">${way}</span></div>
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
