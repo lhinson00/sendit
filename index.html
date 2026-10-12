@@ -2736,20 +2736,27 @@ function renderFootball(g, sum){
   const air=bow(startX, passEndX, passLift);
   const xPin=y=>10+Math.max(0, Math.min(100, y));
   const kick0=kickFromYard!=null?xPin(kickFromYard):(()=>{ const y=pinYard(shownPlay.start); return y==null?startX:xPin(y); })();
-  const catchX=(kind==="FG"||/extra point/i.test(rawPlay))?(goingRight?116:4):(catchYard!=null?xPin(catchYard):(()=>{ const y=pinYard(shownPlay.end); return y==null?ballX:xPin(y); })());
+  const isFG=kind==="FG"||/field goal|extra point/i.test(shownType+" "+rawPlay);
+  const fgMade=isFG&&/good/i.test(rawPlay)&&!/no good/i.test(rawPlay);
+  const fgSide=/wide right|right upright/i.test(rawPlay)?"right":/wide left|left upright/i.test(rawPlay)?"left":"";
+  const goalX=goingRight?118:2;
+  const fgWide=fgSide==="right"?(goingRight?40:13):fgSide==="left"?(goingRight?13:40):26.6;
+  const fgX=!isFG?null:(fgMade||fgSide)?goalX:(goingRight?106:14);
+  const catchX=isFG?fgX:(catchYard!=null?xPin(catchYard):(()=>{ const y=pinYard(shownPlay.end); return y==null?ballX:xPin(y); })());
+  const aimW=isFG?fgWide:26.6;
   const backX=isReturn?xPin(returnYard):catchX;
-  const kickLift=isPunt?-76:kind==="FG"?-52:-62;
-  const KS=FP(kick0,26.6), KC=FP(catchX,26.6), KR=FP(backX,26.6), KM=FP((kick0+catchX)/2,26.6);
+  const kickLift=isPunt?-76:isFG?(fgMade||fgSide?-60:-32):-62;
+  const KS=FP(kick0,26.6), KC=FP(catchX,aimW), KR=FP(backX,26.6), KM=FP((kick0+catchX)/2,(26.6+aimW)/2);
   const kickAir=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} Q ${KM[0].toFixed(1)} ${(KM[1]+kickLift).toFixed(1)} ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
   const kickPlay=isReturn?`${kickAir} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`:kickAir;
   const kickGround=`M ${KS[0].toFixed(1)} ${KS[1].toFixed(1)} L ${KC[0].toFixed(1)} ${KC[1].toFixed(1)}`;
   const returnLeg=`M ${KC[0].toFixed(1)} ${KC[1].toFixed(1)} L ${KR[0].toFixed(1)} ${KR[1].toFixed(1)}`;
-  const postX=kind==="PUNT"?null:(kind==="FG"||/extra point/i.test(rawPlay))?(goingRight?117:3):(isKick?(catchX>=kick0?117:3):null);
-  const uprights=postX==null?"":(()=>{
-    const L=FP(postX,17), R=FP(postX,36);
-    const rise=26;
-    return `<path d="M ${L[0].toFixed(1)} ${(L[1]-rise-18).toFixed(1)} L ${L[0].toFixed(1)} ${L[1].toFixed(1)}" stroke="#f7f1e6" stroke-width="2.2" stroke-linecap="round"/><path d="M ${R[0].toFixed(1)} ${(R[1]-rise-18).toFixed(1)} L ${R[0].toFixed(1)} ${R[1].toFixed(1)}" stroke="#f7f1e6" stroke-width="2.2" stroke-linecap="round"/><path d="M ${L[0].toFixed(1)} ${(L[1]-rise).toFixed(1)} L ${R[0].toFixed(1)} ${(R[1]-rise).toFixed(1)}" stroke="#f0b429" stroke-width="2.6" stroke-linecap="round"/>`;
-  })();
+  const goal=(fieldX)=>{
+    const far=FP(fieldX,22.6), near=FP(fieldX,30.6);
+    const farTop=far[1]-38, nearTop=near[1]-54, farBar=far[1]-15, nearBar=near[1]-22;
+    return `<path d="M ${far[0].toFixed(1)} ${farTop.toFixed(1)} L ${far[0].toFixed(1)} ${far[1].toFixed(1)}" stroke="#f5c518" stroke-width="1.7" stroke-linecap="round"/><path d="M ${near[0].toFixed(1)} ${nearTop.toFixed(1)} L ${near[0].toFixed(1)} ${near[1].toFixed(1)}" stroke="#f5c518" stroke-width="2.7" stroke-linecap="round"/><path d="M ${far[0].toFixed(1)} ${farBar.toFixed(1)} L ${near[0].toFixed(1)} ${nearBar.toFixed(1)}" stroke="#f5c518" stroke-width="2.4" stroke-linecap="round"/>`;
+  };
+  const uprights=goal(2)+goal(118);
   const playKey=String(shownPlay.id||rawPlay||"");
   const fresh=!!playKey && playKey!==window.FIELD_SEEN;
   if(playKey) window.FIELD_SEEN=playKey;
@@ -2763,7 +2770,7 @@ function renderFootball(g, sum){
   const passDur=(Math.max(1.65, Math.min(2.15, 1.45+yardsMoved*0.016))).toFixed(2);
   const kickDur=(flightDur+returnDur).toFixed(2);
   const pig=`<ellipse rx="8.2" ry="4.5" fill="#6b3414" stroke="#f3e6c8" stroke-width=".65"/><path d="M-2.3 0H2.3" stroke="#fff" stroke-width=".75"/><path d="M-1.15-2.15v4.3M0-2.55v5.1M1.15-2.15v4.3" stroke="#fff" stroke-width=".5" fill="none"/>`;
-  const restP=isInc?FP(passEndX, lat):b;
+  const restP=isInc?FP(passEndX, lat):(isFG?KC:b);
   const ball=fresh && travel>8
     ? (isPass
       ? `<ellipse rx="7" ry="2.4" fill="rgba(0,0,0,.35)"><animateMotion dur="${passDur}s" fill="freeze" path="${ground}"/></ellipse><g><animateMotion dur="${passDur}s" rotate="auto" fill="freeze" path="${air}" keyTimes="0;1" keySplines="0.22 0.08 0.2 1" calcMode="spline"/><g>${pig}<animateTransform attributeName="transform" type="scale" values="1;1.7;1" keyTimes="0;0.46;1" dur="${passDur}s" fill="freeze"/></g></g>`
