@@ -2036,8 +2036,8 @@ function tnGameReg(g, map){
 }
 function paintTnSlate(){
   const pack=window.TNFB||{games:[],standings:[]};
-  const todayKey=tnDateKey(chiToday());
-  const games=(pack.games||[]).filter(g=>tnFootballGame(g) && ((g.as!=="" && g.as!=null) || (g.hs!=="" && g.hs!=null) || tnDateKey(g.date)<=todayKey));
+  const horizon=tnDateKey(fridaySelDate());
+  const games=(pack.games||[]).filter(g=>tnFootballGame(g) && (((g.as!=="" && g.as!=null) || (g.hs!=="" && g.hs!=null)) || tnDateKey(g.date)<=horizon));
   const map=tnRegMap(games);
   const latest=tnLatestDate(games);
   const today=fridaySelDate();
@@ -2234,7 +2234,11 @@ async function loadLeague(lg){
     if(hasToday){ window.TN_WEEK=today; tssaaTab(window.TN_TAB||"fb"); }
     else if($("liveList")) $("liveList").innerHTML = "<p class='hint'>Friday slate</p>";
     const packer = typeof loadTnPack==="function" ? loadTnPack() : Promise.resolve();
-    packer.then(()=>refreshTnFromSource("open")).catch(()=>{ if(LEAGUE==="tssaa") paintTnSlate(); });
+    packer.then(()=>{
+      const day=fridaySelDate();
+      if(((window.TNFB||{}).games||[]).some(g=>g.date===day)) window.TN_WEEK=day;
+      return refreshTnFromSource("open");
+    }).catch(()=>{ if(LEAGUE==="tssaa") paintTnSlate(); });
     return;
   }
   try{
