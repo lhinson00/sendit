@@ -1797,25 +1797,19 @@ async function pullNflEvents(){
     const st=((ev.status||{}).type||{}).state;
     return st==="pre"||st==="in";
   });
-  const week=noteWeek("nfl", d);
+  const espnWeek=noteWeek("nfl", d);
+  let week=espnWeek;
   const year=Number((d.season&&d.season.year)||2026);
   const st=Number((d.season&&d.season.type)||2);
+  if(wantNext && week && !stillThisWeek) week+=1;
+  window.WEEK_NOW=window.WEEK_NOW||{};
+  window.WEEK_NOW.nfl=week;
   const off=LEAGUE==="nfl"?slateOff("nfl"):0;
-  if(off && week-off>=1){
+  const target=week-off;
+  if(target>=1 && target!==espnWeek){
     try{
-      const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+(week-off),{cache:"no-store"});
+      const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+target,{cache:"no-store"});
       if(r2.ok){ const d2=await r2.json(); if((d2.events||[]).length) return d2.events; }
-    }catch(e){}
-    return evs;
-  }
-  if(wantNext && week && !stillThisWeek){
-    try{
-      const r2=await fetch(base+"?year="+year+"&seasontype="+st+"&week="+(week+1),{cache:"no-store"});
-      if(r2.ok){
-        const d2=await r2.json();
-        const n=d2.events||[];
-        if(n.length) evs=n;
-      }
     }catch(e){}
   }
   return evs;
