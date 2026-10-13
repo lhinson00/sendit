@@ -5906,23 +5906,29 @@ async function openTeam(tid, name, sport){
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Opening "+name+"…</p>";
   const base="https://site.api.espn.com/apis/site/v2/sports/football/"+(isNfl?"nfl":"college-football")+"/teams/"+tid;
+  const pull=async url=>{
+    try{
+      const res=await fetch(url,{cache:"no-store"});
+      if(!res.ok) return {};
+      return await res.json();
+    }catch(e){ return {}; }
+  };
   try{
-    const [tRes,sRes,rRes,stRes,plRes]=await Promise.all([
-      fetch(base,{cache:"no-store"}),
-      fetch(base+"/schedule",{cache:"no-store"}),
-      fetch(base+"/roster",{cache:"no-store"}),
-      fetch(base+"/statistics",{cache:"no-store"}),
-      fetch(base+"/athletes/statistics",{cache:"no-store"})
+    // The bare /teams/{id} file has no CORS header, so the browser kills the
+    // whole page ("Load failed"). Schedule, roster, and stats do allow it.
+    const [sched,rost,stat,plstat]=await Promise.all([
+      pull(base+"/schedule"),
+      pull(base+"/roster"),
+      pull(base+"/statistics"),
+      pull(base+"/athletes/statistics")
     ]);
-    const pack=tRes.ok?await tRes.json():{};
-    const sched=sRes.ok?await sRes.json():{};
-    const rost=rRes.ok?await rRes.json():{};
-    const stat=stRes.ok?await stRes.json():{};
-    const plstat=plRes.ok?await plRes.json():{};
-    const t=pack.team||{};
-    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+(isNfl?"nfl":"ncaa")+"/500/"+(isNfl?(t.abbreviation||"").toLowerCase():tid)+".png");
+    const t=Object.assign({}, stat.team||{}, rost.team||{}, sched.team||{});
+    if(!t.id && !(plstat.results||[]).length && !(rost.athletes||[]).length){
+      throw new Error("ESPN did not return this club.");
+    }
+    const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||(typeof t.logo==="string"&&t.logo)||("https://a.espncdn.com/i/teamlogos/"+(isNfl?"nfl":"ncaa")+"/500/"+(isNfl?(t.abbreviation||"").toLowerCase():tid)+".png");
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
-    const recSum=rec.summary||"";
+    const recSum=rec.summary||t.recordSummary||t.seasonSummary||"";
     const cats=((((stat.results||{}).stats)||{}).categories)||[];
     const grab=(cat,names)=>{
       const c=(cats||[]).find(x=>x.name===cat);
@@ -6068,7 +6074,7 @@ async function openTeam(tid, name, sport){
       </div>`;
     $("playerRoom").querySelectorAll("[data-gid]").forEach(b=>b.onclick=ev=>{
       ev.stopPropagation();
-      if(b.dataset.gid){ LEAGUE="cfb"; openGame(b.dataset.gid, b.dataset.gid); }
+      if(b.dataset.gid){ LEAGUE=isNfl?"nfl":"cfb"; openGame(b.dataset.gid, b.dataset.gid); }
     });
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
