@@ -118,6 +118,18 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ymatch b{font-size:14px}
 .ymatch span{margin-left:auto;color:var(--ember);font-size:12px;font-weight:700;text-align:right}
 .ylast{margin:8px 0 0;color:#c9c2b8;font-size:12px}
+.ystat{margin-top:10px;padding-top:10px;border-top:1px solid #2a241c}
+.ystat-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ystat-top em{font-style:normal;font-size:10px;letter-spacing:.16em;font-weight:800;color:var(--orange);text-transform:uppercase}
+.ystat.live{border-top-color:#1e4a36}
+.ystat.live .ystat-top em{color:#3ee0a0}
+.ystat-top span{color:#c9c2b8;font-size:12px;font-weight:700;text-align:right}
+.ychips{display:flex;gap:6px}
+.ychips div{flex:1;min-width:0;background:#1a140f;border-radius:10px;padding:8px 2px 6px;text-align:center}
+.ychips b{display:block;font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.02em;line-height:.9;color:#fff}
+.ychips i{display:block;margin-top:3px;font-style:normal;font-size:9px;letter-spacing:.12em;font-weight:800;color:#9b9288}
+.ystat.live .ychips div{background:#102018}
+.ystat.live .ychips b{color:#e9fff5}
 .yempty{margin-top:12px;padding:16px;border:1px dashed #3a3228;border-radius:14px;color:#c9c2b8;font-size:14px;line-height:1.45}
 .ypick{margin-top:12px;background:#101218;border:1px solid #2a241c;border-radius:14px;padding:6px 0 10px}
 .yq{display:block;width:calc(100% - 24px);margin:8px 12px 4px;background:#0c0d12;border:1px solid #3a3228;color:#fff;border-radius:10px;padding:12px;font:inherit;font-size:16px}
@@ -4534,6 +4546,185 @@ function tnSnap(name){
   }
   return {line:fmtTnDate(pick.date)+" · "+ha+" "+pick.opp, live:false};
 }
+function statAt(names, stats, keys){
+  const list=names||[], vals=stats||[];
+  for(const k of keys){
+    const i=list.indexOf(k);
+    if(i>=0 && vals[i]!=null && String(vals[i])!=="") return String(vals[i]);
+  }
+  return "";
+}
+function numStat(names, stats, keys){
+  const n=parseFloat(statAt(names, stats, keys).replace(/,/g,""));
+  return Number.isFinite(n)?n:0;
+}
+function pushChip(out, v, lab){
+  if(out.length>=4 || v==null || v==="") return;
+  out.push({v:String(v), lab});
+}
+function chipsFor(lg, pos, names, stats){
+  const g=(...k)=>statAt(names, stats, k);
+  const n=(...k)=>numStat(names, stats, k);
+  const out=[];
+  const P=String(pos||"");
+  if(lg==="nfl"||lg==="cfb"){
+    const slash=g("completions/passingAttempts");
+    const cmp=g("completions"), att=g("passingAttempts");
+    const pass=slash || ((cmp||att)?((cmp||"0")+"/"+(att||"0")):"");
+    const rec=n("receptions"), rush=n("rushingAttempts"), py=n("passingYards");
+    const qb=/QB/i.test(P) || n("passingAttempts")>=5 || (!!pass && py>0 && !/WR|TE|RB|FB|K|P/i.test(P));
+    if(qb && pass){
+      pushChip(out, pass, "CMP");
+      pushChip(out, g("passingYards")||"0", "YDS");
+      pushChip(out, g("passingTouchdowns")||"0", "TD");
+      pushChip(out, g("interceptions")||"0", "INT");
+    } else if(rec>0 || /WR|TE/i.test(P)){
+      pushChip(out, g("receptions")||"0", "REC");
+      pushChip(out, g("receivingYards")||"0", "YDS");
+      pushChip(out, g("receivingTouchdowns")||"0", "TD");
+      if(rush>0) pushChip(out, g("rushingYards")||"0", "RUSH");
+    } else if(rush>0 || /RB|FB/i.test(P)){
+      pushChip(out, g("rushingAttempts")||"0", "CAR");
+      pushChip(out, g("rushingYards")||"0", "YDS");
+      pushChip(out, g("rushingTouchdowns")||"0", "TD");
+      if(rec>0) pushChip(out, g("receptions"), "REC");
+    } else if(g("fieldGoalsMade/fieldGoalAttempts") || /^K/i.test(P)){
+      pushChip(out, g("fieldGoalsMade/fieldGoalAttempts"), "FG");
+      pushChip(out, g("extraPointsMade/extraPointAttempts"), "XP");
+      pushChip(out, g("totalKickingPoints"), "PTS");
+    } else {
+      if(g("totalTackles")) pushChip(out, g("totalTackles"), "TKL");
+      if(n("sacks")) pushChip(out, g("sacks"), "SACK");
+      if(n("interceptions")) pushChip(out, g("interceptions"), "INT");
+      if(n("passesDefended")) pushChip(out, g("passesDefended"), "PD");
+    }
+  } else if(lg==="nba"||lg==="cbb"){
+    pushChip(out, g("points")||"0", "PTS");
+    pushChip(out, g("totalRebounds","rebounds")||"0", "REB");
+    pushChip(out, g("assists")||"0", "AST");
+    if(n("steals")>=n("blocks") && n("steals")) pushChip(out, g("steals"), "STL");
+    else if(n("blocks")) pushChip(out, g("blocks"), "BLK");
+  } else if(lg==="nhl"){
+    if(n("saves") || n("shotsAgainst") || /^G$/i.test(P)){
+      pushChip(out, g("saves")||"0", "SV");
+      pushChip(out, g("goalsAgainst")||"0", "GA");
+      const pct=g("savePct");
+      if(pct) pushChip(out, String(pct).replace(/^0(?=\.)/,""), "SV%");
+      const toi=g("timeOnIce","timeOnIcePerGame");
+      if(toi) pushChip(out, toi, "TOI");
+    } else {
+      pushChip(out, g("goals")||"0", "G");
+      pushChip(out, g("assists")||"0", "A");
+      pushChip(out, g("shotsTotal","shots")||"0", "SOG");
+      const toi=g("timeOnIce","timeOnIcePerGame");
+      if(toi) pushChip(out, toi, "TOI");
+    }
+  } else if(lg==="mlb"){
+    if(g("inningsPitched") || (n("innings")>0 && !g("atBats"))){
+      pushChip(out, g("inningsPitched","innings"), "IP");
+      pushChip(out, g("earnedRuns")||"0", "ER");
+      pushChip(out, g("strikeouts")||"0", "K");
+      pushChip(out, g("hits")||"0", "H");
+    } else {
+      pushChip(out, (g("hits")||"0")+"-"+(g("atBats")||"0"), "H-AB");
+      pushChip(out, g("runs")||"0", "R");
+      pushChip(out, g("homeRuns")||"0", "HR");
+      pushChip(out, g("RBIs","rbi")||"0", "RBI");
+    }
+  } else if(lg==="mls"){
+    pushChip(out, g("goals","totalGoals")||"0", "G");
+    pushChip(out, g("assists","goalAssists")||"0", "A");
+    pushChip(out, g("shots","totalShots")||"0", "SH");
+  }
+  return out;
+}
+function latestLog(d){
+  if(!d) return null;
+  const names=d.names||[];
+  const metaMap=d.events||{};
+  let best=null;
+  (d.seasonTypes||[]).forEach(st=>{
+    if(/preseason/i.test(st.displayName||"")) return;
+    (st.categories||[]).forEach(c=>{
+      (c.events||[]).forEach(ev=>{
+        const meta=metaMap[ev.eventId]||metaMap[String(ev.eventId)]||{};
+        const t=Date.parse(meta.gameDate||"")||0;
+        if(!best || t>=best.t) best={t, names, stats:ev.stats||[], meta};
+      });
+    });
+  });
+  return best;
+}
+function logContext(meta){
+  if(!meta) return "";
+  const opp=(meta.opponent&&(meta.opponent.abbreviation||meta.opponent.shortDisplayName||meta.opponent.displayName))||"";
+  const vs=String(meta.atVs||"").toLowerCase();
+  const ha=vs==="vs"||vs==="home"?"vs":"@";
+  return [meta.gameResult||"", meta.score||"", opp?ha+" "+opp:""].filter(Boolean).join(" ");
+}
+async function pullJSON(url){
+  try{
+    const res=await fetch(url,{cache:"no-store"});
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){ return null; }
+}
+async function liveAthleteStats(lg, pid, eventId){
+  const path=YPATH[lg];
+  if(!path||!eventId||!pid) return null;
+  const d=await pullJSON("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/summary?event="+eventId);
+  if(!d) return null;
+  const names=[], stats=[];
+  (((d.boxscore||{}).players)||[]).forEach(side=>{
+    (side.statistics||[]).forEach(grp=>{
+      const keys=grp.names||grp.keys||[];
+      const ath=(grp.athletes||[]).find(a=>String((a.athlete&&a.athlete.id)||"")===String(pid));
+      if(!ath) return;
+      (ath.stats||[]).forEach((v,i)=>{
+        const k=keys[i];
+        if(!k || names.indexOf(k)>=0) return;
+        names.push(k); stats.push(v);
+      });
+    });
+  });
+  return names.length?{names, stats}:null;
+}
+async function fillPlayerBook(p){
+  const card={record:[p.pos, p.team].filter(Boolean).join(" · ")||lgLabel(p.lg)};
+  let live=false, eventId="", detail="", oppBit="";
+  if(p.teamId){
+    const book=await teamBook(p.lg, p.teamId);
+    if(book){
+      const built=bookFromTeam(book, p.teamId);
+      Object.assign(card, built, {record:card.record||built.record});
+      live=!!built.live;
+      if(book.live){
+        eventId=String((book.live.ev&&book.live.ev.id)||"");
+        detail=(book.live.st&&(book.live.st.shortDetail||book.live.st.detail))||"";
+        const s=sidesOf(book.live, p.teamId);
+        oppBit=(s.me.homeAway==="home"?"vs ":"@ ")+nickOf(s.theirs);
+      }
+    }
+  }
+  let stat=null;
+  if(live && eventId){
+    const pack=await liveAthleteStats(p.lg, p.id, eventId);
+    const chips=pack?chipsFor(p.lg, p.pos, pack.names, pack.stats):[];
+    if(chips.length) stat={live:true, context:[detail, oppBit].filter(Boolean).join(" · "), chips};
+  }
+  if(!stat){
+    const d=await pullJSON("https://site.web.api.espn.com/apis/common/v3/sports/"+YPATH[p.lg]+"/athletes/"+p.id+"/gamelog");
+    const row=latestLog(d);
+    if(row){
+      const chips=chipsFor(p.lg, p.pos, row.names, row.stats);
+      if(chips.length) stat={live:false, context:logContext(row.meta), chips};
+    }
+  }
+  if(stat){ card.stat=stat; card.last=""; }
+  p._book=card;
+  p._live=live;
+  p._line=stat?stat.chips.map(c=>c.v+" "+c.lab).join(" · "):"";
+}
 async function fillPinLines(){
   const gen=++PIN_GEN;
   if(PINS.some(p=>p.lg==="tssaa") && !(window.TNFB&&window.TNFB.games&&window.TNFB.games.length) && typeof loadTnPack==="function"){
@@ -4546,6 +4737,10 @@ async function fillPinLines(){
         const r=tnSnap(p.name);
         line=r.line; live=r.live;
         p._book={record:"TSSAA", label:r.live?"Live":"", big:"", last:r.line||"", live:r.live};
+      } else if(p.kind==="player" && YPATH[p.lg]){
+        await fillPlayerBook(p);
+        live=!!p._live;
+        line=p._line||"";
       } else if(p.kind==="team" || p.teamId){
         const id=p.kind==="team"?p.id:p.teamId;
         const book=await teamBook(p.lg, id);
@@ -4624,11 +4819,12 @@ function paintYours(quiet){
       const live=!!(b.live||p._live);
       const soon=!!b.soon;
       const opp=b.oppName?`<div class="ymatch">${b.oppLogo?`<img alt="" src="${esc(b.oppLogo)}"/>`:""}<b>${esc(b.oppName)}</b>${b.where?`<span>${esc(b.where)}</span>`:""}</div>`:"";
-      const last=b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label?`<p class="ylast">Checking the schedule…</p>`:""));
+      const stat=(p.kind==="player" && b.stat && b.stat.chips && b.stat.chips.length)?`<div class="ystat${b.stat.live?" live":""}"><div class="ystat-top"><em>${b.stat.live?"Live line":"Last line"}</em><span>${esc(b.stat.context||"")}</span></div><div class="ychips">${b.stat.chips.map(c=>`<div><b>${esc(c.v)}</b><i>${esc(c.lab)}</i></div>`).join("")}</div></div>`:"";
+      const last=stat?"":(b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label?`<p class="ylast">Checking the schedule…</p>`:"")));
       if(YSTATE.order){
         return `<div class="ycard ysort${p.kind==="player"?" player":""}" data-yi="${i}"><span class="ynum">${i+1}</span>${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(lgLabel(p.lg)||record)}</span></div><span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up"${i===0?" disabled":""}>↑</button><button type="button" data-ydn="${i}" aria-label="Move down"${i===PINS.length-1?" disabled":""}>↓</button></span></div>`;
       }
-      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div><button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${last}</div>`;
+      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div><button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${stat}${last}</div>`;
     }).join("");
   }
   if(!quiet) fillPinLines();
@@ -4819,7 +5015,7 @@ function bootYours(){
   }
   setInterval(()=>{
     if($("viewHome") && !$("viewHome").hidden && PINS.length) fillPinLines();
-  }, 45000);
+  }, 20000);
 }
 try{ bootYours(); }catch(e){}
 let SLIP = [];
