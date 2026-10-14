@@ -1066,7 +1066,7 @@ const URLS = {
   nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
   nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
   cbb: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard",
-  ufc: "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
+  ufc: "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
   mls: "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
 };
 const SUM = {
@@ -1691,6 +1691,8 @@ function paint(games){
     if(e.target.closest("[data-fav]")) return;
     if(e.target.closest("[data-tid]")) return;
     if(e.target.closest("[data-stop],.oddsrow,input,select,textarea")) return;
+    const face=e.target.closest("[data-fighter]");
+    if(face){ e.preventDefault(); e.stopPropagation(); openFighter(face.dataset.fighter||"", face.dataset.fname||"Fighter"); return; }
     openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid);
   });
   host.querySelectorAll("[data-fav]").forEach(b=>b.onclick=e=>{
@@ -3358,6 +3360,13 @@ function paintFightShell(g, extra){
     <div class="hist" id="histB"><p class="hint">Loading ${g.home||"fighter"}…</p></div>
     </div>`;
   bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
+  $("gameRoom").querySelectorAll(".gteam.prow").forEach(b=>{
+    b.onclick=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      openFighter(b.dataset.pid||"", b.dataset.pname||"Fighter");
+    };
+  });
 }
 async function fetchUfcLive(g){
   const pack={clock:when(g), away:null, home:null};
@@ -3506,11 +3515,17 @@ async function openGame(id, fid){
   show("game");
   $("gameRoom").innerHTML = "<p class='hint'>Opening…</p>";
   const pool = window.LIVE_GAMES||GAMES||[];
-  const g = LEAGUE==="ufc"
-    ? (pool.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(id) || String(x.eventId)===String(id)) || {eventId:String(id), fightId:String(fid||id)})
+  let g = LEAGUE==="ufc"
+    ? (pool.find(x => String(x.fightId)===String(fid||id) || String(x.id)===String(fid||id) || String(x.id)===String(id)) || null)
     : (pool.find(x => String(x.eventId)===String(id)) || {eventId:String(id), lg:LEAGUE});
+  if(LEAGUE==="ufc" && (!g || (!g.away && !g.home))){
+    for(const ev of (window.UFC_EVENTS||[])){
+      const hit=mapComp(ev,"ufc").find(x=>String(x.fightId)===String(fid||id) || String(x.id)===String(id));
+      if(hit && (hit.away||hit.home)){ g=hit; break; }
+    }
+  }
   if(LEAGUE==="ufc"){
-    if(!g.away && !g.home){
+    if(!g || (!g.away && !g.home)){
       $("gameRoom").innerHTML = "<p class='hint'>Could not match that bout. Back out and tap it again.</p>";
       return;
     }
@@ -3636,15 +3651,17 @@ function showUfcLineup(card, games, box){
     <div class="gcard ufight${live?" live":""}${isHeat(g)?" heat":""}${(isFav(g.awayId)||isFav(g.homeId))?" pin":""}" data-gid="${g.fightId||g.id}" data-fid="${g.fightId||""}">
       <div class="gstat"><span>${g.weight||g.format||"Bout"}${g.rounds?(" · "+g.rounds+" rd"):""}</span><span>${live?"LIVE · "+(g.detail||""):(done?((g.awayWin?g.away:(g.homeWin?g.home:"FINAL"))+(g.awayWin||g.homeWin?" WINS":"")):when(g))}</span></div>
       <div class="ufc-row">
-        <div class="f${g.awayWin?" won":""}${g.homeWin?" lost":""}">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}</em>${g.awayWin?"<span class='wintag'>WINNER</span>":""}</div>
+        <div class="f${g.awayWin?" won":""}${g.homeWin?" lost":""}" data-fighter="${g.awayId||""}" data-fname="${String(g.away||"").replace(/"/g,"")}">${starBtn(g.awayId,g.away)}<img alt="" src="${g.awayImg}"/><b>${g.away||"—"}</b><em>${g.awayRec||""}</em>${g.awayWin?"<span class='wintag'>WINNER</span>":""}</div>
         <span class="vs">${done?(g.awayWin||g.homeWin?"FINAL":"FINAL"):"VS"}</span>
-        <div class="f r${g.homeWin?" won":""}${g.awayWin?" lost":""}">${starBtn(g.homeId,g.home)}<img alt="" src="${g.homeImg}"/><b>${g.home||"—"}</b><em>${g.homeRec||""}</em>${g.homeWin?"<span class='wintag'>WINNER</span>":""}</div>
+        <div class="f r${g.homeWin?" won":""}${g.awayWin?" lost":""}" data-fighter="${g.homeId||""}" data-fname="${String(g.home||"").replace(/"/g,"")}">${starBtn(g.homeId,g.home)}<img alt="" src="${g.homeImg}"/><b>${g.home||"—"}</b><em>${g.homeRec||""}</em>${g.homeWin?"<span class='wintag'>WINNER</span>":""}</div>
       </div>
       ${oddsTape(g,"peek")}
     </div>`;
   }).join("");
   host.querySelectorAll(".ufight").forEach(b=>b.onclick=e=>{
     if(e.target.closest("[data-fav],[data-stop],.oddsdesk,input,.who")) return;
+    const face=e.target.closest("[data-fighter]");
+    if(face){ e.preventDefault(); e.stopPropagation(); openFighter(face.dataset.fighter||"", face.dataset.fname||"Fighter"); return; }
     openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid);
   });
   host.querySelectorAll("[data-fav]").forEach(b=>b.onclick=e=>{
@@ -3676,7 +3693,7 @@ function ufcDay(iso){
 async function pullUfcFuture(){
   const fmt=d=>d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
   const end=new Date(Date.now()+150*86400000);
-  const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?dates="+fmt(new Date())+"-"+fmt(end)+"&limit=80",{cache:"no-store"});
+  const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard?dates="+fmt(new Date())+"-"+fmt(end)+"&limit=80",{cache:"no-store"});
   const d=r.ok?await r.json():{};
   const now=Date.now();
   return (d.events||[]).filter(ev=>{
