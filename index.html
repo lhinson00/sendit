@@ -6078,7 +6078,7 @@ async function openTeam(tid, name, sport){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
   }
 }
-const OFF_CAT = /pass|rush|receiv|quarterback|touchdown|point|totalPoints|totalTouchdowns/i;
+const OFF_CAT = /pass|rush|receiv|recept|quarterback|touchdown|point|totalPoints|totalTouchdowns/i;
 const DEF_CAT = /sack|interception|tackle|defend/i;
 function refId(ref){
   const m=String(ref||"").match(/\/(?:athletes|teams)\/(\d+)/);
@@ -6196,6 +6196,13 @@ function paintLeaders(){
   const defTest = nba ? /steal|block|turnover|foul/i : nhl ? /savePct|avgGoals|wins|shutout/i : mlb ? /ERA|wins|strikeout|saves|WHIP|quality|opponentAvg|holds/i : DEF_CAT;
   const conf=window.LEAD_CONF||"";
   const shown=cats.filter(c=> side==="off" ? offTest.test(c.name||c.displayName||"") && !defTest.test(c.name||"") : defTest.test(c.name||c.displayName||""));
+  if(!nba && !nhl && !mlb && side==="off"){
+    const order=["passingYards","passingTouchdowns","quarterbackRating","rushingYards","rushingTouchdowns","receptions","receivingYards","receivingTouchdowns","totalTouchdowns","totalPoints"];
+    shown.sort((a,b)=>{
+      const ia=order.indexOf(a.name), ib=order.indexOf(b.name);
+      return (ia<0?50:ia)-(ib<0?50:ib);
+    });
+  }
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
