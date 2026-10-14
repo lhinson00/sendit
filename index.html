@@ -83,7 +83,19 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .hubcard.tssaa img{width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px}
 .yours{padding:6px var(--pad) 4px}
 .yhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px}
+.yacts{display:flex;gap:8px;align-items:center;flex:none}
+.yord{border:1px solid #3a3228;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px;border-radius:999px;padding:12px 14px;cursor:pointer}
+.yord.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .yadd{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px;border-radius:999px;padding:12px 16px;cursor:pointer}
+.yhint{margin:10px 0 0;color:#c9c2b8;font-size:13px}
+.ygrid.ordering{grid-template-columns:1fr !important}
+.yhandle,.ymove{display:none}
+.ygrid.ordering .yhandle{display:grid;place-items:center;width:28px;align-self:stretch;border:0;background:transparent;color:#9b9288;cursor:grab;touch-action:none;padding:0;flex:none}
+.ygrid.ordering .yhandle span{display:block;width:14px;height:2px;background:#9b9288;border-radius:2px;margin:2px 0}
+.ygrid.ordering .ymove{display:flex;flex-direction:column;gap:4px;flex:none}
+.ymove button{border:0;background:#1a140f;color:#ffc46b;width:28px;height:22px;border-radius:6px;font:800 14px Manrope,sans-serif;padding:0;cursor:pointer}
+.ycard.dragging{opacity:.4}
+.ycard.over{box-shadow:inset 0 3px 0 var(--orange)}
 .yday{margin:0;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
 .ylede{margin:8px 0 0;color:var(--muted);font-size:13px}
 .ygrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
@@ -909,9 +921,12 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   <div class="yours" id="yours">
     <div class="yhead">
       <p class="yday" id="yDay"></p>
-      <button type="button" class="yadd" id="yAdd">Add</button>
+      <div class="yacts">
+        <button type="button" class="yord" id="yOrd" hidden>Order</button>
+        <button type="button" class="yadd" id="yAdd">Add</button>
+      </div>
     </div>
-    <p class="ylede" id="yLede" hidden>Teams and players you track. Leagues stay underneath.</p>
+    <p class="yhint" id="yHint" hidden>Drag the grip, or use the arrows. Done keeps this order.</p>
     <div class="ygrid" id="yGrid"></div>
     <div class="ypick" id="yPick" hidden>
       <div class="pills" id="yLeagues"></div>
@@ -4200,7 +4215,7 @@ const YLEAGUE={nfl:"nfl",cfb:"college-football",nba:"nba",nhl:"nhl",mlb:"mlb",cb
 let PINS=[];
 try{ PINS=JSON.parse(localStorage.getItem(PIN_KEY)||"[]")||[]; }catch(e){ PINS=[]; }
 if(!Array.isArray(PINS)) PINS=[];
-let YSTATE={lg:"nfl", kind:"team", open:false};
+let YSTATE={lg:"nfl", kind:"team", open:false, order:false};
 let YHITS=[];
 let YSEQ=0;
 let PIN_GEN=0;
@@ -4562,30 +4577,38 @@ function yoursFace(p){
   const letters=esc(String(p.abbr||p.name||"?").replace(/[^A-Za-z0-9]/g,"").slice(0,3)||"?");
   return `<span class="ymark">${letters}</span>`;
 }
+function movePin(from, to){
+  from=+from; to=+to;
+  if(from===to || from<0 || to<0 || from>=PINS.length || to>=PINS.length) return;
+  const row=PINS.splice(from,1)[0];
+  PINS.splice(to,0,row);
+  savePins();
+  paintYours(true);
+}
 function paintYours(quiet){
+  if(window.YDRAG) return;
   const grid=$("yGrid");
   if(!grid) return;
-  const lede=$("yLede");
   const day=$("yDay");
+  const ord=$("yOrd");
+  const hint=$("yHint");
   if(day) day.textContent=new Date().toLocaleDateString("en-US",{timeZone:"America/Chicago",weekday:"long",month:"long",day:"numeric"});
+  if(ord) ord.hidden=!PINS.length;
+  if(hint) hint.hidden=!(YSTATE.order && PINS.length);
+  grid.classList.toggle("ordering", !!YSTATE.order);
   if(!PINS.length){
     grid.innerHTML="<div class='yempty'>None yet. Add the Titans, the Vols, a player, or the high school down the road. They stay on this screen.</div>";
-    if(lede){ lede.hidden=false; lede.textContent="Teams and players you track. Leagues stay underneath."; }
   } else {
-    if(lede) lede.hidden=true;
-    const order=PINS.map((p,i)=>({p,i})).sort((a,b)=>{
-      const ar=(a.p._book&&a.p._book.live)?0:(a.p._book&&a.p._book.t)||9e15;
-      const br=(b.p._book&&b.p._book.live)?0:(b.p._book&&b.p._book.t)||9e15;
-      return ar-br;
-    });
-    grid.innerHTML=order.map(({p,i})=>{
+    grid.innerHTML=PINS.map((p,i)=>{
       const b=p._book||{};
       const record=b.record||(p.kind==="player"?[p.pos,p.team].filter(Boolean).join(" · "):lgLabel(p.lg));
       const live=!!(b.live||p._live);
       const soon=!!b.soon;
       const opp=b.oppName?`<div class="ymatch">${b.oppLogo?`<img alt="" src="${esc(b.oppLogo)}"/>`:""}<b>${esc(b.oppName)}</b>${b.where?`<span>${esc(b.where)}</span>`:""}</div>`:"";
       const last=b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label?`<p class="ylast">Checking the schedule…</p>`:""));
-      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div><button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${last}</div>`;
+      const grip=`<button type="button" class="yhandle" data-yhandle="${i}" aria-label="Drag to reorder"><span></span><span></span><span></span></button>`;
+      const arrows=`<span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up">↑</button><button type="button" data-ydn="${i}" aria-label="Move down">↓</button></span>`;
+      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}">${grip}<div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div>${arrows}<button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${last}</div>`;
     }).join("");
   }
   if(!quiet) fillPinLines();
@@ -4698,9 +4721,18 @@ function bootYours(){
   };
   $("yAdd").onclick=()=>{
     YSTATE.open=!YSTATE.open;
+    if(YSTATE.open){ YSTATE.order=false; if($("yOrd")){ $("yOrd").classList.remove("on"); $("yOrd").textContent="Order"; } }
     $("yPick").hidden=!YSTATE.open;
     $("yAdd").textContent=YSTATE.open?"Close":"Add";
     if(YSTATE.open){ runYSearch(); if(window.matchMedia("(min-width:900px)").matches) $("yq").focus(); }
+    paintYours(true);
+  };
+  if($("yOrd")) $("yOrd").onclick=()=>{
+    YSTATE.order=!YSTATE.order;
+    $("yOrd").classList.toggle("on", YSTATE.order);
+    $("yOrd").textContent=YSTATE.order?"Done":"Order";
+    if(YSTATE.order){ YSTATE.open=false; $("yPick").hidden=true; $("yAdd").textContent="Add"; }
+    paintYours(true);
   };
   let wait=null;
   $("yq").oninput=()=>{ clearTimeout(wait); wait=setTimeout(runYSearch, 220); };
@@ -4711,11 +4743,52 @@ function bootYours(){
     runYSearch();
   };
   $("yGrid").onclick=e=>{
+    const up=e.target.closest("[data-yup]");
+    if(up){ e.preventDefault(); e.stopPropagation(); movePin(+up.dataset.yup, +up.dataset.yup-1); return; }
+    const dn=e.target.closest("[data-ydn]");
+    if(dn){ e.preventDefault(); e.stopPropagation(); movePin(+dn.dataset.ydn, +dn.dataset.ydn+1); return; }
     const drop=e.target.closest("[data-ydrop]");
     if(drop){ e.preventDefault(); e.stopPropagation(); dropPin(PINS[+drop.dataset.ydrop]); return; }
+    if(e.target.closest("[data-yhandle]") || YSTATE.order) return;
     const card=e.target.closest("[data-yi]");
     if(card) openPin(PINS[+card.dataset.yi]);
   };
+  if(!$("yGrid").dataset.drag){
+    $("yGrid").dataset.drag="1";
+    const grid=$("yGrid");
+    let drag=null;
+    const cardAt=(x,y)=>{ const el=document.elementFromPoint(x,y); return el&&el.closest?el.closest(".ycard"):null; };
+    grid.addEventListener("pointerdown", e=>{
+      const handle=e.target.closest("[data-yhandle]");
+      if(!handle || !YSTATE.order) return;
+      const card=handle.closest(".ycard");
+      if(!card) return;
+      drag={from:+card.dataset.yi, card, over:null};
+      window.YDRAG=1;
+      card.classList.add("dragging");
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    });
+    grid.addEventListener("pointermove", e=>{
+      if(!drag) return;
+      const over=cardAt(e.clientX, e.clientY);
+      grid.querySelectorAll(".ycard.over").forEach(c=>c.classList.remove("over"));
+      if(over && over!==drag.card){ over.classList.add("over"); drag.over=over; }
+      e.preventDefault();
+    });
+    const finish=e=>{
+      if(!drag) return;
+      const from=drag.from;
+      const over=drag.over || (e && cardAt(e.clientX, e.clientY));
+      drag.card.classList.remove("dragging");
+      grid.querySelectorAll(".ycard.over").forEach(c=>c.classList.remove("over"));
+      drag=null;
+      window.YDRAG=0;
+      if(over && +over.dataset.yi!==from) movePin(from, +over.dataset.yi);
+    };
+    grid.addEventListener("pointerup", finish);
+    grid.addEventListener("pointercancel", ()=>{ if(drag){ drag.card.classList.remove("dragging"); drag=null; window.YDRAG=0; } });
+  }
   syncPinsFromFav(false);
   paintYours();
   if(!PINS.length){
