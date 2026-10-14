@@ -551,17 +551,21 @@ function hasBump(p){
 function isRelevant(p){
   const inj=injOf(p);
   const scored=Object.prototype.hasOwnProperty.call(LOGS, p.id) && playedRows(LOGS[p.id]).length>0;
+  if(/practice/i.test(p.status||"")) return false;
   if((inj==="Out"||inj==="Injured Reserve") && !scored && p.pos!=="DST") return false;
   if(p.pos==="DST") return true;
   const known=p.depth===1 || !!p.starter;
   const seat=p.depth||99;
+  const depthKnown=seat>0 && seat<99;
   if(Object.prototype.hasOwnProperty.call(LOGS, p.id)){
     const card=rateOf(p);
     if(card && card.proj) return inj!=="Out" && inj!=="Injured Reserve";
-    if(card && card.g>0 && (card.ppg>=6 || known || hasBump(p))) return true;
+    if(card && card.g>0 && (card.ppg>=6 || known || hasBump(p) || !depthKnown)) return true;
     if(hasBump(p)) return true;
+    if(!depthKnown && p.pos==="QB") return !(card && card.g>0 && card.ppg<6);
     return false;
   }
+  if(!depthKnown) return true;
   if(p.pos==="QB") return known || hasBump(p);
   if(p.pos==="RB") return seat<=2 || known;
   if(p.pos==="WR") return seat<=3 || known;
@@ -644,20 +648,27 @@ function gameFpts(g){
   return pts;
 }
 async function fetchLog(id, season){
-  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog?season="+season,{cache:"force-cache"});
+  const q = season ? ("?season="+season) : "";
+  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog"+q,{cache:"no-store"});
   return r.ok?parseSeasonGames(await r.json()):[];
 }
 let logQueue=Promise.resolve();
 function primeLogs(list){
-  const todo=(list||[]).filter(p=>p && p.pos!=="DST" && !Object.prototype.hasOwnProperty.call(LOGS, p.id) && ((p.depth||99)<=3 || p.starter));
+  const todo=(list||[]).filter(p=>{
+    if(!p || p.pos==="DST") return false;
+    if(Object.prototype.hasOwnProperty.call(LOGS, p.id)) return false;
+    if(/practice/i.test(p.status||"")) return false;
+    const seat=p.depth||99;
+    return seat<=4 || seat>=99 || p.starter || p.pos==="QB";
+  });
   if(!todo.length) return;
   logQueue=logQueue.then(async()=>{
-    for(let i=0;i<todo.length;i+=6){
-      await Promise.all(todo.slice(i,i+6).map(async p=>{
+    for(let i=0;i<todo.length;i+=8){
+      await Promise.all(todo.slice(i,i+8).map(async p=>{
         if(Object.prototype.hasOwnProperty.call(LOGS, p.id)) return;
-        try{ LOGS[p.id]=await fetchLog(p.id, 2026); }
+        try{ LOGS[p.id]=await fetchLog(p.id); }
         catch(e){ LOGS[p.id]=[]; }
-        if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter)){
+        if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter || p.pos==="QB")){
           try{ PRIOR[p.id]=await fetchLog(p.id, 2025); }
           catch(e){ PRIOR[p.id]=[]; }
         }
@@ -876,7 +887,7 @@ async function loadRoster(tid, ab, game){
         if(!/^(QB|RB|WR|TE)$/.test(pos)) return;
         const opp = String(tid)===String(game.homeId)?game.awayAb:game.homeAb;
         const when = game.start ? new Date(game.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}) : "";
-        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter, depth:depth[String(a.id)]||99};
+        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter, depth:depth[String(a.id)]||99, status:(a.status&&(a.status.name||a.status.type))||""};
         p.sal=0;
         out.push(p);
       });
@@ -895,7 +906,7 @@ function bandFor(pos){
 }
 function dstFpts(d){
   d=d||{};
-  const gp=2;
+  const gp=Math.max(1, Number(d.gp)||seasonGamesSoFar()||1);
   const paG=(d.pa||0)/gp;
   let pa=0;
   if(paG<=0) pa=10;
@@ -905,7 +916,7 @@ function dstFpts(d){
   else if(paG<=27) pa=0;
   else if(paG<=34) pa=-1;
   else pa=-4;
-  return (d.sacks||0)*1 + (d.to||0)*2 + (d.st||0)*6 + pa*gp;
+  return ((d.sacks||0)/gp)*1 + ((d.to||0)/gp)*2 + ((d.st||0)/gp)*6 + pa;
 }
 function rateOf(p){
   if(!p) return {pts:0, g:0, ppg:0, proj:false};
@@ -948,7 +959,11 @@ function fptsFrom(s){
   s=s||{};
   return (s.py||0)*0.04+(s.ptd||0)*4+(s.ry||0)*0.1+(s.rtd||0)*6+(s.rec||0)*1+(s.recy||0)*0.1+(s.rectd||0)*6;
 }
-function seasonGamesSoFar(){ return 2; }
+function seasonGamesSoFar(){
+  let g=0;
+  Object.keys(TEAMDEF).forEach(k=>{ const n=Number(TEAMDEF[k]&&TEAMDEF[k].gp)||0; if(n>g) g=n; });
+  return g;
+}
 function gamesOf(p){
   const card=rateOf(p);
   if(card && card.g) return card.g;
@@ -1091,6 +1106,35 @@ async function loadInjuries(){
     });
   }catch(e){}
 }
+async function loadDefenses(){
+  const tids=[...new Set((STATE.games||[]).flatMap(g=>[g.homeId,g.awayId]).filter(Boolean))];
+  await Promise.all(tids.map(async tid=>{
+    try{
+      const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/statistics",{cache:"no-store"});
+      if(!r.ok) return;
+      const d=await r.json();
+      const ab=(d.team&&d.team.abbreviation)||"";
+      if(!ab) return;
+      const grab=(side, cat, name)=>{
+        const root=side==="opp" ? ((d.results||{}).opponent) : (((d.results||{}).stats)||{});
+        const cats=Array.isArray(root) ? root : ((root&&root.categories)||[]);
+        const c=cats.find(x=>x&&x.name===cat);
+        const s=((c&&c.stats)||[]).find(x=>x&&x.name===name);
+        return s ? Number(s.value)||0 : 0;
+      };
+      const gp=grab("team","defensive","teamGamesPlayed");
+      TEAMDEF[ab]={
+        pa: grab("opp","scoring","totalPoints"),
+        to: grab("team","miscellaneous","totalTakeaways"),
+        st: grab("team","scoring","returnTouchdowns")+grab("team","defensive","miscTouchdowns"),
+        sacks: grab("team","defensive","sacks"),
+        gp: gp||undefined
+      };
+    }catch(e){}
+  }));
+  repriceAll();
+  paintAll();
+}
 async function loadPool(){
   $("pool").innerHTML="<p class='hint'>Loading slates…</p>";
   const jobs=STATE.games.flatMap(g=>[
@@ -1123,6 +1167,7 @@ async function loadPool(){
     })
   ]).catch(()=>{});
   primeLogs(STATE.pool);
+  loadDefenses();
 }
 
 function num(v){ return Number(String(v||"0").replace(/,/g,""))||0; }
