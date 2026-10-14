@@ -89,13 +89,13 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .yadd{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px;border-radius:999px;padding:12px 16px;cursor:pointer}
 .yhint{margin:10px 0 0;color:#c9c2b8;font-size:13px}
 .ygrid.ordering{grid-template-columns:1fr !important}
-.yhandle,.ymove{display:none}
-.ygrid.ordering .yhandle{display:grid;place-items:center;width:28px;align-self:stretch;border:0;background:transparent;color:#9b9288;cursor:grab;touch-action:none;padding:0;flex:none}
-.ygrid.ordering .yhandle span{display:block;width:14px;height:2px;background:#9b9288;border-radius:2px;margin:2px 0}
-.ygrid.ordering .ymove{display:flex;flex-direction:column;gap:4px;flex:none}
-.ymove button{border:0;background:#1a140f;color:#ffc46b;width:28px;height:22px;border-radius:6px;font:800 14px Manrope,sans-serif;padding:0;cursor:pointer}
-.ycard.dragging{opacity:.4}
-.ycard.over{box-shadow:inset 0 3px 0 var(--orange)}
+.ycard.ysort{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px}
+.ycard.ysort .ylogo,.ycard.ysort .ymark{width:40px;height:40px}
+.ycard.ysort .ywho b{font-size:22px}
+.ynum{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--orange);width:18px;flex:none;text-align:center}
+.ycard.ysort .ymove{display:flex;gap:8px;margin-left:auto;flex:none}
+.ycard.ysort .ymove button{width:52px;height:52px;border:0;border-radius:14px;background:#24180f;color:#ffc46b;font:800 22px Manrope,sans-serif;padding:0}
+.ycard.ysort .ymove button:disabled{opacity:.28}
 .yday{margin:0;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
 .ylede{margin:8px 0 0;color:var(--muted);font-size:13px}
 .ygrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
@@ -926,7 +926,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
         <button type="button" class="yadd" id="yAdd">Add</button>
       </div>
     </div>
-    <p class="yhint" id="yHint" hidden>Drag the grip, or use the arrows. Done keeps this order.</p>
+    <p class="yhint" id="yHint" hidden>Tap the arrows. The top of the list is what you see first.</p>
     <div class="ygrid" id="yGrid"></div>
     <div class="ypick" id="yPick" hidden>
       <div class="pills" id="yLeagues"></div>
@@ -4601,6 +4601,8 @@ function movePin(from, to){
   PINS.splice(to,0,row);
   savePins();
   paintYours(true);
+  const card=document.querySelector('#yGrid .ycard[data-yi="'+to+'"]');
+  if(card && card.scrollIntoView) card.scrollIntoView({block:"nearest"});
 }
 function paintYours(quiet){
   if(window.YDRAG) return;
@@ -4623,9 +4625,10 @@ function paintYours(quiet){
       const soon=!!b.soon;
       const opp=b.oppName?`<div class="ymatch">${b.oppLogo?`<img alt="" src="${esc(b.oppLogo)}"/>`:""}<b>${esc(b.oppName)}</b>${b.where?`<span>${esc(b.where)}</span>`:""}</div>`:"";
       const last=b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label?`<p class="ylast">Checking the schedule…</p>`:""));
-      const grip=`<button type="button" class="yhandle" data-yhandle="${i}" aria-label="Drag to reorder"><span></span><span></span><span></span></button>`;
-      const arrows=`<span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up">↑</button><button type="button" data-ydn="${i}" aria-label="Move down">↓</button></span>`;
-      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}">${grip}<div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div>${arrows}<button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${last}</div>`;
+      if(YSTATE.order){
+        return `<div class="ycard ysort${p.kind==="player"?" player":""}" data-yi="${i}"><span class="ynum">${i+1}</span>${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(lgLabel(p.lg)||record)}</span></div><span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up"${i===0?" disabled":""}>↑</button><button type="button" data-ydn="${i}" aria-label="Move down"${i===PINS.length-1?" disabled":""}>↓</button></span></div>`;
+      }
+      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div><button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${last}</div>`;
     }).join("");
   }
   if(!quiet) fillPinLines();
