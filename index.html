@@ -112,16 +112,24 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ywhen em{display:block;font-style:normal;font-size:10px;letter-spacing:.16em;font-weight:800;color:var(--orange);text-transform:uppercase}
 .ycard.live .ywhen em{color:#3ee0a0}
 .ywhen strong{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.03em;line-height:.9;margin-top:2px}
-.ycard .star{flex:none;font-size:18px;padding:4px}
+.ycard .yremove{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid #3a3228;background:#1a140f;color:#c9c2b8;font-size:18px;line-height:1;cursor:pointer}
+.ysit{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #1e4a36}
+.ydiamond{position:relative;width:72px;height:68px}
+.ybase{position:absolute;width:14px;height:14px;transform:rotate(45deg);border:2px solid #5d6b62;border-radius:2px;background:transparent}
+.ybase.on{background:#3ee0a0;border-color:#3ee0a0}
+.ybase.b2{left:29px;top:2px}
+.ybase.b3{left:8px;top:22px}
+.ybase.b1{left:50px;top:22px}
+.youts{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:11px;font-weight:800;letter-spacing:.06em;color:#c9c2b8}
+.ypab{min-width:0;display:flex;flex-direction:column;gap:3px}
+.ycountline{font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.04em;line-height:.9;color:#fff}
+.ypab span{display:flex;gap:8px;align-items:baseline;min-width:0}
+.ypab em{flex:none;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.12em;color:#9b9288}
+.ypab b{font-size:15px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ymatch{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a241c}
 .ymatch img{width:22px;height:22px;object-fit:contain}
 .ymatch b{font-size:14px}
 .ymatch span{margin-left:auto;color:var(--ember);font-size:12px;font-weight:700;text-align:right;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ylines{display:flex;gap:4px;margin-top:10px}
-.ylines div{flex:1;min-width:0;text-align:center;background:#1a140f;border-radius:8px;padding:4px 0 3px}
-.ylines i{display:block;font-style:normal;font-size:8px;letter-spacing:.06em;color:#9b9288;font-weight:800}
-.ylines b{display:block;font-family:"Bebas Neue",sans-serif;font-size:16px;line-height:1;color:#fff}
-.ycard.live .ylines div{background:#102018}
 .ylast{margin:8px 0 0;color:#c9c2b8;font-size:12px}
 .ystat{margin-top:10px;padding-top:10px;border-top:1px solid #2a241c}
 .ystat-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
@@ -4297,8 +4305,10 @@ function dropPin(p){
   PINS=PINS.filter(x=>pinKey(x)!==k);
   if(p.kind!=="player"){
     Object.keys(FAV||{}).forEach(lg=>{ if(FAV[lg]) delete FAV[lg][String(p.id)]; });
-    saveFav();
+  } else {
+    Object.keys(FAV||{}).forEach(lg=>{ if(FAV[lg]) delete FAV[lg][String(p.id)]; });
   }
+  saveFav();
   savePins();
   paintYours();
 }
@@ -4686,65 +4696,46 @@ async function pullJSON(url){
     return await res.json();
   }catch(e){ return null; }
 }
-function groupMap(block, name){
-  const g=((block&&block.statistics)||[]).find(s=>s.name===name);
+function onBase(v){
+  if(!v) return false;
+  if(v===true) return true;
+  return !!(v.playerId||v.id||v.athlete);
+}
+function boxNames(d){
   const map={};
-  ((g&&g.stats)||[]).forEach(x=>{
-    if(x && x.name && x.displayValue!=null) map[x.name]=String(x.displayValue);
+  (((d.boxscore||{}).players)||[]).forEach(side=>{
+    (side.statistics||[]).forEach(grp=>{
+      (grp.athletes||[]).forEach(a=>{
+        const ath=a.athlete||{};
+        if(ath.id) map[String(ath.id)]=ath.shortName||ath.displayName||"";
+      });
+    });
   });
   return map;
 }
-function flatTeam(block){
-  const map={};
-  ((block&&block.statistics)||[]).forEach(s=>{
-    if(s && s.name && s.displayValue!=null && !s.stats) map[s.name]=String(s.displayValue);
-  });
-  return map;
+function sitName(node, names){
+  if(!node) return "";
+  const ath=node.athlete||{};
+  if(ath.shortName||ath.displayName) return ath.shortName||ath.displayName;
+  const id=node.playerId||node.id||ath.id;
+  return id?(names[String(id)]||""):"";
 }
-function teamLive(d, lg, teamId){
-  const block=(((d.boxscore||{}).teams)||[]).find(t=>String((t.team&&t.team.id)||"")===String(teamId));
-  const comp=((((d||{}).header||{}).competitions)||[])[0]||{};
-  const me=(comp.competitors||[]).find(x=>String(x.id||(x.team&&x.team.id))===String(teamId));
-  const lines=((me&&me.linescores)||[]).map(x=>x.displayValue!=null?String(x.displayValue):(x.value!=null?String(x.value):"")).filter(v=>v!=="");
-  const chips=[];
-  const add=(v,lab)=>{ if(chips.length>=4 || v==null || v==="") return; chips.push({v:String(v), lab}); };
-  const pick=(map,k)=>map&&map[k]!=null&&map[k]!==""?map[k]:"";
-  let note="";
-  if(lg==="mlb" && block){
-    const bat=groupMap(block,"batting"), fld=groupMap(block,"fielding");
-    add(pick(bat,"hits")||"0","H");
-    add(pick(bat,"homeRuns")||"0","HR");
-    add(pick(bat,"RBIs")||"0","RBI");
-    add(pick(fld,"errors")||"0","E");
-    const sit=d.situation||{};
-    if(sit.balls!=null || sit.outs!=null){
-      const bases=[sit.onFirst&&"1st",sit.onSecond&&"2nd",sit.onThird&&"3rd"].filter(Boolean);
-      const count=(sit.balls!=null&&sit.strikes!=null)?(sit.balls+"-"+sit.strikes):"";
-      const outs=sit.outs!=null?(sit.outs+" out"+(Number(sit.outs)===1?"":"s")):"";
-      note=[count, outs, bases.length?bases.join(" & "):"bases empty"].filter(Boolean).join(" · ");
-    }
-  } else if((lg==="nba"||lg==="cbb") && block){
-    const m=flatTeam(block);
-    add(pick(m,"fieldGoalPct"),"FG%");
-    add(pick(m,"totalRebounds"),"REB");
-    add(pick(m,"assists"),"AST");
-    add(pick(m,"turnovers"),"TO");
-  } else if(lg==="nhl" && block){
-    const m=flatTeam(block);
-    add(pick(m,"shotsTotal"),"SOG");
-    const pp=pick(m,"powerPlayGoals"), ppo=pick(m,"powerPlayOpportunities");
-    if(pp!==""||ppo!=="") add((pp||"0")+"-"+(ppo||"0"),"PP");
-    add(pick(m,"hits"),"HIT");
-    const fo=pick(m,"faceoffPercent");
-    if(fo) add(String(fo).replace(/\.0$/,""),"FO%");
-  } else if((lg==="nfl"||lg==="cfb") && block){
-    const m=flatTeam(block);
-    add(pick(m,"totalYards"),"YDS");
-    add(pick(m,"rushingYards"),"RUSH");
-    add(pick(m,"netPassingYards"),"PASS");
-    add(pick(m,"thirdDownEff"),"3RD");
-  }
-  return {chips, lines, note};
+function teamLive(d, lg){
+  if(lg!=="mlb") return null;
+  const sit=d.situation||{};
+  const names=boxNames(d);
+  const balls=sit.balls, strikes=sit.strikes, outs=sit.outs;
+  if(balls==null && strikes==null && !sit.pitcher && !sit.batter) return null;
+  return {
+    balls:balls==null?"":String(balls),
+    strikes:strikes==null?"":String(strikes),
+    outs:outs==null?"":String(outs),
+    first:onBase(sit.onFirst),
+    second:onBase(sit.onSecond),
+    third:onBase(sit.onThird),
+    pitcher:sitName(sit.pitcher, names),
+    batter:sitName(sit.batter, names)
+  };
 }
 function headBits(d, teamId){
   const comp=((((d||{}).header||{}).competitions)||[])[0]||{};
@@ -4796,7 +4787,7 @@ async function liveAthleteStats(lg, pid, eventId, teamId){
       });
     }
   }
-  return {names, stats, score:head.score, detail:head.detail, team:teamId?teamLive(d, lg, teamId):null};
+  return {names, stats, score:head.score, detail:head.detail, sit:lg==="mlb"?teamLive(d, lg):null};
 }
 async function fillPlayerBook(p){
   const card={record:[p.pos, p.team].filter(Boolean).join(" · ")||lgLabel(p.lg)};
@@ -4861,10 +4852,7 @@ async function fillPinLines(){
             const pack=await liveAthleteStats(p.lg, "", String((book.live.ev&&book.live.ev.id)||""), id);
             if(pack && pack.score) card.big=pack.score;
             if(pack && pack.detail) card.label="Live · "+pack.detail;
-            if(pack && pack.team){
-              if(pack.team.lines && pack.team.lines.length>1) card.lines=pack.team.lines;
-              if(pack.team.chips && pack.team.chips.length) card.stat={live:true, context:pack.team.note||pack.detail||"", chips:pack.team.chips};
-            }
+            if(pack && pack.sit) card.sit=pack.sit;
           }
           p._book=card;
           live=!!card.live;
@@ -4939,13 +4927,15 @@ function paintYours(quiet){
       const live=!!(b.live||p._live);
       const soon=!!b.soon;
       const opp=b.oppName?`<div class="ymatch">${b.oppLogo?`<img alt="" src="${esc(b.oppLogo)}"/>`:""}<b>${esc(b.oppName)}</b>${b.where?`<span>${esc(b.where)}</span>`:""}</div>`:"";
-      const lines=(b.lines&&b.lines.length>1)?`<div class="ylines">${b.lines.map((v,n)=>`<div><i>${n+1}</i><b>${esc(v)}</b></div>`).join("")}</div>`:"";
-      const stat=(b.stat && b.stat.chips && b.stat.chips.length)?`<div class="ystat${b.stat.live?" live":""}"><div class="ystat-top"><em>${b.stat.live?"Live line":"Last line"}</em><span>${esc(b.stat.context||"")}</span></div><div class="ychips">${b.stat.chips.map(c=>`<div><b>${esc(c.v)}</b><i>${esc(c.lab)}</i></div>`).join("")}</div></div>`:"";
-      const last=(p.kind==="player"&&stat)?"":(b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label&&!stat?`<p class="ylast">Checking the schedule…</p>`:"")));
+      const s=b.sit;
+      const sit=s?`<div class="ysit"><div class="ydiamond"><i class="ybase b2${s.second?" on":""}"></i><i class="ybase b3${s.third?" on":""}"></i><i class="ybase b1${s.first?" on":""}"></i><span class="youts">${s.outs!==""?esc(s.outs+" out"+(s.outs==="1"?"":"s")):""}</span></div><div class="ypab"><b class="ycountline">${(s.balls!==""&&s.strikes!=="")?esc(s.balls+"–"+s.strikes):""}</b><span><em>P</em><b>${esc(s.pitcher||"—")}</b></span><span><em>AB</em><b>${esc(s.batter||"—")}</b></span></div></div>`:"";
+      const stat=(p.kind==="player" && b.stat && b.stat.chips && b.stat.chips.length)?`<div class="ystat${b.stat.live?" live":""}"><div class="ystat-top"><em>${b.stat.live?"Live line":"Last line"}</em><span>${esc(b.stat.context||"")}</span></div><div class="ychips">${b.stat.chips.map(c=>`<div><b>${esc(c.v)}</b><i>${esc(c.lab)}</i></div>`).join("")}</div></div>`:"";
+      const last=(p.kind==="player"&&stat)?"":(b.last?`<p class="ylast">${esc(b.last)}</p>`:(!b.oppName&&p._line?`<p class="ylast">${esc(p._line)}</p>`:(!b.label&&!stat&&!sit?`<p class="ylast">Checking the schedule…</p>`:"")));
+      const remove=`<button type="button" class="yremove" data-ydrop="${i}" aria-label="Remove">×</button>`;
       if(YSTATE.order){
-        return `<div class="ycard ysort${p.kind==="player"?" player":""}" data-yi="${i}"><span class="ynum">${i+1}</span>${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(lgLabel(p.lg)||record)}</span></div><span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up"${i===0?" disabled":""}>↑</button><button type="button" data-ydn="${i}" aria-label="Move down"${i===PINS.length-1?" disabled":""}>↓</button></span></div>`;
+        return `<div class="ycard ysort${p.kind==="player"?" player":""}" data-yi="${i}"><span class="ynum">${i+1}</span>${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(lgLabel(p.lg)||record)}</span></div><span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up"${i===0?" disabled":""}>↑</button><button type="button" data-ydn="${i}" aria-label="Move down"${i===PINS.length-1?" disabled":""}>↓</button></span>${remove}</div>`;
       }
-      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div><button type="button" class="star on" data-ydrop="${i}" aria-label="Remove">★</button></div>${opp}${lines}${stat}${last}</div>`;
+      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div>${remove}</div>${opp}${sit}${stat}${last}</div>`;
     }).join("");
   }
   if(!quiet) fillPinLines();
