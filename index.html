@@ -1556,7 +1556,8 @@ function pulseBoard(g){
   const justFinal = g.state==="post" && prev.state && prev.state!=="post";
   const tracked = slipsForGame(g).filter(s=>!s.pid);
   const favs = gameFavs(g);
-  const openThis = String(OPEN||"")===String(g.fightId||"") || String(OPEN||"")===String(g.eventId||"") || String(OPEN||"")===String(g.id||"");
+  const openId = String(OPEN||"");
+  const openThis = !!openId && (openId===String(g.fightId||"") || openId===String(g.eventId||"") || openId===String(g.id||""));
   const watching = tracked.length || favs.length || openThis;
   const who=(favs.map(f=>f.name)[0])||(tracked[0]&&tracked[0].name)||"";
   const tag=tracked.length?"TRACKER":"FAVORITE";
