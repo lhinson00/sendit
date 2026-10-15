@@ -1097,12 +1097,12 @@ const URLS = {
 const SUM = {
   nfl: id => "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+id,
   cfb: id => "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/summary?event="+id,
-  mlb: id => "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event="+id,
+  mlb: id => "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/summary?event="+id,
   nhl: id => "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event="+id,
   nba: id => "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event="+id,
   cbb: id => "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event="+id,
   ufc: id => "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event="+id,
-  mls: id => "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/summary?event="+id
+  mls: id => "https://site.web.api.espn.com/apis/site/v2/sports/soccer/usa.1/summary?event="+id
 };
 let LEAGUE = "nfl";
 let GAMES = [];
@@ -3637,6 +3637,23 @@ async function openGame(id, fid){
         }
         window.NBA_HOLD=sig;
       }
+      const headerC0 = (((sum.header||{}).competitions)||[])[0] || {};
+      if(!g.awayAb || !g.homeAb){
+        const comps=headerC0.competitors||[];
+        const away=comps.find(x=>x.homeAway==="away")||{};
+        const home=comps.find(x=>x.homeAway==="home")||{};
+        const tag=x=>(x.team&&x.team.abbreviation)||"";
+        const name=x=>(x.team&&(x.team.shortDisplayName||x.team.displayName))||tag(x);
+        if(!g.awayAb) g.awayAb=tag(away);
+        if(!g.homeAb) g.homeAb=tag(home);
+        if(!g.away) g.away=name(away);
+        if(!g.home) g.home=name(home);
+        if(!g.awayId) g.awayId=String((away.team&&away.team.id)||"");
+        if(!g.homeId) g.homeId=String((home.team&&home.team.id)||"");
+        const st0=(headerC0.status&&headerC0.status.type)||{};
+        if(!g.detail) g.detail=st0.shortDetail||st0.detail||"";
+        if(!g.state) g.state=st0.state||"";
+      }
       renderGame(g, sum);
       if(window.NBA_HOLD) window.NBA_SIG=window.NBA_HOLD;
       const headerC = (((sum.header||{}).competitions)||[])[0] || {};
@@ -4513,6 +4530,7 @@ function bookFromTeam(book, id){
     const ms=scOf(s.me), os=scOf(s.opp);
     const bits=whenBits(focus.ev.date, live, (ms!==""&&os!=="")?ms+"–"+os:"", (focus.st&&focus.st.shortDetail)||"");
     card.live=live;
+    if(live) card.eventId=String((focus.ev&&focus.ev.id)||"");
     card.soon=!live && bits.label==="Tonight";
     card.label=bits.label;
     card.big=bits.big;
@@ -5000,6 +5018,10 @@ function openPin(p){
     else if(typeof loadTnPack==="function") loadTnPack().then(go).catch(go);
     else go();
     return;
+  }
+  if(p._book && p._book.live && p._book.eventId){
+    LEAGUE=p.lg||LEAGUE;
+    return openGame(String(p._book.eventId));
   }
   if(p.lg==="nfl") return openNflTeam(p.id, p.name);
   if(p.lg==="nba") return openNbaTeam(p.id, p.name);
