@@ -4547,11 +4547,15 @@ function tnSnap(name){
   }
   return {line:fmtTnDate(pick.date)+" · "+ha+" "+pick.opp, live:false};
 }
+function blankStat(v){
+  const s=String(v==null?"":v).trim();
+  return !s || s==="--" || s==="—" || s==="--.--" || /^-+$/.test(s);
+}
 function statAt(names, stats, keys){
   const list=names||[], vals=stats||[];
   for(const k of keys){
     const i=list.indexOf(k);
-    if(i>=0 && vals[i]!=null && String(vals[i])!=="") return String(vals[i]);
+    if(i>=0 && vals[i]!=null && !blankStat(vals[i])) return String(vals[i]);
   }
   return "";
 }
@@ -4621,21 +4625,29 @@ function chipsFor(lg, pos, names, stats){
       if(toi) pushChip(out, toi, "TOI");
     }
   } else if(lg==="mlb"){
-    if(g("inningsPitched") || (n("innings")>0 && !g("atBats"))){
-      pushChip(out, g("inningsPitched","innings"), "IP");
-      pushChip(out, g("earnedRuns")||"0", "ER");
-      pushChip(out, g("strikeouts")||"0", "K");
-      pushChip(out, g("hits")||"0", "H");
+    const ip=g("inningsPitched","fullInnings.partInnings");
+    if(ip){
+      pushChip(out, ip, "IP");
+      pushChip(out, g("earnedRuns","ER")||"0", "ER");
+      pushChip(out, g("strikeouts","K")||"0", "K");
+      pushChip(out, g("hits","H")||"0", "H");
     } else {
-      pushChip(out, (g("hits")||"0")+"-"+(g("atBats")||"0"), "H-AB");
+      pushChip(out, g("hits-atBats")||((g("hits")||"0")+"-"+(g("atBats")||"0")), "H-AB");
       pushChip(out, g("runs")||"0", "R");
       pushChip(out, g("homeRuns")||"0", "HR");
       pushChip(out, g("RBIs","rbi")||"0", "RBI");
     }
   } else if(lg==="mls"){
-    pushChip(out, g("goals","totalGoals")||"0", "G");
-    pushChip(out, g("assists","goalAssists")||"0", "A");
-    pushChip(out, g("shots","totalShots")||"0", "SH");
+    if((n("saves") || n("shotsFaced")) && !n("totalGoals") && !n("totalShots")){
+      pushChip(out, g("saves")||"0", "SV");
+      pushChip(out, g("goalsConceded")||"0", "GA");
+      pushChip(out, g("shotsFaced")||"0", "SF");
+    } else {
+      pushChip(out, g("totalGoals","goals")||"0", "G");
+      pushChip(out, g("goalAssists","assists")||"0", "A");
+      pushChip(out, g("totalShots","shots")||"0", "SH");
+      if(g("shotsOnTarget")) pushChip(out, g("shotsOnTarget"), "SOT");
+    }
   }
   return out;
 }
@@ -4670,28 +4682,57 @@ async function pullJSON(url){
     return await res.json();
   }catch(e){ return null; }
 }
-async function liveAthleteStats(lg, pid, eventId){
+function headBits(d, teamId){
+  const comp=((((d||{}).header||{}).competitions)||[])[0]||{};
+  const st=(comp.status&&comp.status.type)||{};
+  const comps=comp.competitors||[];
+  const me=comps.find(x=>String(x.id||(x.team&&x.team.id))===String(teamId));
+  const opp=me?comps.find(x=>x!==me):null;
+  const ms=me?scOf(me):"", os=opp?scOf(opp):"";
+  return {score:(ms!==""&&os!=="")?ms+"–"+os:"", detail:st.shortDetail||st.detail||""};
+}
+function pushPair(names, stats, k, v){
+  if(!k || names.indexOf(k)>=0 || blankStat(v)) return;
+  names.push(k); stats.push(String(v));
+}
+function eatObjStats(list, names, stats){
+  (list||[]).forEach(s=>{
+    if(!s || typeof s!=="object" || Array.isArray(s)) return;
+    const v=s.displayValue!=null?s.displayValue:(s.value!=null?s.value:"");
+    pushPair(names, stats, s.name, v);
+    if(s.abbreviation) pushPair(names, stats, s.abbreviation, v);
+  });
+}
+async function liveAthleteStats(lg, pid, eventId, teamId){
   const path=YPATH[lg];
-  if(!path||!eventId||!pid) return null;
+  if(!path||!eventId) return null;
   const d=await pullJSON("https://site.web.api.espn.com/apis/site/v2/sports/"+path+"/summary?event="+eventId);
   if(!d) return null;
+  const head=headBits(d, teamId);
   const names=[], stats=[];
-  (((d.boxscore||{}).players)||[]).forEach(side=>{
-    (side.statistics||[]).forEach(grp=>{
-      const keys=grp.keys||[];
-      const aliases=grp.names||[];
-      const labels=grp.labels||[];
-      const ath=(grp.athletes||[]).find(a=>String((a.athlete&&a.athlete.id)||"")===String(pid));
-      if(!ath) return;
-      (ath.stats||[]).forEach((v,i)=>{
-        [keys[i], aliases[i], labels[i]].forEach(k=>{
-          if(!k || names.indexOf(k)>=0) return;
-          names.push(k); stats.push(v);
+  if(pid){
+    (((d.boxscore||{}).players)||[]).forEach(side=>{
+      (side.statistics||[]).forEach(grp=>{
+        const keys=grp.keys||[];
+        const aliases=grp.names||[];
+        const labels=grp.labels||[];
+        const ath=(grp.athletes||[]).find(a=>String((a.athlete&&a.athlete.id)||"")===String(pid));
+        if(!ath) return;
+        (ath.stats||[]).forEach((v,i)=>{
+          [keys[i], aliases[i], labels[i]].forEach(k=>pushPair(names, stats, k, v));
         });
       });
     });
-  });
-  return names.length?{names, stats}:null;
+    if(!names.length){
+      (d.rosters||[]).forEach(team=>{
+        (team.roster||[]).forEach(a=>{
+          if(String((a.athlete&&a.athlete.id)||"")!==String(pid)) return;
+          eatObjStats(a.stats, names, stats);
+        });
+      });
+    }
+  }
+  return {names, stats, score:head.score, detail:head.detail};
 }
 async function fillPlayerBook(p){
   const card={record:[p.pos, p.team].filter(Boolean).join(" · ")||lgLabel(p.lg)};
@@ -4712,9 +4753,11 @@ async function fillPlayerBook(p){
   }
   let stat=null;
   if(live && eventId){
-    const pack=await liveAthleteStats(p.lg, p.id, eventId);
+    const pack=await liveAthleteStats(p.lg, p.id, eventId, p.teamId);
+    if(pack && pack.score) card.big=pack.score;
+    if(pack && pack.detail) card.label="Live · "+pack.detail;
     const chips=pack?chipsFor(p.lg, p.pos, pack.names, pack.stats):[];
-    if(chips.length) stat={live:true, context:[detail, oppBit].filter(Boolean).join(" · "), chips};
+    if(chips.length) stat={live:true, context:[(pack&&pack.detail)||detail, oppBit].filter(Boolean).join(" · "), chips};
   }
   if(!stat){
     const d=await pullJSON("https://site.web.api.espn.com/apis/common/v3/sports/"+YPATH[p.lg]+"/athletes/"+p.id+"/gamelog");
@@ -4750,6 +4793,11 @@ async function fillPinLines(){
         const book=await teamBook(p.lg, id);
         if(book){
           const card=bookFromTeam(book, id);
+          if(card.live && book.live){
+            const pack=await liveAthleteStats(p.lg, "", String((book.live.ev&&book.live.ev.id)||""), id);
+            if(pack && pack.score) card.big=pack.score;
+            if(pack && pack.detail) card.label="Live · "+pack.detail;
+          }
           p._book=card;
           live=!!card.live;
           line=card.last||"";
