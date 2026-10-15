@@ -8034,6 +8034,12 @@ $("toSlate").onclick = ()=>{
     showEat({keepFrom:true});
     return;
   }
+  if(window.FROM_YOURS){
+    window.FROM_YOURS=false;
+    window.FROMTEAM=false;
+    show("home");
+    return;
+  }
   show("live", {keep:true});
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
