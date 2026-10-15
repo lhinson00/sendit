@@ -102,6 +102,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ycard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#120e0c;border:1px solid rgba(255,122,24,.28);border-radius:16px;padding:12px;cursor:pointer;position:relative}
 .ycard.now{border-color:var(--orange);background:linear-gradient(180deg,#1c120c,#120e0c 46%)}
 .ycard.live{border-color:#3ee0a0;background:linear-gradient(180deg,#0e1a14,#120e0c 46%);box-shadow:inset 3px 0 0 #3ee0a0}
+.ycard.final .ywhen em{color:#f4efe6}
 .yrow{display:flex;gap:10px;align-items:center}
 .ylogo{width:48px;height:48px;object-fit:contain;background:#fff;border-radius:10px;padding:4px;flex:none}
 .ycard.player .ylogo{object-fit:cover;border-radius:50%;background:#1a120c;padding:0}
@@ -1592,7 +1593,7 @@ function pulseBoard(g){
       body: playTxt || (who? (who+" — "+kind) : kind)
     });
   } else if(watching && justFinal){
-    const ufc=(g.lg==="ufc"||!!g.fightId)&&g.lg!=="cfb"&&g.lg!=="nfl";
+    const ufc=g.lg==="ufc";
     const winner=g.awayWin?(g.away||g.awayAb):(g.homeWin?(g.home||g.homeAb):"");
     const loser=g.awayWin?(g.home||g.homeAb):(g.homeWin?(g.away||g.awayAb):"");
     flashAlert({
@@ -4522,7 +4523,8 @@ async function teamBook(lg, id){
 }
 function bookFromTeam(book, id){
   const card={record:recordLine(book.team)};
-  const focus=book.live||book.next;
+  const holdFinal=!book.live && book.last && chiKey(new Date(book.last.t))===chiKey(new Date());
+  const focus=book.live||(holdFinal?book.last:book.next);
   if(focus){
     const s=sidesOf(focus, id);
     const home=s.me.homeAway==="home";
@@ -4530,18 +4532,19 @@ function bookFromTeam(book, id){
     const ms=scOf(s.me), os=scOf(s.opp);
     const bits=whenBits(focus.ev.date, live, (ms!==""&&os!=="")?ms+"–"+os:"", (focus.st&&focus.st.shortDetail)||"");
     card.live=live;
-    if(live) card.eventId=String((focus.ev&&focus.ev.id)||"");
-    card.soon=!live && bits.label==="Tonight";
-    card.label=bits.label;
-    card.big=bits.big;
+    card.final=!!holdFinal;
+    if(live||holdFinal) card.eventId=String((focus.ev&&focus.ev.id)||"");
+    card.soon=!live && !holdFinal && bits.label==="Tonight";
+    card.label=holdFinal?"Final":bits.label;
+    card.big=holdFinal&&ms!==""&&os!==""?ms+"–"+os:bits.big;
     card.oppName=nickOf(s.theirs);
     card.oppLogo=((s.theirs.logos||[])[0]||{}).href||"";
-    card.where=venueBit(focus, home);
+    card.where=holdFinal?(s.me.winner?"Win":(s.opp.winner?"Loss":"Final")):venueBit(focus, home);
     card.t=focus.t;
     card.abbr=s.mine.abbreviation||"";
     card.logo=((s.mine.logos||[])[0]||{}).href||"";
   }
-  if(book.last){
+  if(book.last && !holdFinal){
     const line=resultLine(book.last, id);
     if(line) card.last="Last · "+line;
   }
@@ -4953,7 +4956,7 @@ function paintYours(quiet){
       if(YSTATE.order){
         return `<div class="ycard ysort${p.kind==="player"?" player":""}" data-yi="${i}"><span class="ynum">${i+1}</span>${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(lgLabel(p.lg)||record)}</span></div><span class="ymove"><button type="button" data-yup="${i}" aria-label="Move up"${i===0?" disabled":""}>↑</button><button type="button" data-ydn="${i}" aria-label="Move down"${i===PINS.length-1?" disabled":""}>↓</button></span>${remove}</div>`;
       }
-      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div>${remove}</div>${opp}${sit}${stat}${last}</div>`;
+      return `<div class="ycard${p.kind==="player"?" player":""}${live?" live":""}${b.final?" final":""}${soon?" now":""}" data-yi="${i}"><div class="yrow">${yoursFace(p)}<div class="ywho"><b>${esc(p.name)}</b><span>${esc(record)}</span></div><div class="ywhen">${b.label?`<em>${esc(b.label)}</em>`:""}${b.big?`<strong>${esc(b.big)}</strong>`:""}</div>${remove}</div>${opp}${sit}${stat}${last}</div>`;
     }).join("");
   }
   if(!quiet) fillPinLines();
@@ -5019,7 +5022,7 @@ function openPin(p){
     else go();
     return;
   }
-  if(p._book && p._book.live && p._book.eventId){
+  if(p._book && (p._book.live || p._book.final) && p._book.eventId){
     LEAGUE=p.lg||LEAGUE;
     return openGame(String(p._book.eventId));
   }
