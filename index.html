@@ -4446,7 +4446,8 @@ function recordLine(team){
 }
 function venueBit(row, home){
   const v=((row.c&&row.c.venue)||{}).fullName||"";
-  const short=v.replace(/\s+(Arena|Stadium|Center|Centre|Field|Coliseum|Park|Forum|Garden|Dome|Fieldhouse)$/i,"");
+  let short=v.replace(/\s+(Arena|Stadium|Center|Centre|Field|Coliseum|Park|Forum|Garden|Dome|Fieldhouse)$/i,"");
+  if(short.length<4) short=v;
   if(home) return short?("Home · "+short):"Home";
   return short?("at "+short):"Away";
 }
@@ -4599,9 +4600,9 @@ function chipsFor(lg, pos, names, stats){
       if(n("passesDefended")) pushChip(out, g("passesDefended"), "PD");
     }
   } else if(lg==="nba"||lg==="cbb"){
-    pushChip(out, g("points")||"0", "PTS");
-    pushChip(out, g("totalRebounds","rebounds")||"0", "REB");
-    pushChip(out, g("assists")||"0", "AST");
+    pushChip(out, g("points","PTS")||"0", "PTS");
+    pushChip(out, g("totalRebounds","rebounds","REB")||"0", "REB");
+    pushChip(out, g("assists","AST")||"0", "AST");
     if(n("steals")>=n("blocks") && n("steals")) pushChip(out, g("steals"), "STL");
     else if(n("blocks")) pushChip(out, g("blocks"), "BLK");
   } else if(lg==="nhl"){
@@ -4613,9 +4614,9 @@ function chipsFor(lg, pos, names, stats){
       const toi=g("timeOnIce","timeOnIcePerGame");
       if(toi) pushChip(out, toi, "TOI");
     } else {
-      pushChip(out, g("goals")||"0", "G");
-      pushChip(out, g("assists")||"0", "A");
-      pushChip(out, g("shotsTotal","shots")||"0", "SOG");
+      pushChip(out, g("goals","G")||"0", "G");
+      pushChip(out, g("assists","A")||"0", "A");
+      pushChip(out, g("shotsTotal","shots","SOG")||"0", "SOG");
       const toi=g("timeOnIce","timeOnIcePerGame");
       if(toi) pushChip(out, toi, "TOI");
     }
@@ -4677,13 +4678,16 @@ async function liveAthleteStats(lg, pid, eventId){
   const names=[], stats=[];
   (((d.boxscore||{}).players)||[]).forEach(side=>{
     (side.statistics||[]).forEach(grp=>{
-      const keys=grp.names||grp.keys||[];
+      const keys=grp.keys||[];
+      const aliases=grp.names||[];
+      const labels=grp.labels||[];
       const ath=(grp.athletes||[]).find(a=>String((a.athlete&&a.athlete.id)||"")===String(pid));
       if(!ath) return;
       (ath.stats||[]).forEach((v,i)=>{
-        const k=keys[i];
-        if(!k || names.indexOf(k)>=0) return;
-        names.push(k); stats.push(v);
+        [keys[i], aliases[i], labels[i]].forEach(k=>{
+          if(!k || names.indexOf(k)>=0) return;
+          names.push(k); stats.push(v);
+        });
       });
     });
   });
