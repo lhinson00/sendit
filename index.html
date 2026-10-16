@@ -487,6 +487,34 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .tape td:nth-child(2),.tape td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
 .tape tr.hit td{color:var(--orange)}
 .tape tr.miss td{color:#8a8478}
+.castline.previewcast{grid-template-columns:1fr 1fr}
+.castline.previewcast .cside{grid-template-columns:36px minmax(0,1fr)}
+.castline.previewcast .cside.r{grid-template-columns:minmax(0,1fr) 36px}
+.preview{margin:0 0 18px}
+.pred{background:#14110e;border:1px solid #2a241c;border-radius:16px;padding:12px 14px;margin:0 0 10px}
+.pred .hint{margin:0 0 8px}
+.prednames{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+.prednames span{display:flex;align-items:center;gap:6px;min-width:0}
+.prednames span.r{flex-direction:row-reverse;text-align:right}
+.prednames img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:50%;padding:2px}
+.prednames b{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:1}
+.prednames em{font-style:normal;font-size:12px;color:var(--muted)}
+.predtrack{height:10px;border-radius:99px;overflow:hidden;background:#2a241c}
+.predtrack i{display:block;height:100%}
+.predline{margin:8px 0 0;color:var(--ember);font-size:13px;letter-spacing:.04em}
+.previewnote{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.35}
+.priors{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.priorcol{background:#14110e;border:1px solid #2a241c;border-radius:16px;padding:10px 10px 6px;min-width:0}
+.priorh{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.priorh img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:50%;padding:2px}
+.priorh b{font-size:13px}
+.priorh em{margin-left:auto;font-style:normal;color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.prior{display:grid;grid-template-columns:16px minmax(0,1fr);gap:2px 6px;align-items:center;width:100%;padding:7px 0;border:0;border-top:1px solid #221e18;background:none;color:inherit;text-align:left;cursor:pointer}
+.prior i{font-style:normal;font-weight:800;font-size:12px}
+.prior i.w{color:#3ee0a0}
+.prior i.l{color:#ff5a3c}
+.prior b{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prior em{grid-column:2;font-style:normal;color:var(--muted);font-size:11px}
 .hitline{display:grid;grid-template-columns:repeat(6,1fr);gap:0;padding-top:8px}
 .hitn{padding:8px 4px;text-align:center;border-bottom:1px solid #221e18;color:#8a8478}
 .hitn.hit{color:var(--orange)}
@@ -2467,6 +2495,41 @@ function qtrCells(comp){
   const cells = [1,2,3,4,5].map(i => (ls[i-1] && ls[i-1].displayValue) || (ls[i-1] && ls[i-1].value) || "");
   return cells;
 }
+function previewBoard(sum, spec){
+  const away=spec.away||{}, home=spec.home||{};
+  const aw=spec.aw||"Away", hm=spec.hm||"Home";
+  const pred=sum.predictor||{};
+  const ap=Math.round(Number((pred.awayTeam||{}).gameProjection)||0);
+  const hp=Math.round(Number((pred.homeTeam||{}).gameProjection)||0);
+  const pc=((sum.pickcenter)||[])[0]||{};
+  const line=[pc.details, (pc.overUnder!=null && pc.overUnder!=="")?("O/U "+pc.overUnder):""].filter(Boolean).join(" · ");
+  const art=sum.article||{};
+  const note=String(art.description||art.headline||"").trim();
+  const blockFor=(id, ab)=>(sum.lastFiveGames||[]).find(b=>{
+    const t=b.team||{};
+    return String(t.id)===String(id) || String(t.abbreviation||"").toUpperCase()===String(ab||"").toUpperCase();
+  });
+  const day=iso=>{
+    const d=new Date(iso||0);
+    if(!isFinite(d.getTime())) return "";
+    return d.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"});
+  };
+  const col=(id, ab, logo)=>{
+    const block=blockFor(id, ab)||{};
+    const rows=(block.events||[]).slice().sort((a,b)=>new Date(b.gameDate||0)-new Date(a.gameDate||0)).map(e=>{
+      const opp=e.opponent||{};
+      const res=String(e.gameResult||"").toUpperCase();
+      const cls=res==="W"?"w":res==="L"?"l":"";
+      const where=(e.atVs==="@"||e.atVs==="at")?"at":"vs";
+      const name=opp.abbreviation||opp.shortDisplayName||opp.displayName||"Opp";
+      return `<button type="button" class="prior" data-gid="${esc(e.id||"")}"><i class="${cls}">${esc(res||"–")}</i><b>${esc(where+" "+name)}</b><em>${esc([day(e.gameDate), e.score].filter(Boolean).join(" · "))}</em></button>`;
+    }).join("");
+    return `<div class="priorcol"><div class="priorh">${logo?`<img alt="" src="${esc(logo)}"/>`:""}<b>${esc(ab)}</b><em>Last 5</em></div>${rows||"<p class='hint'>No recent games.</p>"}</div>`;
+  };
+  const bar=(ap||hp)?`<div class="pred"><p class="hint">ESPN matchup predictor</p><div class="prednames"><span>${spec.aLogo?`<img alt="" src="${esc(spec.aLogo)}"/>`:""}<em>${esc(aw)}</em><b>${ap}%</b></span><span class="r">${spec.hLogo?`<img alt="" src="${esc(spec.hLogo)}"/>`:""}<em>${esc(hm)}</em><b>${hp}%</b></span></div><div class="predtrack" style="background:${esc(spec.hCol||"#2a241c")}"><i style="width:${ap}%;background:${esc(spec.aCol||"#ff7a18")}"></i></div>${line?`<p class="predline">Line · ${esc(line)}</p>`:""}</div>`:(line?`<div class="pred"><p class="predline">Line · ${esc(line)}</p></div>`:"");
+  const slate=`<div class="priors">${col(away.id||(away.team&&away.team.id), aw, spec.aLogo)}${col(home.id||(home.team&&home.team.id), hm, spec.hLogo)}</div>`;
+  return `<div class="preview">${bar}${note?`<p class="previewnote">${esc(note)}</p>`:""}${slate}</div>`;
+}
 function renderFootball(g, sum){
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
@@ -2979,24 +3042,26 @@ function renderFootball(g, sum){
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
+  const pregame = stType.state!=="in" && stType.state!=="post";
+  const previewHtml = pregame ? previewBoard(sum, {away:away, home:home, aw:aw, hm:hm, aLogo:aLogo, hLogo:hLogo, aCol:colOf(away), hCol:colOf(home)}) : "";
   const tab = window.FTAB || "live";
   const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
   if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
   $("gameBody").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
       <div class="mlb-inning">${live?"LIVE · ":""}${st||"Pregame"}${tv?(" · "+tv):""}</div>
-      <div class="castline">
-        <div class="cside${offAway?" hasball":""}"><div class="mark"><img alt="" src="${aLogo}"/>${offAway?'<span class="pigskin">🏈</span>':""}</div><div><b>${aw}</b><em>${aRec||""}</em></div><span class="cscore">${as}</span></div>
+      <div class="castline${pregame?" previewcast":""}">
+        ${pregame?`<div class="cside"><div class="mark"><img alt="" src="${aLogo}"/></div><div><b>${aw}</b><em>${aRec||""}</em></div></div><div class="cside r"><div><b>${hm}</b><em>${hRec||""}</em></div><div class="mark"><img alt="" src="${hLogo}"/></div></div>`:`<div class="cside${offAway?" hasball":""}"><div class="mark"><img alt="" src="${aLogo}"/>${offAway?'<span class="pigskin">🏈</span>':""}</div><div><b>${aw}</b><em>${aRec||""}</em></div><span class="cscore">${as}</span></div>
         <table class="qtr mini">
           <tr><th>1</th><th>2</th><th>3</th><th>4</th>${hasOT?"<th>OT</th>":""}</tr>
           <tr><td>${aQ[0]||"—"}</td><td>${aQ[1]||"—"}</td><td>${aQ[2]||"—"}</td><td>${aQ[3]||"—"}</td>${hasOT?"<td>"+(aQ[4]||"—")+"</td>":""}</tr>
           <tr><td>${hQ[0]||"—"}</td><td>${hQ[1]||"—"}</td><td>${hQ[2]||"—"}</td><td>${hQ[3]||"—"}</td>${hasOT?"<td>"+(hQ[4]||"—")+"</td>":""}</tr>
         </table>
-        <div class="cside r${!offAway && offAb?" hasball":""}"><span class="cscore">${hs}</span><div><b>${hm}</b><em>${hRec||""}</em></div><div class="mark"><img alt="" src="${hLogo}"/>${!offAway && offAb?'<span class="pigskin">🏈</span>':""}</div></div>
+        <div class="cside r${!offAway && offAb?" hasball":""}"><span class="cscore">${hs}</span><div><b>${hm}</b><em>${hRec||""}</em></div><div class="mark"><img alt="" src="${hLogo}"/>${!offAway && offAb?'<span class="pigskin">🏈</span>':""}</div></div>`}
       </div>
     </div>
     ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
-    <div id="gameOdds">${oddsTape(g,"pick")}</div>
+    ${pregame?previewHtml:`<div id="gameOdds">${oddsTape(g,"pick")}</div>
     <div class="ftabs">
       <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Gamecast</button>
       <button type="button" data-ftab="box" class="${tab==="box"?"on":""}">Box</button>
@@ -3029,14 +3094,16 @@ function renderFootball(g, sum){
       </div>
     </div>
     <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
-    <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leadBoard||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`;
-  if(!playing){
+    <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leadBoard||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`}`;
+  if(pregame){
+    if($("clipMount")){ $("clipMount").innerHTML=""; $("clipMount").hidden=true; }
+  } else if(!playing){
     $("clipMount").innerHTML = clips
       ? `<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>`
       : `<p class="hint">Highlights post after the game.</p>`;
   }
-  $("clipMount").hidden = tab!=="hl" && tab!=="live";
-  bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
+  if($("clipMount")) $("clipMount").hidden = pregame || (tab!=="hl" && tab!=="live");
+  if(!pregame) bindOdds($("gameOdds")||$("gameRoom"), ()=>g);
   document.querySelectorAll("[data-ftab]").forEach(b=>b.onclick=()=>{
     window.FTAB=b.dataset.ftab;
     document.querySelectorAll("[data-ftab]").forEach(x=>x.classList.toggle("on", x===b));
@@ -3046,6 +3113,9 @@ function renderFootball(g, sum){
   const tapeEl=document.querySelector("#gameBody .dtape");
   const onMark=tapeEl&&tapeEl.querySelector(".dmark.on");
   if(tapeEl&&onMark) tapeEl.scrollLeft=Math.max(0, onMark.offsetLeft-tapeEl.clientWidth/2+onMark.offsetWidth/2);
+  document.querySelectorAll("#gameBody .prior[data-gid]").forEach(btn=>{
+    btn.onclick=()=>{ if(btn.dataset.gid) openGame(btn.dataset.gid); };
+  });
   document.querySelectorAll("#gameBody [data-pid]").forEach(btn=>{
     btn.onclick=()=>{
       if(!btn.dataset.pid) return;
