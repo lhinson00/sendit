@@ -2086,12 +2086,12 @@ async function refreshTnFromSource(why){
   const day=fridaySelDate();
   const src="https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day;
   const proxies=[
-    "https://r.jina.ai/http://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day,
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(src)
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(src),
+    "https://r.jina.ai/http://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day
   ];
   for(const u of proxies){
     const ctl=new AbortController();
-    const timer=setTimeout(()=>ctl.abort(), 8000);
+    const timer=setTimeout(()=>ctl.abort(), 25000);
     try{
       const r=await fetch(u,{cache:"no-store", signal:ctl.signal});
       if(!r.ok) continue;
