@@ -3135,7 +3135,7 @@ function renderFootball(g, sum){
       </div>
     </div>
     ${venue?`<p class="hint">${venue}${city?(" · "+city):""}</p>`:""}
-    ${pregame?previewHtml:`<div id="gameOdds">${oddsTape(g,"pick")}</div>
+    ${pregame?previewHtml+(Object.keys(leadMap).length?leadBoard:""):`<div id="gameOdds">${oddsTape(g,"pick")}</div>
     <div class="ftabs">
       <button type="button" data-ftab="live" class="${tab==="live"?"on":""}">Gamecast</button>
       <button type="button" data-ftab="box" class="${tab==="box"?"on":""}">Box</button>
