@@ -649,33 +649,72 @@ function gameFpts(g){
 }
 async function fetchLog(id, season){
   const q = season ? ("?season="+season) : "";
-  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog"+q,{cache:"no-store"});
+  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog"+q);
   return r.ok?parseSeasonGames(await r.json()):[];
 }
+const LOG_KEY="sauceCap.logs.2026";
+function readLogCache(){
+  try{
+    const d=JSON.parse(localStorage.getItem(LOG_KEY)||"null");
+    if(!d||!d.logs) return 0;
+    Object.keys(d.logs).forEach(id=>{ if(!Object.prototype.hasOwnProperty.call(LOGS,id)) LOGS[id]=d.logs[id]; });
+    Object.keys(d.prior||{}).forEach(id=>{ if(!PRIOR[id]) PRIOR[id]=d.prior[id]; });
+    return Number(d.at)||0;
+  }catch(e){ return 0; }
+}
+async function warmLogs(){
+  window.LOG_AT=readLogCache();
+  try{
+    const r=await fetch("/data/cap-logs.json",{cache:"no-store"});
+    if(!r.ok) return;
+    const d=await r.json();
+    const at=Number(d.at)||0;
+    if(at<=(window.LOG_AT||0)) return;
+    Object.keys(d.logs||{}).forEach(id=>{ LOGS[id]=d.logs[id]; });
+    Object.keys(d.prior||{}).forEach(id=>{ if(d.prior[id]&&d.prior[id].length) PRIOR[id]=d.prior[id]; });
+    window.LOG_AT=at;
+  }catch(e){}
+}
+function saveLogCache(){
+  try{
+    const logs={}, prior={};
+    Object.keys(LOGS).forEach(id=>{ logs[id]=LOGS[id]; });
+    Object.keys(PRIOR).forEach(id=>{ prior[id]=PRIOR[id]; });
+    localStorage.setItem(LOG_KEY, JSON.stringify({at:Date.now(), logs, prior}));
+  }catch(e){}
+}
+function worthPrice(p){
+  if(!p || p.pos==="DST" || /practice/i.test(p.status||"")) return false;
+  const seat=p.depth||99;
+  if(p.pos==="QB") return seat<=2 || p.starter || seat>=99;
+  if(p.pos==="RB") return seat<=2 || p.starter;
+  if(p.pos==="WR") return seat<=3 || p.starter;
+  if(p.pos==="TE") return seat<=2 || p.starter;
+  return false;
+}
 let logQueue=Promise.resolve();
+let logPaint=0;
 function primeLogs(list){
-  const todo=(list||[]).filter(p=>{
-    if(!p || p.pos==="DST") return false;
-    if(Object.prototype.hasOwnProperty.call(LOGS, p.id)) return false;
-    if(/practice/i.test(p.status||"")) return false;
-    const seat=p.depth||99;
-    return seat<=4 || seat>=99 || p.starter || p.pos==="QB";
-  });
+  const fresh=Date.now()-(window.LOG_AT||0) < 10*60*1000;
+  const todo=(list||[]).filter(p=>worthPrice(p) && !(fresh && Object.prototype.hasOwnProperty.call(LOGS, p.id)));
   if(!todo.length) return;
+  const kick=()=>{ repriceAll(); paintAll(); };
   logQueue=logQueue.then(async()=>{
-    for(let i=0;i<todo.length;i+=8){
-      await Promise.all(todo.slice(i,i+8).map(async p=>{
-        if(Object.prototype.hasOwnProperty.call(LOGS, p.id)) return;
+    for(let i=0;i<todo.length;i+=18){
+      await Promise.all(todo.slice(i,i+18).map(async p=>{
         try{ LOGS[p.id]=await fetchLog(p.id); }
-        catch(e){ LOGS[p.id]=[]; }
+        catch(e){ if(!LOGS[p.id]) LOGS[p.id]=[]; }
         if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter || p.pos==="QB")){
           try{ PRIOR[p.id]=await fetchLog(p.id, 2025); }
-          catch(e){ PRIOR[p.id]=[]; }
+          catch(e){ if(!PRIOR[p.id]) PRIOR[p.id]=[]; }
         }
       }));
-      repriceAll();
-      paintAll();
+      clearTimeout(logPaint);
+      logPaint=setTimeout(kick, 150);
     }
+    window.LOG_AT=Date.now();
+    saveLogCache();
+    kick();
   });
 }
 function paintPool(){
@@ -805,21 +844,26 @@ function slateStamps(){
 }
 async function loadSlate(){
   const stamp=capWeekId();
+  const days=slateStamps();
+  const pages=await Promise.all(days.map(async day=>{
+    try{
+      const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+day,{cache:"no-store"});
+      return res.ok?res.json():null;
+    }catch(e){ return null; }
+  }));
   const seen=new Set();
   const evs=[];
   let week="", year="";
-  for(const day of slateStamps()){
-    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+day,{cache:"no-store"});
-    if(!res.ok) continue;
-    const d=await res.json();
+  pages.forEach(d=>{
+    if(!d) return;
     if(!week && d.week) week=d.week.number;
     if(!year && d.season) year=d.season.year;
     (d.events||[]).forEach(ev=>{
       const iso=ev.date||(((ev.competitions||[])[0]||{}).date)||"";
       const ymd=iso?new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"}).replace(/-/g,""):"";
-      if(!seen.has(ev.id) && slateStamps().indexOf(ymd)>=0){ seen.add(ev.id); evs.push(ev); }
+      if(!seen.has(ev.id) && days.indexOf(ymd)>=0){ seen.add(ev.id); evs.push(ev); }
     });
-  }
+  });
   if(!evs.length) throw new Error("Could not load NFL slate");
   STATE.espnWeek = week;
   STATE.week = stamp.id;
@@ -849,7 +893,7 @@ async function loadDepth(tid){
   if(DEPTH[tid]) return DEPTH[tid];
   const map={};
   try{
-    const d=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/depthcharts",{cache:"no-store"}).then(r=>r.json());
+    const d=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/depthcharts").then(r=>r.json());
     (d.depthchart||[]).forEach(chart=>{
       const pos=chart.positions||{};
       Object.keys(pos).forEach(k=>{
@@ -875,7 +919,7 @@ async function loadDepth(tid){
 async function loadRoster(tid, ab, game){
   const out=[];
   try{
-    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/roster",{cache:"no-store"});
+    const r=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/roster");
     const depth=DEPTH[tid]||{};
     if(!r.ok) return out;
     const d=await r.json();
@@ -1138,36 +1182,28 @@ async function loadDefenses(){
 }
 async function loadPool(){
   $("pool").innerHTML="<p class='hint'>Loading slates…</p>";
-  const jobs=STATE.games.flatMap(g=>[
-    loadRoster(g.awayId,g.awayAb,g),
-    loadRoster(g.homeId,g.homeAb,g)
+  window.LOG_AT=Math.max(window.LOG_AT||0, readLogCache());
+  const games=STATE.games||[];
+  const tids=[...new Set(games.flatMap(g=>[g.homeId,g.awayId]).filter(Boolean))];
+  const chunks=await Promise.all([
+    ...games.flatMap(g=>[loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]),
+    ...tids.map(loadDepth)
   ]);
-  const chunks=await Promise.all(jobs);
   const seen=new Set();
-  STATE.pool=chunks.flat().filter(p=>{
-    if(!p||seen.has(p.id)) return false; seen.add(p.id); return true;
+  STATE.pool=chunks.flat().filter(p=>p&&p.id).filter(p=>{
+    if(seen.has(p.id)) return false; seen.add(p.id); return true;
   }).map(p=>{
-    if(p.starter && !p.depth) p.depth=1;
+    const chart=Object.keys(DEPTH).map(k=>DEPTH[k][p.id]).find(n=>n!=null);
+    if(chart!=null) p.depth=chart;
+    else if(p.starter && !p.depth) p.depth=1;
     p.inj=injOf(p); p.sal=priceLikeDk(p); return p;
   });
   repriceAll();
   $("weekLine").textContent=STATE.label+" · $50,000 · games played only";
   paintAll();
-  Promise.all([
-    loadInjuries().then(()=>{ repriceAll(); paintAll(); }),
-    pullBoard().then(()=>paintStand()),
-    Promise.all(STATE.games.flatMap(g=>[loadDepth(g.awayId),loadDepth(g.homeId)])).then(()=>{
-      STATE.pool.forEach(p=>{
-        const d=Object.values(DEPTH).find(m=>m[p.id]!=null);
-        if(d) p.depth=d[p.id];
-        else if(p.starter) p.depth=1;
-      });
-      repriceAll();
-      paintAll();
-      primeLogs(STATE.pool);
-    })
-  ]).catch(()=>{});
   primeLogs(STATE.pool);
+  loadInjuries().then(()=>{ repriceAll(); paintAll(); }).catch(()=>{});
+  pullBoard().then(()=>paintStand()).catch(()=>{});
   loadDefenses();
 }
 
@@ -1974,7 +2010,9 @@ window.addEventListener("pagehide", capSpot);
 (async function boot(){
   try{
     const prevWeek=STATE.week;
+    const warm=warmLogs();
     await loadSlate();
+    await warm;
     if(prevWeek && prevWeek!==STATE.week){ STATE.locked=false; STATE.lineup={}; STATE.name=""; STATE.sealName=""; saveStore(); }
     await loadPool();
     await pullBoard();
