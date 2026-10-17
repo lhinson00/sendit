@@ -2080,10 +2080,44 @@ pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:
   try{ sessionStorage.setItem("sauceTnLive", JSON.stringify({day:day, games:pack.games.filter(g=>g.date===day), asOf:pack.asOf})); }catch(e){}
   return hit;
 }
+function tnLiveStatus(d){
+  const period=String((d&&d.period)||"").replace(/\s+/g," ").trim();
+  const left=String((d&&d.timeleft)||"").replace(/\s+/g," ").trim();
+  if(!period) return "Tonight";
+  if(/final/i.test(period)) return "Final";
+  return left ? (period+" "+left) : period;
+}
 async function refreshTnFromSource(why){
-  if(window._tnPull && Date.now()-window._tnPull<60000) return;
+  if(window._tnPull && Date.now()-window._tnPull<30000) return;
   window._tnPull=Date.now();
   const day=fridaySelDate();
+  const liveUrl="https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid=1&selDate="+encodeURIComponent(day)+"&bust="+Date.now();
+  try{
+    const r=await fetch(liveUrl,{cache:"no-store"});
+    if(r.ok){
+      const data=await r.json();
+      if(Array.isArray(data) && data.length){
+        const rows=data.map(d=>({
+          id:String(d.eventid||""),
+          sport:"Football",
+          status:tnLiveStatus(d),
+          away:String(d.visitingname||"").trim(),
+          home:String(d.hostname||"").trim(),
+          as:String(d.visitingscore==null?"":d.visitingscore).trim(),
+          hs:String(d.hostscore==null?"":d.hostscore).trim()
+        })).filter(x=>x.id&&x.away&&x.home);
+        if(rows.length){
+          const n=applyTnScores(rows, day);
+          window.TN_WEEK=day;
+          if(LEAGUE==="tssaa") paintTnSlate();
+          else if(window.VIEW_NOW==="home" && typeof paintYours==="function") paintYours();
+          const line=$("liveMeta");
+          if(line && LEAGUE==="tssaa") line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
+          return;
+        }
+      }
+    }
+  }catch(e){}
   const src="https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day;
   const proxies=[
     "https://api.allorigins.win/raw?url="+encodeURIComponent(src),
@@ -2122,13 +2156,16 @@ function msToNextFriNightPull(){
   const days={Sun:5,Mon:4,Tue:3,Wed:2,Thu:1,Fri:7,Sat:6}[wd]||5;
   return ((days*24+(20-h))*60-m)*60*1000;
 }
+function tnLiveHour(){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"2-digit",hour12:false}).formatToParts(new Date());
+  const wd=parts.find(x=>x.type==="weekday").value;
+  const h=Number(parts.find(x=>x.type==="hour").value);
+  return (wd==="Fri" && h>=19 && h<=23) || (wd==="Sat" && h===0);
+}
 function startTnFridayClock(){
   const tick=async()=>{
-    const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"2-digit",hour12:false}).formatToParts(new Date());
-    const wd=parts.find(x=>x.type==="weekday").value;
-    const h=Number(parts.find(x=>x.type==="hour").value);
-    if((wd==="Fri" && (h===20||h===21||h===22)) || (wd==="Sat" && h===0)) await refreshTnFromSource("clock");
-    setTimeout(tick, Math.min(msToNextFriNightPull(), 15*60*1000));
+    if(tnLiveHour()) await refreshTnFromSource("clock");
+    setTimeout(tick, tnLiveHour()?45000:Math.min(msToNextFriNightPull(), 15*60*1000));
   };
   setTimeout(tick, 4000);
 }
@@ -4638,9 +4675,15 @@ function tnSnap(name){
     const home=g.home===name;
     const opp=tnOppName(home?g.away:g.home);
     const us=home?g.hs:g.as, them=home?g.as:g.hs;
-    const done=us!==""&&them!==""&&!isNaN(+us)&&!isNaN(+them);
-    return {key:tnDayKey(g.date), done, home, opp, us, them, date:g.date};
+    const live=/qt\.|half|overtime|\bOT\b/i.test(g.status||"") && !/final/i.test(g.status||"");
+    const done=!live && us!==""&&them!==""&&!isNaN(+us)&&!isNaN(+them);
+    return {key:tnDayKey(g.date), done, live, home, opp, us, them, date:g.date, status:g.status||""};
   }).filter(r=>r.key).sort((a,b)=>a.key.localeCompare(b.key));
+  const going=rows.find(r=>r.live);
+  if(going){
+    const ha=going.home?"vs":"@";
+    return {line:(going.us||"0")+"–"+(going.them||"0")+" "+ha+" "+going.opp+" · "+going.status, live:true, status:going.status, score:(going.us||"0")+"–"+(going.them||"0"), opp:going.opp};
+  }
   const nxt=rows.find(r=>!r.done && r.key>=today);
   const last=[...rows].reverse().find(r=>r.done);
   const pick=nxt||last;
@@ -4929,7 +4972,7 @@ async function fillPinLines(){
       if(p.lg==="tssaa"){
         const r=tnSnap(p.name);
         line=r.line; live=r.live;
-        p._book={record:"TSSAA", label:r.live?"Live":"", big:"", last:r.line||"", live:r.live};
+        p._book={record:"TSSAA", label:r.live?(r.status||"Live"):"", big:r.live?(r.score||""):"", oppName:r.live?(r.opp||""):"", last:r.live?"":(r.line||""), live:r.live};
       } else if(p.kind==="player" && YPATH[p.lg]){
         await fillPlayerBook(p);
         live=!!p._live;
