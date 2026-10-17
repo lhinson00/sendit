@@ -265,7 +265,7 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard .nm{font-size:15px;line-height:1.15;flex-wrap:wrap}
 .gcard.tncard .bigline{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;align-items:start}
 .gcard.tncard .nm{display:flex;flex-direction:row;align-items:flex-start;gap:4px;min-width:0;flex-wrap:nowrap;font-size:18px;letter-spacing:.02em;line-height:1.08}
-.gcard.tncard .nm .who{min-width:0;flex:1}
+.gcard.tncard .nm .who{min-width:0;flex:1;border:0;background:none;color:inherit;font:inherit;padding:0;cursor:pointer;text-align:inherit}
 .gcard.tncard .nm span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
 .gcard.tncard .nm em{display:block;font-family:Manrope,sans-serif;font-style:normal;font-size:11px;letter-spacing:.06em;margin-top:3px;color:#9a9388}
 .gcard.tncard .nm.r{text-align:right;justify-content:flex-end}
@@ -294,6 +294,7 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .srow img{width:24px;height:24px;object-fit:contain;background:#fff;border-radius:50%;padding:2px;cursor:pointer}
 .srow .seed{color:var(--ember);font-weight:800}
 .srow .clin{color:var(--orange);font-size:11px;font-weight:800}
+button.srow{width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left}
 .playoffbox{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}
 @media(max-width:560px){.playoffbox{grid-template-columns:1fr}.srow{grid-template-columns:20px 24px 1fr 48px 28px 28px 40px}}
 .pollrow{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #221e18;cursor:pointer}
@@ -2216,35 +2217,46 @@ function paintTnSlate(){
   const today=fridaySelDate();
   if(!window.TN_WEEK) window.TN_WEEK = games.some(g=>g.date===today) ? today : latest;
   if(!window.TN_REG) window.TN_REG="all";
+  if(!window.TN_SLATE_CLASS) window.TN_SLATE_CLASS="all";
   $("liveMeta").textContent = "TSSAA · Football · "+(pack.asOf||latest);
   const days=[...new Set(games.map(g=>g.date).filter(Boolean))].sort((a,b)=>tnDateKey(b).localeCompare(tnDateKey(a)));
-  const regs=[...new Set(games.map(g=>tnGameReg(g,map)))].sort();
+  const slateCls=window.TN_SLATE_CLASS;
+  const regs = slateCls==="all"
+    ? [...new Set(games.map(g=>tnGameReg(g,map)))].sort()
+    : ["1","2","3","4","5","6","7","8"];
   const sid=(id,name)=>String(id||("n:"+name));
+  const who=(name, rec)=>`<button type="button" class="who"><span>${name}</span><em>${rec||""}</em></button>`;
   const card=g=>{
     const aid=sid(g.aid,g.away), hid=sid(g.hid,g.home);
     const pinned=isFav(aid)||isFav(hid);
     return `<div class="gcard tncard${pinned?" pin":""}" data-tn="${g.id}" data-away="${aid}" data-home="${hid}" data-an="${String(g.away).replace(/"/g,"")}" data-hn="${String(g.home).replace(/"/g,"")}">
       <div class="gstat"><span>${g.status||"Final"}</span><span>${tnGameReg(g,map)}</span></div>
       <div class="bigline">
-        <div class="nm">${starBtn(aid,g.away)}<div class="who"><span>${g.away}</span><em>${g.ar||""}</em></div></div>
+        <div class="nm">${starBtn(aid,g.away)}${who(g.away, g.ar)}</div>
         <div class="sc"><em>${g.as||"–"}</em><span>–</span><em>${g.hs||"–"}</em></div>
-        <div class="nm r"><div class="who"><span>${g.home}</span><em>${g.hr||""}</em></div>${starBtn(hid,g.home)}</div>
+        <div class="nm r">${who(g.home, g.hr)}${starBtn(hid,g.home)}</div>
       </div>
     </div>`;
   };
+  const classes=["1A","2A","3A","4A","5A","6A"];
   const weekPills=`<div class="pills" id="tnWeeks">
     ${days.slice(0,6).map(d=>`<button type="button" data-tnweek="${d}" class="${window.TN_WEEK===d?"on":""}">${d===chiToday()?"Tonight":fmtTnDate(d)}</button>`).join("")}
     <button type="button" data-tnweek="all" class="${window.TN_WEEK==="all"?"on":""}">All dates</button>
   </div>`;
+  const classPills=`<div class="pills" id="tnClass">
+    <button type="button" data-tnslate="all" class="${slateCls==="all"?"on":""}">All classes</button>
+    ${classes.map(c=>`<button type="button" data-tnslate="${c}" class="${slateCls===c?"on":""}">${c}</button>`).join("")}
+  </div>`;
   const regPills=`<div class="pills" id="tnPills">
     <button type="button" data-tnreg="all" class="${window.TN_REG==="all"?"on":""}">All regions</button>
-    ${regs.map(r=>`<button type="button" data-tnreg="${r.replace(/"/g,"")}" class="${window.TN_REG===r?"on":""}">${r.replace(/DIVISION /i,"D").replace(/REGION /i,"R")}</button>`).join("")}
+    ${regs.map(r=>`<button type="button" data-tnreg="${String(r).replace(/"/g,"")}" class="${window.TN_REG===r?"on":""}">${slateCls==="all"?String(r).replace(/DIVISION /i,"D").replace(/REGION /i,"R"):("R"+r)}</button>`).join("")}
   </div>`;
   const week=window.TN_WEEK;
   const showDays = week==="all" ? days : days.filter(d=>d===week);
   const body=showDays.map(d=>{
     let list=games.filter(g=>g.date===d);
-    if(window.TN_REG && window.TN_REG!=="all") list=list.filter(g=>tnGameReg(g,map)===window.TN_REG);
+    if(slateCls!=="all") list=list.filter(g=>tnInSlate(g, slateCls, window.TN_REG));
+    else if(window.TN_REG && window.TN_REG!=="all") list=list.filter(g=>tnGameReg(g,map)===window.TN_REG);
     if(!list.length) return "";
     list.sort((a,b)=>{
       const af=isFav(sid(a.aid,a.away))||isFav(sid(a.hid,a.home));
@@ -2254,11 +2266,18 @@ function paintTnSlate(){
     });
     return `<p class="kicker" style="margin:14px 0 8px">${fmtTnDate(d)} · ${list.length} games</p>`+list.map(card).join("");
   }).join("") || `<p class="hint">No games in this region for that date.</p>`;
-  $("liveList").innerHTML = weekPills + regPills + body;
+  $("liveList").innerHTML = weekPills + classPills + regPills + body;
   const weeks=$("tnWeeks");
   if(weeks) weeks.onclick=e=>{
     const b=e.target.closest("[data-tnweek]"); if(!b) return;
     window.TN_WEEK=b.getAttribute("data-tnweek");
+    paintTnSlate();
+  };
+  const classesEl=$("tnClass");
+  if(classesEl) classesEl.onclick=e=>{
+    const b=e.target.closest("[data-tnslate]"); if(!b) return;
+    window.TN_SLATE_CLASS=b.getAttribute("data-tnslate");
+    window.TN_REG="all";
     paintTnSlate();
   };
   const pills=$("tnPills");
@@ -2267,13 +2286,15 @@ function paintTnSlate(){
     window.TN_REG=b.getAttribute("data-tnreg");
     paintTnSlate();
   };
-  $("liveList").querySelectorAll("[data-tn]").forEach(el=>{
-    el.onclick=ev=>{
-      if(ev.target.closest(".star")) return;
-      const side=ev.target.closest(".nm");
-      if(side && side.classList.contains("r")) openTnTeam(el.getAttribute("data-home"), el.getAttribute("data-hn"));
-      else openTnTeam(el.getAttribute("data-away"), el.getAttribute("data-an"));
-    };
+  $("liveList").querySelectorAll(".tncard").forEach(el=>{
+    el.querySelectorAll(".who").forEach((who,i)=>{
+      who.onclick=ev=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+        if(i===1) openTnTeam(el.getAttribute("data-home"), el.getAttribute("data-hn"));
+        else openTnTeam(el.getAttribute("data-away"), el.getAttribute("data-an"));
+      };
+    });
   });
 }
 window.TN_ALIGN={"cloudland":["1A","1"],"cosby":["1A","1"],"hampton":["1A","1"],"hancockcounty":["1A","1"],"jellico":["1A","1"],"northgreene":["1A","1"],"sunbright":["1A","1"],"unaka":["1A","1"],"coalfield":["1A","2"],"greenback":["1A","2"],"harriman":["1A","2"],"midway":["1A","2"],"oakdale":["1A","2"],"oliversprings":["1A","2"],"rockwood":["1A","2"],"wartburgcentral":["1A","2"],"copperbasin":["1A","3"],"lookoutvalley":["1A","3"],"salecreek":["1A","3"],"southpittsburg":["1A","3"],"whitwell":["1A","3"],"claycounty":["1A","4"],"innovationacademy":["1A","4"],"jobyrns":["1A","4"],"redboilingsprings":["1A","4"],"cornersville":["1A","5"],"eagleville":["1A","5"],"fayetteville":["1A","5"],"huntland":["1A","5"],"moorecounty":["1A","5"],"richland":["1A","5"],"collinwood":["1A","6"],"hollowrockbruceton":["1A","6"],"mcewen":["1A","6"],"mckenzie":["1A","6"],"perrycounty":["1A","6"],"waynecounty":["1A","6"],"dresden":["1A","7"],"gleason":["1A","7"],"greenfield":["1A","7"],"humboldt":["1A","7"],"lakecounty":["1A","7"],"southfulton":["1A","7"],"westcarroll":["1A","7"],"bookertwashington":["1A","8"],"kippmemphis":["1A","8"],"manassas":["1A","8"],"memphismiddlecollege":["1A","8"],"middleton":["1A","8"],"oakhaven":["1A","8"],"westwood":["1A","8"],"cumberlandgap":["2A","1"],"happyvalley":["2A","1"],"southgreene":["2A","1"],"westgreene":["2A","1"],"eagletonacademy":["2A","2"],"oneida":["2A","2"],"polkcounty":["2A","2"],"tellicoplains":["2A","2"],"alvincyork":["2A","3"],"bledsoecounty":["2A","3"],"grundycounty":["2A","3"],"marioncounty":["2A","3"],"monterey":["2A","3"],"cannoncounty":["2A","4"],"gordonsville":["2A","4"],"jacksoncounty":["2A","4"],"smithcounty":["2A","4"],"trousdalecounty":["2A","4"],"adamsville":["2A","5"],"decaturcountyriverside":["2A","5"],"lewiscounty":["2A","5"],"loretto":["2A","5"],"mtpleasant":["2A","5"],"scottshill":["2A","5"],"summertown":["2A","5"],"easthickman":["2A","6"],"eastnashville":["2A","6"],"eastrobertson":["2A","6"],"hickmancounty":["2A","6"],"houstoncounty":["2A","6"],"gibsoncounty":["2A","7"],"halls":["2A","7"],"huntingdon":["2A","7"],"jacksoncentralmerry":["2A","7"],"milan":["2A","7"],"peabody":["2A","7"],"unioncity":["2A","7"],"bluffcity":["2A","8"],"fairley":["2A","8"],"hillcrest":["2A","8"],"mase":["2A","8"],"memphisbusinessacademy":["2A","8"],"mitchell":["2A","8"],"sheffield":["2A","8"],"trezevant":["2A","8"],"chuckeydoak":["3A","1"],"claiborne":["3A","1"],"gatlinburgpittman":["3A","1"],"johnsoncounty":["3A","1"],"pigeonforge":["3A","1"],"unicoicounty":["3A","1"],"austineast":["3A","2"],"kingston":["3A","2"],"mcminncentral":["3A","2"],"meigscounty":["3A","2"],"scott":["3A","2"],"sweetwater":["3A","2"],"brainerd":["3A","3"],"chattanoogacentral":["3A","3"],"chattanoogapreparatory":["3A","3"],"tyner":["3A","3"],"cascade":["3A","4"],"community":["3A","4"],"forrest":["3A","4"],"gilescounty":["3A","4"],"sequatchiecounty":["3A","4"],"watertown":["3A","4"],"maplewood":["3A","5"],"stratford":["3A","5"],"westmoreland":["3A","5"],"whitehouseheritage":["3A","5"],"whitescreek":["3A","5"],"camdencentral":["3A","6"],"cheathamcountycentral":["3A","6"],"fairview":["3A","6"],"harpeth":["3A","6"],"stewartcounty":["3A","6"],"sycamore":["3A","6"],"waverlycentral":["3A","6"],"bolivarcentral":["3A","7"],"covington":["3A","7"],"dyersburg":["3A","7"],"mcnairycentral":["3A","7"],"obioncountycentral":["3A","7"],"ripley":["3A","7"],"westview":["3A","7"],"bolton":["3A","8"],"frederickdouglass":["3A","8"],"hamilton":["3A","8"],"melrose":["3A","8"],"memphiseast":["3A","8"],"raleighegypt":["3A","8"],"wooddale":["3A","8"],"cherokee":["4A","1"],"elizabethton":["4A","1"],"grainger":["4A","1"],"greeneville":["4A","1"],"northviewacademy":["4A","1"],"seymour":["4A","1"],"sullivaneast":["4A","1"],"volunteer":["4A","1"],"alcoa":["4A","2"],"andersoncounty":["4A","2"],"carter":["4A","2"],"fulton":["4A","2"],"gibbs":["4A","2"],"heritage":["4A","2"],"southdoyle":["4A","2"],"unioncounty":["4A","2"],"eastridge":["4A","3"],"hixson":["4A","3"],"loudon":["4A","3"],"redbank":["4A","3"],"sequoyah":["4A","3"],"signalmountain":["4A","3"],"dekalbcounty":["4A","4"],"livingstonacademy":["4A","4"],"maconcounty":["4A","4"],"stonememorial":["4A","4"],"upperman":["4A","4"],"whitecounty":["4A","4"],"battlecreek":["4A","5"],"creekwood":["4A","5"],"marshallcounty":["4A","5"],"montgomerycentral":["4A","5"],"springhill":["4A","5"],"greenbrier":["4A","6"],"libertycreek":["4A","6"],"pearlcohn":["4A","6"],"springfield":["4A","6"],"whitehouse":["4A","6"],"chestercounty":["4A","7"],"crockettcounty":["4A","7"],"dyercounty":["4A","7"],"hardincounty":["4A","7"],"jacksonnorthside":["4A","7"],"jacksonsouthside":["4A","7"],"lexington":["4A","7"],"southgibson":["4A","7"],"craigmont":["4A","8"],"fayetteware":["4A","8"],"haywood":["4A","8"],"kirby":["4A","8"],"lakelandprep":["4A","8"],"millingtoncentral":["4A","8"],"ridgeway":["4A","8"],"cockecounty":["5A","1"],"danielboone":["5A","1"],"davidcrockett":["5A","1"],"morristownwest":["5A","1"],"seviercounty":["5A","1"],"tennesseehigh":["5A","1"],"campbellcounty":["5A","2"],"clinton":["5A","2"],"karns":["5A","2"],"knoxvillecentral":["5A","2"],"knoxvillehalls":["5A","2"],"powell":["5A","2"],"west":["5A","2"],"williamblount":["5A","2"],"easthamilton":["5A","3"],"lenoircity":["5A","3"],"mcminncounty":["5A","3"],"ooltewah":["5A","3"],"rheacounty":["5A","3"],"soddydaisy":["5A","3"],"walkervalley":["5A","3"],"columbiacentral":["5A","4"],"franklincounty":["5A","4"],"lawrencecounty":["5A","4"],"lincolncounty":["5A","4"],"tullahoma":["5A","4"],"centennial":["5A","5"],"hillsboro":["5A","5"],"jameslawson":["5A","5"],"nolensville":["5A","5"],"page":["5A","5"],"beech":["5A","6"],"hendersonville":["5A","6"],"hunterslane":["5A","6"],"portland":["5A","6"],"stationcamp":["5A","6"],"dicksoncounty":["5A","7"],"henrycounty":["5A","7"],"kenwood":["5A","7"],"kirkwood":["5A","7"],"northeast":["5A","7"],"northwest":["5A","7"],"brighton":["5A","8"],"kingsbury":["5A","8"],"memphiscentral":["5A","8"],"munford":["5A","8"],"overton":["6A","5"],"dobynsbennett":["6A","1"],"jeffersoncounty":["6A","1"],"morristowneast":["6A","1"],"sciencehill":["6A","1"],"westridge":["6A","1"],"bearden":["6A","2"],"bradleycentral":["6A","2"],"cleveland":["6A","2"],"farragut":["6A","2"],"hardinvalley":["6A","2"],"maryville":["6A","2"],"oakridge":["6A","2"],"blackman":["6A","3"],"lavergne":["6A","3"],"oakland":["6A","3"],"riverdale":["6A","3"],"rockvale":["6A","3"],"siegel":["6A","3"],"smyrna":["6A","3"],"stewartscreek":["6A","3"],"cookeville":["6A","4"],"gallatin":["6A","4"],"greenhill":["6A","4"],"lebanon":["6A","4"],"mtjuliet":["6A","4"],"wilsoncentral":["6A","4"],"antioch":["6A","5"],"caneridge":["6A","5"],"clarksville":["6A","5"],"mcgavock":["6A","5"],"rossview":["6A","5"],"westcreek":["6A","5"],"brentwood":["6A","6"],"coffeecountycentral":["6A","6"],"franklin":["6A","6"],"independence":["6A","6"],"ravenwood":["6A","6"],"shelbyvillecentral":["6A","6"],"summit":["6A","6"],"arlington":["6A","7"],"bartlett":["6A","7"],"collierville":["6A","7"],"cordova":["6A","7"],"houston":["6A","7"],"germantown":["6A","8"],"southwind":["6A","8"],"whitestation":["6A","8"],"whitehaven":["6A","8"]};
@@ -2313,7 +2334,7 @@ function paintTnStand(){
   host.innerHTML=`<div class="pills">${clsPills}</div><div class="pills">${rgPills}</div>
     <div class="stable"><h3>Region ${reg} · ${cls}</h3>
     <div class="srow head"><span>#</span><span></span><div>Team</div><span></span><span>Region</span></div>
-    ${teams.map((t,i)=>`<div class="srow" data-tname="${String(t.team).replace(/"/g,"")}"><span>${i+1}</span><span></span><div><b>${t.team}</b></div><span></span><span>${t.w}-${t.l}</span></div>`).join("")||"<p class='hint'>No region games in the file for this group yet.</p>"}
+    ${teams.map((t,i)=>`<button type="button" class="srow" data-tname="${String(t.team).replace(/"/g,"")}"><span>${i+1}</span><span></span><div><b>${t.team}</b></div><span></span><span>${t.w}-${t.l}</span></button>`).join("")||"<p class='hint'>No region games in the file for this group yet.</p>"}
     </div>`;
   host.querySelectorAll("[data-tncls]").forEach(b=>b.onclick=()=>{ window.TN_CLASS=b.getAttribute("data-tncls"); paintTnStand(); });
   host.querySelectorAll("[data-tnrg]").forEach(b=>b.onclick=()=>{ window.TN_RG=b.getAttribute("data-tnrg"); paintTnStand(); });
@@ -2321,6 +2342,20 @@ function paintTnStand(){
 }
 function tnOppName(s){
   return String(s||"").replace(/DIVISION\s*[IVXLCDM0-9]+/ig,"").replace(/CLASS\s*[A-Z0-9]+/ig,"").replace(/[·•|]\s*REGION\s*\d+/ig,"").replace(/REGION\s*\d+/ig,"").replace(/\s+/g," ").trim();
+}
+function tnSameSchool(a,b){
+  if(!a||!b) return false;
+  if(a===b) return true;
+  return normTnName(a)===normTnName(b);
+}
+function tnInSlate(g, cls, reg){
+  const hit=n=>{
+    const a=tnAlign(n);
+    if(!a || a[0]!==cls) return false;
+    if(reg && reg!=="all" && String(a[1])!==String(reg)) return false;
+    return true;
+  };
+  return hit(g.away)||hit(g.home);
 }
 function openTnTeam(sid, name){
   window.FROMTEAM=true;
@@ -2336,11 +2371,11 @@ function openTnTeam(sid, name){
     if(name && g.away===name && g.aid) ids.add(String(g.aid));
     if(name && g.home===name && g.hid) ids.add(String(g.hid));
   });
-  const games=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && (g.away===name||g.home===name||(g.aid&&ids.has(String(g.aid)))||(g.hid&&ids.has(String(g.hid))))).slice();
+  const games=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && (tnSameSchool(g.away,name)||tnSameSchool(g.home,name)||(g.aid&&ids.has(String(g.aid)))||(g.hid&&ids.has(String(g.hid))))).slice();
   const rec={w:0,l:0,t:0};
   const upcoming=[], played=[];
   games.forEach(g=>{
-    const home=g.home===name||(g.hid&&ids.has(String(g.hid)));
+    const home=tnSameSchool(g.home,name)||(g.hid&&ids.has(String(g.hid))&&!tnSameSchool(g.away,name));
     const opp=home?g.away:g.home;
     const us=home?g.hs:g.as, them=home?g.as:g.hs;
     const done=us!==""&&them!=="";
