@@ -3124,11 +3124,11 @@ function renderFootball(g, sum){
   const driveLine=[cur.description, cur.result||cur.displayResult].filter(Boolean).join(" · ") || "In progress";
   const liveBits=String(liveNow||"").split(" · ");
   const liveDown=liveBits[0]||"";
-  const liveSpot=liveBits.slice(1).join(" · ");
+  const liveWhere=liveBits.slice(1).join(" · ");
   const gridiron=`<div class="gridiron">
     <div class="casttop${liveDown?"":" solo"}">
       <div class="casttop-drv">${possLogo0?`<img alt="" src="${possLogo0}"/>`:""}<div><b>Current drive</b><span>${esc(driveLine)}</span></div></div>
-      ${liveDown?`<div class="casttop-live"><i>LIVE</i><b>${esc(liveDown)}</b>${liveSpot?`<em>${esc(liveSpot)}</em>`:""}</div>`:""}
+      ${liveDown?`<div class="casttop-live"><i>LIVE</i><b>${esc(liveDown)}</b>${liveWhere?`<em>${esc(liveWhere)}</em>`:""}</div>`:""}
     </div>
     <div class="fpicture">
     <svg viewBox="28 4 384 176" aria-hidden="true">
