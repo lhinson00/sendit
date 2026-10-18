@@ -1574,7 +1574,9 @@ function nScore(v){
 }
 function gameKey(g){ if(!g) return ""; if(g.lg==="ufc"||LEAGUE==="ufc") return String(g.fightId||g.eventId||g.id||""); return String(g.eventId||g.id||g.fightId||""); }
 function slipsForGame(g){
+  const lg=g&&g.lg||"";
   return SLIP.filter(s=>{
+    if(s.lg && lg && s.lg!==lg) return false;
     if(s.fightId && g.fightId && String(s.fightId)===String(g.fightId)) return true;
     if(s.eventId && g.eventId && String(s.eventId)===String(g.eventId)) return true;
     if(s.pid && s.team && (s.team===g.awayAb || s.team===g.homeAb)) return true;
@@ -4381,9 +4383,14 @@ function favName(id){
 }
 function gameFavs(g){
   if(!g) return [];
+  const book=(FAV&&FAV[g.lg||""])||{};
   const out=[];
-  const a=favName(g.awayId); if(a) out.push({side:"away", name:a});
-  const h=favName(g.homeId); if(h) out.push({side:"home", name:h});
+  const hit=(id, side)=>{
+    const name=book[String(id||"")];
+    if(name) out.push({side, name});
+  };
+  hit(g.awayId, "away");
+  hit(g.homeId, "home");
   return out;
 }
 function toggleFav(id, name){
@@ -5557,7 +5564,10 @@ function pumpAlert(){
   }, 7000);
 }
 function findSlipGame(s, pool){
-  return pool.find(x=>String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId)));
+  return pool.find(x=>{
+    if(s.lg && x.lg && s.lg!==x.lg) return false;
+    return String(x.eventId)===String(s.eventId) || (s.fightId && String(x.fightId)===String(s.fightId));
+  });
 }
 function alertFromSlip(s, g, prev){
   if(!ALERT_SEED) return;
