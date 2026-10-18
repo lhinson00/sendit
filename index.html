@@ -226,9 +226,13 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .fstrip .farrow{position:absolute;top:50%;width:36px;height:14px;margin-top:-7px;overflow:visible;pointer-events:none}
 .fstrip.right .farrow{left:5px}
 .fstrip.left .farrow{right:5px}
-.gcard .sc{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
+.gcard .sc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
+.gcard .scline{display:flex;align-items:center;justify-content:center;gap:10px}
 .gcard .sc em{font-style:normal;min-width:1.15em;text-align:center}
-.gcard .sc span{font-size:20px;color:#6a645c}
+.gcard .scline > span{font-size:20px;color:#6a645c}
+.gcard .sc .dd{display:flex;align-items:baseline;justify-content:center;gap:8px;font-size:16px;letter-spacing:.08em;color:#f7f2ea;line-height:1}
+.gcard .dd b{font-weight:400}
+.gcard .dd i{font-style:normal;color:#ff7a18;font-size:14px}
 .gcard.live .sc em{color:var(--orange)}
 .gcard .sub{font-size:12px;color:#c9c2b8;margin-top:6px;line-height:1.4}
 .gcard .sub b{color:var(--ember)}
@@ -1753,6 +1757,12 @@ function paint(games){
           : `<svg class="farrow" viewBox="0 0 40 14" aria-hidden="true"><path d="M40 6.2H24V2.4L0 7l24 4.6V7.8h16z" fill="#ffc46b"/></svg>`;
         field=`<div class="fstrip ${possAway?"right":"left"}" title="${side||""} ball${g.possText?" · "+g.possText:""}">${marks}<i style="left:${pct}%">${arrow}</i></div>`;
       }
+      let dd="";
+      if(fb && live){
+        const raw=String(g.shortDown||g.down||"").replace(/\s+at\s+.*/i,"").trim();
+        const m=raw.match(/^(1st|2nd|3rd|4th)\s*&\s*(.+)$/i);
+        if(m) dd=`<span class="dd"><b>${m[1].toUpperCase()}</b><i>&</i><b>${esc(m[2].toUpperCase())}</b></span>`;
+      }
       let sub="";
       if(LEAGUE==="mlb"){
         if(g.state==="in" && g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"");
@@ -1761,14 +1771,14 @@ function paint(games){
       } else if(LEAGUE==="mls"){
         sub = (g.venue?g.venue:"")+(g.lastPlay?(" · "+g.lastPlay):"");
       } else {
-        sub = (g.down?g.down+" · ":"")+(g.red?"RED ZONE · ":"")+(g.lastPlay||"");
+        sub = (g.red?"RED ZONE · ":"")+(g.lastPlay||"");
       }
       return `
       <div class="gcard${live?" live":""}${done?" done":""}${isHeat(g)?" heat":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
           <div class="nm${aWin?" win":""}${possAway?" has":""}">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${possAway?pig:""}${rankChip(g.awayRank)}<span>${g.away}</span></div>
-          <div class="sc"><em class="${aWin?"win":""}">${g.awayScore||"–"}</em><span>–</span><em class="${hWin?"win":""}">${g.homeScore||"–"}</em></div>
+          <div class="sc"><span class="scline"><em class="${aWin?"win":""}">${g.awayScore||"–"}</em><span>–</span><em class="${hWin?"win":""}">${g.homeScore||"–"}</em></span>${dd}</div>
           <div class="nm r${hWin?" win":""}${possHome?" has":""}"><span>${g.home}</span>${rankChip(g.homeRank)}${possHome?pig:""}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
         </div>
         ${field}
