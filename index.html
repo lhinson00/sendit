@@ -219,9 +219,7 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard .nm.r{justify-content:flex-end}
 .gcard .nm.has .logoplate{box-shadow:0 0 0 2px #ff7a18}
 .gcard .ball{font-style:normal;font-size:14px;line-height:1}
-.fstrip{position:relative;height:12px;margin:8px 0 2px;border-radius:3px;background:linear-gradient(90deg,#0a3d16 0 7%,#1c8a38 7% 93%,#0a3d16 93% 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
-.fstrip:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.8)}
-.fstrip:after{content:"";position:absolute;left:7%;right:7%;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,59,59,.32) 0 20%,transparent 20% 80%,rgba(255,59,59,.32) 80%)}
+.fstrip{position:relative;height:12px;margin:8px 0 2px;border-radius:3px;background:#1c8a38;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 .fstrip i{position:absolute;top:50%;z-index:2;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #ff7a18}
 .fstrip.right i:after,.fstrip.left i:after{content:"";position:absolute;top:50%;margin-top:-3px;border-style:solid}
 .fstrip.right i:after{left:8px;border-width:3px 0 3px 6px;border-color:transparent transparent transparent #ffc46b}
@@ -1742,7 +1740,7 @@ function paint(games){
       let field="";
       if(fb && live && g.yard!=null && isFinite(Number(g.yard)) && (possAway||possHome)){
         const y=Math.max(0, Math.min(100, Number(g.yard)));
-        const pct=(7+((100-y)/100)*86).toFixed(1);
+        const pct=(4+((100-y)/100)*92).toFixed(1);
         const side=possAway?g.awayAb:g.homeAb;
         field=`<div class="fstrip ${possAway?"right":"left"}" title="${side||""} ball${g.possText?" · "+g.possText:""}"><i style="left:${pct}%"></i></div>`;
       }
