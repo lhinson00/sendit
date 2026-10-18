@@ -217,6 +217,8 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard .bigline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin:6px 0 4px}
 .gcard .nm{font-family:"Bebas Neue",sans-serif;font-size:20px;display:flex;align-items:center;gap:8px}
 .gcard .nm.r{justify-content:flex-end}
+.gcard .nm.has .logoplate{box-shadow:0 0 0 2px #ff7a18}
+.gcard .ball{font-style:normal;font-size:14px;line-height:1}
 .gcard .sc{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
 .gcard .sc em{font-style:normal;min-width:1.15em;text-align:center}
 .gcard .sc span{font-size:20px;color:#6a645c}
@@ -1724,6 +1726,10 @@ function paint(games){
       const aWin=!!(g.awayWin || (done && Number(g.awayScore)>Number(g.homeScore)));
       const hWin=!!(g.homeWin || (done && Number(g.homeScore)>Number(g.awayScore)));
       const pinned=isFav(g.awayId)||isFav(g.homeId);
+      const fb=LEAGUE==="nfl"||LEAGUE==="cfb";
+      const possAway=fb&&live&&g.possId&&String(g.possId)===String(g.awayId);
+      const possHome=fb&&live&&g.possId&&String(g.possId)===String(g.homeId);
+      const pig=`<i class="ball" aria-label="has the ball">🏈</i>`;
       let sub="";
       if(LEAGUE==="mlb"){
         if(g.state==="in" && g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"");
@@ -1738,9 +1744,9 @@ function paint(games){
       <div class="gcard${live?" live":""}${done?" done":""}${isHeat(g)?" heat":""}${pinned?" pin":""}" data-gid="${g.eventId}" data-fid="${g.fightId||""}">
         <div class="gstat"><span>${when(g)}</span><span>${g.broadcast||""}</span></div>
         <div class="bigline">
-          <div class="nm${aWin?" win":""}">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${rankChip(g.awayRank)}<span>${g.away}</span></div>
+          <div class="nm${aWin?" win":""}${possAway?" has":""}">${starBtn(g.awayId,g.away)}<span class="logoplate" data-tid="${g.awayId||""}" data-tname="${String(g.away||"").replace(/"/g,"")}"><img alt="" src="${g.awayImg}"/></span>${possAway?pig:""}${rankChip(g.awayRank)}<span>${g.away}</span></div>
           <div class="sc"><em class="${aWin?"win":""}">${g.awayScore||"–"}</em><span>–</span><em class="${hWin?"win":""}">${g.homeScore||"–"}</em></div>
-          <div class="nm r${hWin?" win":""}"><span>${g.home}</span>${rankChip(g.homeRank)}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
+          <div class="nm r${hWin?" win":""}${possHome?" has":""}"><span>${g.home}</span>${rankChip(g.homeRank)}${possHome?pig:""}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
         </div>
         ${sub?`<div class="sub">${sub}</div>`:""}
         ${oddsTape(g,"peek")}
