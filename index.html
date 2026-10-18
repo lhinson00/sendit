@@ -660,7 +660,14 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .scorebug.islive{box-shadow:0 0 0 1px #ff3b3b inset, 0 0 24px rgba(255,59,59,.18)}
 .scorebug.islive .mlb-inning{color:#ff6d6d;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
-.drivehead{display:grid;grid-template-columns:34px 1fr auto auto;gap:8px;align-items:center;padding:2px 4px 8px}
+.drivebook{margin:14px 0 4px;padding:10px 10px 2px;border-radius:16px;background:#101218;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.drivebook.prev .drivehead b{color:#9b9288;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
+.drivebook .drivehead span{font-size:13px;color:#f4efe6}
+.drvnow{display:flex;align-items:center;gap:8px;margin:2px 2px 8px}
+.drvnow img{width:22px;height:22px;object-fit:contain}
+.drvnow b{display:block;color:#ff7a18;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
+.drvnow span{color:#f4efe6;font-size:13px}
+.drivehead{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;padding:2px 4px 8px}
 .drivehead img{width:30px;height:30px;object-fit:contain}
 .drivehead b{display:block;font-size:13px;letter-spacing:.02em}
 .drivehead span{color:#9b9288;font-size:11px}
@@ -2735,12 +2742,14 @@ function renderFootball(g, sum){
   const logoPct = logoYard==null ? null : yardPct(logoYard);
   const live = stType.state==="in";
   const lastDrv = ((drives.previous||[]).slice(-1)[0]) || {};
-  const driveBook = (drv, title) => {
+  const driveBook = (drv, which) => {
     const plist = (drv.plays||[]).filter(p=>p && p.text).slice().reverse();
     if(!plist.length && !drv.description) return "";
     const team = (drv.team && (drv.team.abbreviation || drv.team.shortDisplayName)) || "";
+    const logo = (drv.team && (drv.team.logo || (drv.team.logos && drv.team.logos[0] && drv.team.logos[0].href))) || "";
     const res = drv.result || drv.displayResult || "";
-    const head = [drv.description, res].filter(Boolean).join(" · ");
+    const summary = [team, drv.description, res].filter(Boolean).join(" · ");
+    const label = which==="now" ? "Current drive" : "Previous drive";
     const rows = plist.map(p=>{
       const clk=(p.clock&&p.clock.displayValue)||"";
       const q=p.period&&p.period.number?("Q"+p.period.number):"";
@@ -2748,7 +2757,7 @@ function renderFootball(g, sum){
       const on=p.id && String(p.id)===String(window.DRIVE_PICK||"");
       return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+(sit?(" · "+sit):"")+"</span><p>"+(p.text||"")+"</p></div>";
     }).join("");
-    return "<div class='drivebook'><p class='hint'>"+head+"</p>"+(rows||"<p class='hint'>No plays yet.</p>")+"</div>";
+    return "<section class='drivebook "+which+"'><div class='drivehead'>"+(logo?"<img alt='' src='"+logo+"'/>":"")+"<div><b>"+label+"</b><span>"+esc(summary)+"</span></div></div>"+(rows||"<p class='hint'>No plays yet.</p>")+"</section>";
   };
   const prevDrives = (Array.isArray(drives.previous)?drives.previous:[]).slice();
   const teamAb = drv => (drv && drv.team && (drv.team.abbreviation || drv.team.shortDisplayName)) || "";
@@ -2766,8 +2775,8 @@ function renderFootball(g, sum){
     twoPoss.push({drv:d, title:(tAb||"Prior")+" · last possession"});
     break;
   }
-  const thisDriveHtml = twoPoss[0]?driveBook(twoPoss[0].drv, twoPoss[0].title):"";
-  const lastDriveHtml = twoPoss[1]?driveBook(twoPoss[1].drv, twoPoss[1].title):"";
+  const thisDriveHtml = twoPoss[0]?driveBook(twoPoss[0].drv, "now"):"";
+  const lastDriveHtml = twoPoss[1]?driveBook(twoPoss[1].drv, "prev"):"";
   const aQ = qtrCells(away), hQ = qtrCells(home);
   const hasOT = aQ[4] || hQ[4];
   const leadMap={};
@@ -3099,7 +3108,9 @@ function renderFootball(g, sum){
     return `<button type="button" class="dmark${p===shownPlay?" on":""}${mk.cls?" "+mk.cls:""}" data-pid="${p.id||""}"><b>${i+1}</b><em>${mk.lab}</em></button>`;
   }).join("");
   const line=String(shownPlay.text||"").replace(/&/g,"&").replace(/</g,"<");
+  const curSum = [poss0, cur.description, cur.result||cur.displayResult].filter(Boolean).join(" · ");
   const gridiron=`<div class="gridiron">
+    <div class="drvnow">${possLogo0?`<img alt="" src="${possLogo0}"/>`:""}<div><b>Current drive</b><span>${esc(curSum||"In progress")}</span></div></div>
     ${liveNow?`<div class="livenow"><img alt="" src="${possLogo0}"/><i>LIVE</i><b>${liveNow}</b></div>`:""}
     <div class="fpicture">
     <svg viewBox="28 4 384 176" aria-hidden="true">
