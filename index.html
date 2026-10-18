@@ -219,6 +219,13 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard .nm.r{justify-content:flex-end}
 .gcard .nm.has .logoplate{box-shadow:0 0 0 2px #ff7a18}
 .gcard .ball{font-style:normal;font-size:14px;line-height:1}
+.fstrip{position:relative;height:12px;margin:8px 0 2px;border-radius:3px;background:linear-gradient(90deg,#0a3d16 0 7%,#1c8a38 7% 93%,#0a3d16 93% 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.fstrip:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.8)}
+.fstrip:after{content:"";position:absolute;left:7%;right:7%;top:0;bottom:0;background:linear-gradient(90deg,rgba(255,59,59,.32) 0 20%,transparent 20% 80%,rgba(255,59,59,.32) 80%)}
+.fstrip i{position:absolute;top:50%;z-index:2;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #ff7a18}
+.fstrip.right i:after,.fstrip.left i:after{content:"";position:absolute;top:50%;margin-top:-3px;border-style:solid}
+.fstrip.right i:after{left:8px;border-width:3px 0 3px 6px;border-color:transparent transparent transparent #ffc46b}
+.fstrip.left i:after{right:8px;border-width:3px 6px 3px 0;border-color:transparent #ffc46b transparent transparent}
 .gcard .sc{display:flex;align-items:center;justify-content:center;gap:10px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
 .gcard .sc em{font-style:normal;min-width:1.15em;text-align:center}
 .gcard .sc span{font-size:20px;color:#6a645c}
@@ -1358,6 +1365,8 @@ function mapComp(ev, lg){
       lastPlayScore: !!(c.situation && c.situation.lastPlay && (c.situation.lastPlay.scoringPlay || /touchdown|\bTD\b|field goal|home run/i.test(c.situation.lastPlay.text||""))),
       down: (c.situation && (c.situation.downDistanceText || c.situation.shortDownDistanceText)) || "",
       possId: String((c.situation && c.situation.possession) || ""),
+      yard: (c.situation && c.situation.yardLine!=null && c.situation.yardLine!=="") ? Number(c.situation.yardLine) : null,
+      possText: (c.situation && c.situation.possessionText) || "",
       red: !!(c.situation && c.situation.isRedZone),
       balls: c.situation && c.situation.balls,
       strikes: c.situation && c.situation.strikes,
@@ -1730,6 +1739,13 @@ function paint(games){
       const possAway=fb&&live&&g.possId&&String(g.possId)===String(g.awayId);
       const possHome=fb&&live&&g.possId&&String(g.possId)===String(g.homeId);
       const pig=`<i class="ball" aria-label="has the ball">🏈</i>`;
+      let field="";
+      if(fb && live && g.yard!=null && isFinite(Number(g.yard)) && (possAway||possHome)){
+        const y=Math.max(0, Math.min(100, Number(g.yard)));
+        const pct=(7+((100-y)/100)*86).toFixed(1);
+        const side=possAway?g.awayAb:g.homeAb;
+        field=`<div class="fstrip ${possAway?"right":"left"}" title="${side||""} ball${g.possText?" · "+g.possText:""}"><i style="left:${pct}%"></i></div>`;
+      }
       let sub="";
       if(LEAGUE==="mlb"){
         if(g.state==="in" && g.pitcher) sub = "<b>P</b> "+g.pitcher+(g.pitcherLine?(" · "+g.pitcherLine):"")+(g.batter?(" · <b>AB</b> "+g.batter):"")+(g.outs!=null?(" · "+g.outs+" out"):"");
@@ -1748,6 +1764,7 @@ function paint(games){
           <div class="sc"><em class="${aWin?"win":""}">${g.awayScore||"–"}</em><span>–</span><em class="${hWin?"win":""}">${g.homeScore||"–"}</em></div>
           <div class="nm r${hWin?" win":""}${possHome?" has":""}"><span>${g.home}</span>${rankChip(g.homeRank)}${possHome?pig:""}<span class="logoplate" data-tid="${g.homeId||""}" data-tname="${String(g.home||"").replace(/"/g,"")}"><img alt="" src="${g.homeImg}"/></span>${starBtn(g.homeId,g.home)}</div>
         </div>
+        ${field}
         ${sub?`<div class="sub">${sub}</div>`:""}
         ${oddsTape(g,"peek")}
       </div>`;
