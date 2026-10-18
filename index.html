@@ -71,7 +71,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ownlock{display:flex;gap:8px;margin-top:10px}
 .ownlock input{flex:1;background:#0c0d12;border:1px solid #3a3228;color:#fff;padding:10px;border-radius:8px}
 .ownlock button,.ownbtn{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;border-radius:8px}
-.hub{display:flex;flex-wrap:wrap;gap:8px;padding:6px var(--pad) 36px}
+.hub{display:flex;flex-wrap:wrap;gap:8px;padding:6px var(--pad) 4px}
 .hubcard{display:inline-flex;align-items:center;gap:8px;text-align:left;padding:8px 12px;border-radius:999px;border:1px solid #2a241c;background:#101218;color:#fff}
 .hubcard img{width:18px;height:18px;object-fit:contain;margin:0}
 .hubcard b{font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.06em;font-weight:400}
@@ -153,7 +153,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .yhit .ymark{font-size:14px}
 .yhit b{display:block;font-size:14px}
 .yhit em{display:block;font-style:normal;color:#9b9288;font-size:11px}
-.hubk{width:100%;margin:16px 0 2px;font-family:Manrope,system-ui,sans-serif;font-size:10px;letter-spacing:.18em;font-weight:800;text-transform:uppercase;color:var(--muted)}
+.hubk{width:100%;margin:2px 0 2px;font-family:Manrope,system-ui,sans-serif;font-size:10px;letter-spacing:.18em;font-weight:800;text-transform:uppercase;color:var(--muted)}
 h2 .pinstar{margin-left:8px;font-size:22px;vertical-align:2px}
 .yface{position:relative;width:36px;height:36px;flex:none}
 .yface img{position:absolute;inset:0;width:36px;height:36px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
@@ -984,6 +984,20 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
 
 <button type="button" class="navback" id="navBack">Back</button>
 <section id="viewHome">
+  <div class="hub">
+    <h3 class="hubk">All boards</h3>
+    <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
+    <button class="hubcard" data-lg="cfb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png"/><b>NCAAF</b><span>Saturday slate</span></button>
+    <button class="hubcard" data-lg="mlb"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png"/><b>MLB</b><span>Tonight</span></button>
+    <button class="hubcard" data-lg="nhl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"/><b>NHL</b><span>Tonight</span></button>
+    <button class="hubcard" data-lg="nba"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png"/><b>NBA</b><span>Preseason</span></button>
+    <button class="hubcard" data-lg="cbb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png"/><b>NCAAB</b><span>Men's hoops</span></button>
+    <button class="hubcard" data-lg="mls"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mls.png"/><b>MLS</b><span>Match night</span></button>
+    <button class="hubcard" data-lg="ufc"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/><b>UFC</b><span>The card</span></button>
+    <button class="hubcard tssaa" data-lg="tssaa"><img alt="" src="https://cms-files.tssaa.org/images/logos/tssaa-logo.png"/><b>TSSAA</b><span>Tennessee</span></button>
+    <a class="hubcard cap" href="/cap.html"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>Sauce Cap</b><span>NFL</span></a>
+    <a class="hubcard cap" href="/picks.html"><span class="duo"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><img alt="" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2080%2080%22%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2210%22%20fill%3D%22%230033a0%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2248%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2216%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3ENCAA%3C/text%3E%3C/svg%3E"/></span><b>Pick Em</b><span>NFL · College</span></a>
+  </div>
   <div class="yours" id="yours">
     <div class="yhead">
       <p class="yday" id="yDay"></p>
@@ -1000,20 +1014,6 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <input class="yq" id="yq" placeholder="Search a team or player" autocomplete="off" enterkeyhint="search"/>
       <div id="yHits"></div>
     </div>
-  </div>
-  <div class="hub">
-    <h3 class="hubk">All boards</h3>
-    <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
-    <button class="hubcard" data-lg="cfb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-football-college.png"/><b>NCAAF</b><span>Saturday slate</span></button>
-    <button class="hubcard" data-lg="mlb"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mlb.png"/><b>MLB</b><span>Tonight</span></button>
-    <button class="hubcard" data-lg="nhl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"/><b>NHL</b><span>Tonight</span></button>
-    <button class="hubcard" data-lg="nba"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png"/><b>NBA</b><span>Preseason</span></button>
-    <button class="hubcard" data-lg="cbb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png"/><b>NCAAB</b><span>Men's hoops</span></button>
-    <button class="hubcard" data-lg="mls"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mls.png"/><b>MLS</b><span>Match night</span></button>
-    <button class="hubcard" data-lg="ufc"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/><b>UFC</b><span>The card</span></button>
-    <button class="hubcard tssaa" data-lg="tssaa"><img alt="" src="https://cms-files.tssaa.org/images/logos/tssaa-logo.png"/><b>TSSAA</b><span>Tennessee</span></button>
-    <a class="hubcard cap" href="/cap.html"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>Sauce Cap</b><span>NFL</span></a>
-    <a class="hubcard cap" href="/picks.html"><span class="duo"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><img alt="" src="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2080%2080%22%3E%3Crect%20width%3D%2280%22%20height%3D%2280%22%20rx%3D%2210%22%20fill%3D%22%230033a0%22/%3E%3Ctext%20x%3D%2240%22%20y%3D%2248%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2Csans-serif%22%20font-size%3D%2216%22%20font-weight%3D%22700%22%20fill%3D%22%23fff%22%3ENCAA%3C/text%3E%3C/svg%3E"/></span><b>Pick Em</b><span>NFL · College</span></a>
   </div>
 </section>
 
