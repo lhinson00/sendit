@@ -219,8 +219,10 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard .nm.r{justify-content:flex-end}
 .gcard .nm.has .logoplate{box-shadow:0 0 0 2px #ff7a18}
 .gcard .ball{font-style:normal;font-size:14px;line-height:1}
-.fstrip{position:relative;height:12px;margin:8px 0 2px;border-radius:3px;background:#1c8a38;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
-.fstrip i{position:absolute;top:50%;z-index:2;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #ff7a18}
+.fstrip{position:relative;height:26px;margin:8px 0 2px;border-radius:4px;background:#167028;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.fstrip .fy{position:absolute;top:2px;transform:translateX(-50%);font-weight:800;font-size:8px;line-height:1;color:rgba(255,255,255,.92);font-family:Manrope,sans-serif}
+.fstrip .fy:before{content:"";position:absolute;left:50%;top:9px;width:1px;height:15px;margin-left:-0.5px;background:rgba(255,255,255,.75)}
+.fstrip i{position:absolute;top:16px;z-index:2;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #ff7a18}
 .fstrip.right i:after,.fstrip.left i:after{content:"";position:absolute;top:50%;margin-top:-3px;border-style:solid}
 .fstrip.right i:after{left:8px;border-width:3px 0 3px 6px;border-color:transparent transparent transparent #ffc46b}
 .fstrip.left i:after{right:8px;border-width:3px 6px 3px 0;border-color:transparent #ffc46b transparent transparent}
@@ -1742,7 +1744,11 @@ function paint(games){
         const y=Math.max(0, Math.min(100, Number(g.yard)));
         const pct=(4+((100-y)/100)*92).toFixed(1);
         const side=possAway?g.awayAb:g.homeAb;
-        field=`<div class="fstrip ${possAway?"right":"left"}" title="${side||""} ball${g.possText?" · "+g.possText:""}"><i style="left:${pct}%"></i></div>`;
+        const marks=[10,20,30,40,50,40,30,20,10].map((n,i)=>{
+          const left=(4+((i+1)*10/100)*92).toFixed(1);
+          return `<b class="fy" style="left:${left}%">${n}</b>`;
+        }).join("");
+        field=`<div class="fstrip ${possAway?"right":"left"}" title="${side||""} ball${g.possText?" · "+g.possText:""}">${marks}<i style="left:${pct}%"></i></div>`;
       }
       let sub="";
       if(LEAGUE==="mlb"){
