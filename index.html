@@ -699,7 +699,6 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .dmark em{font-style:normal;font-size:11px;font-weight:800;color:#9b9288}
 .dmark.on{min-width:78px;height:50px;padding:0 10px;border-color:#ff7a18;background:#2a160c}
 .dmark.on b{font-size:16px;color:#ff7a18;white-space:nowrap}
-.play .pdb{display:inline-block;margin:6px 0 0;padding:2px 8px;border-radius:8px;border:1px solid rgba(255,122,24,.5);background:#2a160c;color:#ff7a18;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.04em;line-height:1.1}
 .dmark.made em{color:#3ee0a0}
 .dmark.bad em{color:#ff5a3c}
 .dline{margin:8px 2px 0;color:#f4efe6;font-size:13px;line-height:1.35}
@@ -2769,9 +2768,8 @@ function renderFootball(g, sum){
     const rows = plist.map(p=>{
       const clk=(p.clock&&p.clock.displayValue)||"";
       const q=p.period&&p.period.number?("Q"+p.period.number):"";
-      const sit=String((p.start&&(p.start.downDistanceText||p.start.shortDownDistanceText))||"").replace(/\s+/g," ").trim();
       const on=p.id && String(p.id)===String(window.DRIVE_PICK||"");
-      return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+"</span>"+(sit?"<b class='pdb'>"+esc(sit)+"</b>":"")+"<p>"+(p.text||"")+"</p></div>";
+      return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+"</span><p>"+(p.text||"")+"</p></div>";
     }).join("");
     return "<section class='drivebook "+which+"'><div class='drivehead'>"+(logo?"<img alt='' src='"+logo+"'/>":"")+"<div><b>"+label+"</b><span>"+esc(summary)+"</span></div></div>"+(rows||"<p class='hint'>No plays yet.</p>")+"</section>";
   };
