@@ -32,7 +32,7 @@ plausible.init();
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600&family=Manrope:wght@500;700;800&display=swap");
 :root{--bg:#05060a;--orange:#ff7a18;--ember:#ffc46b;--live:#ff3b3b;--text:#f7f2ea;--muted:#9b9288;--pad:clamp(12px,3vw,20px)}
-*{box-sizing:border-box}html,body{margin:0;background:#05060a;color:var(--text);font-family:Manrope,system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;background:#05060a;color:var(--text);font-family:Manrope,system-ui,sans-serif;overflow-anchor:none}
 body{min-height:100dvh;width:min(1120px,100%);margin:0 auto;padding-bottom:78px}
 .top{padding:var(--pad);background:linear-gradient(90deg,#2a1408,#05060a 55%);border-bottom:2px solid var(--orange)}
 .scflash{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;pointer-events:none}
@@ -1155,16 +1155,24 @@ const $ = id => document.getElementById(id);
 window.VIEW_Y = window.VIEW_Y || {};
 window.VIEW_NOW = window.VIEW_NOW || "home";
 try{ history.scrollRestoration="manual"; }catch(e){}
-function stickScroll(done){
-  const go=()=>{
-    if(window.HOLD_Y==null) return;
-    const y=Number(window.HOLD_Y)||0;
-    const max=Math.max(0, (document.documentElement.scrollHeight||0)-window.innerHeight);
-    window.scrollTo(0, Math.min(y, max));
-  };
+window.SCROLL_LOCK = window.SCROLL_LOCK || 0;
+function userMoved(){ window.SCROLL_LOCK = (window.SCROLL_LOCK||0)+1; window.HOLD_Y=null; }
+window.addEventListener("pointerdown", userMoved, {passive:true, capture:true});
+window.addEventListener("wheel", userMoved, {passive:true});
+window.addEventListener("keydown", userMoved);
+function settleScroll(y){
+  if(window.HOLD_Y!=null) return;
+  const now=window.scrollY||document.documentElement.scrollTop||0;
+  if(Math.abs(now-y)>8) window.scrollTo(0, y);
+}
+function stickScroll(){
+  if(window.HOLD_Y==null) return;
+  const y=Number(window.HOLD_Y)||0;
+  const lock=window.SCROLL_LOCK||0;
+  window.HOLD_Y=null;
+  const go=()=>{ if((window.SCROLL_LOCK||0)!==lock) return; window.scrollTo(0, y); };
   go();
-  [40,120,300,700,1400,2400,4000].forEach(t=>setTimeout(go, t));
-  if(done) setTimeout(()=>{ window.HOLD_Y=null; }, 4200);
+  requestAnimationFrame(go);
 }
 function viewPin(){
   const k = (window.VIEW_NOW||"home")+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
@@ -1173,7 +1181,8 @@ function viewPin(){
 function viewPop(name){
   const k = name+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
   const y = window.VIEW_Y[k] || 0;
-  requestAnimationFrame(function(){ window.scrollTo(0, y); setTimeout(function(){ window.scrollTo(0,y); }, 80); });
+  const lock=window.SCROLL_LOCK||0;
+  requestAnimationFrame(function(){ if((window.SCROLL_LOCK||0)!==lock) return; window.scrollTo(0, y); });
 }
 async function show(name, opts){
   opts = opts||{};
@@ -1669,6 +1678,7 @@ function watchGames(games){
   if((games||[]).length) ALERT_SEED=true;
 }
 function paint(games){
+  const holdY=window.scrollY||document.documentElement.scrollTop||0;
   window.LIVE_GAMES = games;
   watchGames(games);
   const host=$("liveList");
@@ -1688,7 +1698,7 @@ function paint(games){
     if(todays.length) shown=todays;
     $("liveMeta").textContent = "MLB · Today · "+shown.length+(shown.some(g=>g.state==="in")?" · LIVE":"");
   }
-  if(!shown.length){ host.innerHTML="<p class='hint'>Nothing on the board for "+LEAGUE.toUpperCase()+" right now.</p>"; return; }
+  if(!shown.length){ host.innerHTML="<p class='hint'>Nothing on the board for "+LEAGUE.toUpperCase()+" right now.</p>"; settleScroll(holdY); return; }
   if(LEAGUE==="ufc"){
     const events={};
     games.forEach(g=>{
@@ -1781,6 +1791,7 @@ function paint(games){
     else if(LEAGUE==="nhl") openLeagueTeam(b.dataset.tid, b.dataset.tname||"Team", "nhl");
     else if(LEAGUE==="cfb") openTeam(b.dataset.tid, b.dataset.tname||"Team");
   });
+  settleScroll(holdY);
 }
 function boardDates(){
   const fmt=d=>d.toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10).replace(/-/g,"");
@@ -3151,6 +3162,7 @@ function renderFootball(g, sum){
   const previewHtml = pregame ? previewBoard(sum, {away:away, home:home, aw:aw, hm:hm, aLogo:aLogo, hLogo:hLogo, aCol:colOf(away), hCol:colOf(home)}) : "";
   const tab = window.FTAB || "live";
   const playing = [...document.querySelectorAll("#clipMount video")].some(v=>!v.paused && !v.ended);
+  const holdY=window.scrollY||document.documentElement.scrollTop||0;
   if(!$("gameBody")) $("gameRoom").innerHTML = "<div id='gameBody'></div><div id='clipMount'></div>";
   $("gameBody").innerHTML = `
     <div class="scorebug mlb-bug${live?" islive":""}">
@@ -3229,9 +3241,10 @@ function renderFootball(g, sum){
       window.FIELD_SEEN="";
       if(window.FB_LAST) renderFootball(window.FB_LAST.g, window.FB_LAST.sum);
       const pic=document.querySelector("#gameBody .fpicture");
-      if(pic) pic.scrollIntoView({block:"nearest", behavior:"smooth"});
+      if(pic) pic.scrollIntoView({block:"nearest", behavior:"auto"});
     };
   });
+  settleScroll(holdY);
 }
 function videoClips(sum){
   return (sum.videos||[]).map(v=>{
@@ -5136,6 +5149,7 @@ function movePin(from, to){
 }
 function paintYours(quiet){
   if(window.YDRAG) return;
+  const holdY=window.scrollY||document.documentElement.scrollTop||0;
   const grid=$("yGrid");
   if(!grid) return;
   const day=$("yDay");
@@ -5166,6 +5180,7 @@ function paintYours(quiet){
     }).join("");
   }
   if(!quiet) fillPinLines();
+  settleScroll(holdY);
 }
 async function runYSearch(){
   const seq=++YSEQ;
