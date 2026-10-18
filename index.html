@@ -694,7 +694,9 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .dmark{flex:0 0 auto;min-width:54px;height:46px;padding:0 8px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#12110f;color:#f4efe6;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .dmark b{font-family:"Bebas Neue",sans-serif;font-size:15px;letter-spacing:.04em;line-height:1}
 .dmark em{font-style:normal;font-size:11px;font-weight:800;color:#9b9288}
-.dmark.on{border-color:#ff7a18;background:#2a160c}
+.dmark.on{min-width:78px;height:50px;padding:0 10px;border-color:#ff7a18;background:#2a160c}
+.dmark.on b{font-size:16px;color:#ff7a18;white-space:nowrap}
+.play .pdb{display:inline-block;margin:6px 0 0;padding:2px 8px;border-radius:8px;border:1px solid rgba(255,122,24,.5);background:#2a160c;color:#ff7a18;font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.04em;line-height:1.1}
 .dmark.made em{color:#3ee0a0}
 .dmark.bad em{color:#ff5a3c}
 .dline{margin:8px 2px 0;color:#f4efe6;font-size:13px;line-height:1.35}
@@ -2753,9 +2755,9 @@ function renderFootball(g, sum){
     const rows = plist.map(p=>{
       const clk=(p.clock&&p.clock.displayValue)||"";
       const q=p.period&&p.period.number?("Q"+p.period.number):"";
-      const sit=(p.start&&(p.start.shortDownDistanceText||p.start.downDistanceText))||"";
+      const sit=String((p.start&&(p.start.downDistanceText||p.start.shortDownDistanceText))||"").replace(/\s+/g," ").trim();
       const on=p.id && String(p.id)===String(window.DRIVE_PICK||"");
-      return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+(sit?(" · "+sit):"")+"</span><p>"+(p.text||"")+"</p></div>";
+      return "<div class='play pickable"+(p.scoringPlay?" hot":"")+(on?" on":"")+"' data-pid='"+(p.id||"")+"'><span>"+q+" "+clk+"</span>"+(sit?"<b class='pdb'>"+esc(sit)+"</b>":"")+"<p>"+(p.text||"")+"</p></div>";
     }).join("");
     return "<section class='drivebook "+which+"'><div class='drivehead'>"+(logo?"<img alt='' src='"+logo+"'/>":"")+"<div><b>"+label+"</b><span>"+esc(summary)+"</span></div></div>"+(rows||"<p class='hint'>No plays yet.</p>")+"</section>";
   };
@@ -3103,9 +3105,17 @@ function renderFootball(g, sum){
     if(/no gain/i.test(t)) return {lab:"0", cls:""};
     return {lab:((p.type||{}).abbreviation)||"•", cls:""};
   };
+  const snapOf=p=>{
+    const s=(p&&p.start)||{};
+    return String(s.downDistanceText||s.shortDownDistanceText||"").replace(/\s+/g," ").trim().toUpperCase();
+  };
+  const shownDown=snapOf(shownPlay);
   const tape=meaningful.map((p,i)=>{
     const mk=markOf(p);
-    return `<button type="button" class="dmark${p===shownPlay?" on":""}${mk.cls?" "+mk.cls:""}" data-pid="${p.id||""}"><b>${i+1}</b><em>${mk.lab}</em></button>`;
+    const on=p===shownPlay;
+    const down=snapOf(p);
+    const top=on&&down?esc(down):String(i+1);
+    return `<button type="button" class="dmark${on?" on":""}${mk.cls?" "+mk.cls:""}" data-pid="${p.id||""}"><b>${top}</b><em>${esc(mk.lab)}</em></button>`;
   }).join("");
   const line=String(shownPlay.text||"").replace(/&/g,"&").replace(/</g,"<");
   const curSum = [poss0, cur.description, cur.result||cur.displayResult].filter(Boolean).join(" · ");
@@ -3125,7 +3135,7 @@ function renderFootball(g, sum){
       ${ball}
     </svg>
     </div>
-    <div class="onsit"><img alt="" src="${offLogo}"/><i>PLAY</i><b>${face}</b><span class="way">${way}</span></div>
+    <div class="onsit"><img alt="" src="${offLogo}"/><i>${shownPlay===latestPlay?"PLAY":"REPLAY"}</i>${shownDown?"":`<b>${face}</b>`}<span class="way">${way}</span></div>
     ${tape?`<div class="dtape">${tape}</div><p class="dline">${line}</p>`:""}
   </div>`;
   const clips=videoClips(sum);
