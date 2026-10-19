@@ -48,7 +48,7 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .seat{width:100%;border:0;background:#101218;color:inherit;display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:14px;text-align:left;border-bottom:1px solid #221e18}
 .seat .rk{font-family:"Bebas Neue",sans-serif;font-size:32px;color:var(--orange)}
 .seat b{font-size:18px}
-.seat span{color:#9b9288;font-size:12px}
+.seat span{color:#9b9288;font-size:12px;display:block}
 .meter{height:6px;border-radius:99px;background:#241e18;margin-top:6px;overflow:hidden}
 .meter i{display:block;height:100%;background:linear-gradient(90deg,#3ee0a0,#ff7a18)}
 .rec{font-family:"Bebas Neue",sans-serif;font-size:28px}
@@ -94,6 +94,11 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .scard .sub{margin-top:6px;color:#c9c2b8;font-size:12px}
 #slate{padding-bottom:28px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b140e;border:1px solid var(--orange);padding:8px 12px;display:none}
+.tbin{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:#9b9288;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.tbin input{width:92px;background:#0c0d12;border:1px solid #3a2a18;color:#fff;border-radius:8px;padding:8px 10px;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em;text-align:center}
+.tbin input:disabled{opacity:.72}
+.tbcard{border-color:rgba(255,122,24,.55)}
+.tbnote{margin:8px 16px 0;color:#9b9288;font-size:12px;letter-spacing:.08em;font-weight:800;text-transform:uppercase}
 .whoami{margin:10px 16px 0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.04em}
 .whoami:empty{display:none}
 .nameask{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:80;display:none;align-items:flex-end;justify-content:center}
@@ -160,7 +165,7 @@ function paintLock(){
   if(!btn) return;
   const here=screenNow();
   const need=state.games.filter(g=>!started(g));
-  const ready=need.length>0&&need.every(g=>card().picks[g.id]);
+  const ready=need.length>0&&need.every(g=>card().picks[g.id])&&tbReady();
   if(card().locked){
     btn.textContent="Unlock";
     btn.hidden=!(here==="slate"||here==="board");
@@ -192,7 +197,7 @@ function slateStamps(){
   return out;
 }
 function card(){ return state.cards[state.lg]; }
-function loadLocal(){ ["nfl","cfb"].forEach(lg=>{ try{ state.cards[lg]=Object.assign({picks:{},name:"",locked:false}, JSON.parse(localStorage.getItem("saucePick."+weekKey(lg))||"{}")); }catch(e){ state.cards[lg]={picks:{},name:"",locked:false}; } }); const who=$("whoLine"); if(who) who.textContent=card().name||""; }
+function loadLocal(){ ["nfl","cfb"].forEach(lg=>{ try{ state.cards[lg]=Object.assign({picks:{},name:"",locked:false,tb:""}, JSON.parse(localStorage.getItem("saucePick."+weekKey(lg))||"{}")); }catch(e){ state.cards[lg]={picks:{},name:"",locked:false,tb:""}; } const c=state.cards[lg]; c.picks=c.picks||{}; if((c.tb==null||c.tb==="") && c.picks._tb!=null) c.tb=c.picks._tb; }); const who=$("whoLine"); if(who) who.textContent=card().name||""; }
 function headers(extra){ return Object.assign({apikey:SUPA_KEY,Authorization:"Bearer "+SUPA_KEY,"Content-Type":"application/json"}, extra||{}); }
 function rankOf(comp){ const r=comp.curatedRank&&comp.curatedRank.current?comp.curatedRank.current:comp.curatedRank; const n=Number(r); return n>0&&n<90?n:99; }
 function isSec(comp){ return String((comp.team||{}).conferenceId)==="8"; }
@@ -216,26 +221,105 @@ function recOf(c){ const r=(c.records||[]).find(x=>x.type==="total")||(c.records
 function mapEv(ev,lg){
   const c=(ev.competitions||[])[0]||{}; const st=((c.status||{}).type)||{}; const comps=c.competitors||[];
   const away=comps.find(x=>x.homeAway==="away")||comps[0]||{}; const home=comps.find(x=>x.homeAway==="home")||comps[1]||{};
-  const team=x=>{ const t=x.team||{}; return {id:String(t.id||""), ab:t.abbreviation||"", name:t.displayName||t.shortDisplayName||"Team", score:x.score||"", rec:recOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")}; };
+  const team=x=>{ const t=x.team||{}; return {id:String(t.id||""), ab:t.abbreviation||"", name:t.displayName||t.shortDisplayName||"Team", score:x.score||"", rec:recOf(x), rank:rankOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")}; };
   const broad=((c.broadcasts||[])[0]||{}).names||[];
   const sit=c.situation||{}; const last=(sit.lastPlay&&(sit.lastPlay.text||sit.lastPlay))||""; const down=[sit.shortDownDistanceText,sit.possessionText].filter(Boolean).join(" · "); return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||"", away:team(away), home:team(home), tv:broad.join(" / "), play:down||last};
 }
 function started(g){ return g.state==="in"||g.state==="post"; }
+function isVols(t){ return !!(t && (t.id==="2633" || /^tennessee volunteers$/i.test(t.name||""))); }
+function isTitans(t){ return !!(t && (t.id==="10" || /tennessee titans/i.test(t.name||""))); }
+function recKey(rec){
+  const m=String(rec||"").match(/(\d+)\s*-\s*(\d+)(?:\s*-\s*(\d+))?/);
+  if(!m) return [-1,-1];
+  const w=+m[1], l=+m[2], t=+(m[3]||0), g=w+l+t;
+  return [g?w/g:-1, w];
+}
+function tbPick(){
+  const games=state.games||[];
+  if(!games.length) return null;
+  if(state.lg==="cfb"){
+    const vols=games.find(g=>isVols(g.away)||isVols(g.home));
+    if(vols) return {game:vols, why:"Vols"};
+    let best=null, bestR=99;
+    games.forEach(g=>{
+      const r=Math.min(g.away.rank||99, g.home.rank||99);
+      if(r<bestR){ bestR=r; best=g; }
+    });
+    if(best && bestR<99){
+      const who=(best.away.rank||99)===bestR?best.away:best.home;
+      return {game:best, why:"No. "+bestR+" "+(who.ab||who.name)};
+    }
+  } else {
+    const titans=games.find(g=>isTitans(g.away)||isTitans(g.home));
+    if(titans) return {game:titans, why:"Titans"};
+    let best=null, key=[-1,-1];
+    games.forEach(g=>{
+      [g.away,g.home].forEach(t=>{
+        const k=recKey(t.rec);
+        if(k[0]>key[0] || (k[0]===key[0] && k[1]>key[1])){ key=k; best=g; }
+      });
+    });
+    if(best && key[0]>=0) return {game:best, why:"Best record"};
+  }
+  return {game:games[0], why:"First game"};
+}
+function tbTotal(g){
+  if(!g || g.state!=="post") return null;
+  const a=Number(g.away.score), h=Number(g.home.score);
+  return isFinite(a)&&isFinite(h)?a+h:null;
+}
+function tbMeasure(guess, actual){
+  if(actual==null || guess==null || guess==="" || !isFinite(Number(guess))) return {miss:1, dist:9999, over:1};
+  const n=Number(guess), dist=Math.abs(n-actual);
+  return {miss:0, dist, over:n>actual?1:0};
+}
+function tbReady(){
+  const pick=tbPick();
+  if(!pick || started(pick.game)) return true;
+  return card().tb!=="" && card().tb!=null && isFinite(Number(card().tb));
+}
 function dayLabel(iso){ return new Date(iso).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric",timeZone:"America/Chicago"}); }
 function saveLocal(){
   localStorage.setItem("saucePick."+weekKey(state.lg), JSON.stringify(card()));
   const who=$("whoLine"); if(who) who.textContent=card().name||"";
   const need=state.games.filter(g=>!started(g));
-  const ready=need.length>0&&need.every(g=>card().picks[g.id]);
+  const ready=need.length>0&&need.every(g=>card().picks[g.id])&&tbReady();
   paintLock();
   const picks=card().picks; let w=0,l=0,open=0;
   state.games.forEach(g=>{ if(!started(g)) open++; const pick=picks[g.id]; if(!pick||g.state!=="post") return; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; });
-  $("made").textContent=Object.keys(picks).length+"/"+state.games.length; $("rec").textContent=w+"-"+l; $("open").textContent=open;
+  $("made").textContent=Object.keys(picks).filter(k=>k!=="_tb").length+"/"+state.games.length; $("rec").textContent=w+"-"+l; $("open").textContent=open;
+}
+function tbCard(){
+  const pick=tbPick();
+  if(!pick) return "";
+  const g=pick.game;
+  const showSc=g.state==="in"||g.state==="post";
+  const total=tbTotal(g);
+  const guess=card().tb;
+  const locked=!!(card().locked||started(g));
+  let note="";
+  if(total!=null){
+    if(guess===""||guess==null) note="No total entered";
+    else {
+      const d=Math.abs(Number(guess)-total);
+      note=(d===0?"Exact":d+" off")+" · final "+total;
+    }
+  }
+  return `<article class="gcard tbcard">
+    <div class="gstat"><span>Tiebreaker · ${pick.why}</span><span>${g.detail||""}</span></div>
+    <div class="bigline">
+      <div class="nm"><span class="logoplate"><img alt="" src="${g.away.logo}"/></span><span class="who">${g.away.name}</span></div>
+      <div class="sc"><em>${showSc?(g.away.score||"0"):"–"}</em><span>–</span><em>${showSc?(g.home.score||"0"):"–"}</em></div>
+      <div class="nm r"><span class="who">${g.home.name}</span><span class="logoplate"><img alt="" src="${g.home.logo}"/></span></div>
+    </div>
+    <label class="tbin">Total points<input id="tbIn" inputmode="numeric" maxlength="3" value="${guess==null?"":guess}" ${locked?"disabled":""}/></label>
+    ${note?`<div class="sub">${note}</div>`:""}
+  </article>`;
 }
 function paint(){
   const picks=card().picks;
   let last="";
-  $("games").innerHTML=`<div class="list">`+state.games.map(g=>{
+  $("games").innerHTML=`<div class="list">`+tbCard()+state.games.map(g=>{
     const day=dayLabel(g.kick);
     const head=day!==last?`<div class="day">${day}</div>`:"";
     last=day;
@@ -254,6 +338,13 @@ function paint(){
     </article>`;
   }).join("")+`</div>`;
   $("games").querySelectorAll(".pickside").forEach(b=>b.onclick=()=>pick(b.dataset.g,b.dataset.t));
+  const tbIn=$("tbIn");
+  if(tbIn) tbIn.oninput=()=>{
+    const n=tbIn.value.replace(/[^\d]/g,"").slice(0,3);
+    tbIn.value=n;
+    card().tb=n===""?"":Number(n);
+    saveLocal();
+  };
   saveLocal();
 }
 function pick(id,tid){
@@ -262,7 +353,10 @@ function pick(id,tid){
   card().picks[id]=tid; saveLocal(); paint();
 }
 async function pushCard(){
-  const body={week:weekKey(state.lg), name:card().name.slice(0,24), lineup:card().picks, pts:0, locked_at:new Date().toISOString()};
+  const lineup=Object.assign({}, card().picks);
+  delete lineup._tb;
+  if(card().tb!=="" && card().tb!=null && isFinite(Number(card().tb))) lineup._tb=Number(card().tb);
+  const body={week:weekKey(state.lg), name:card().name.slice(0,24), lineup, pts:0, locked_at:new Date().toISOString()};
   const r=await fetch(SUPA_URL+"/rest/v1/cards?on_conflict=week,name",{method:"POST",headers:headers({"Prefer":"resolution=merge-duplicates,return=minimal"}),body:JSON.stringify(body)});
   if(!r.ok) throw new Error(await r.text());
 }
@@ -297,16 +391,63 @@ function openCard(name){
       <div class="sub">${reveal?(g.play||""):"Pick hidden until kickoff"}</div>
     </a>`;
   }).join("");
-  $("match").innerHTML=`<div class="list">${rows}</div>`;
+  const tb=tbPick();
+  const guess=picks._tb;
+  let head="";
+  if(tb){
+    const actual=tbTotal(tb.game);
+    let extra="";
+    if(guess!=null && guess!==""){
+      extra=" · "+guess;
+      if(actual!=null){
+        const d=Math.abs(Number(guess)-actual);
+        extra=" · "+(d===0?"Exact":d+" off");
+      }
+    }
+    head=`<p class="tbnote">Tiebreaker · ${tb.why}${extra}</p>`;
+  }
+  $("match").innerHTML=`<div class="list">${head}${rows}</div>`;
   show("match");
 }
 async function paintBoard(){
   const r=await fetch(SUPA_URL+"/rest/v1/cards?week=eq."+encodeURIComponent(weekKey(state.lg))+"&week=like.pem-*&select=name,lineup",{headers:headers()});
   const rows=r.ok?await r.json():[];
-  const scored=rows.map(row=>{ const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{}); let w=0,l=0,done=0; state.games.forEach(g=>{ const pick=picks[g.id]; if(!pick||g.state!=="post") return; done++; const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:""; if(winner&&pick===winner) w++; else if(winner) l++; }); return {name:row.name,w,l,done,picks}; }).sort((a,b)=>b.w-a.w||a.l-b.l||a.name.localeCompare(b.name));
+  const tb=tbPick();
+  const tbLine=tb?`<p class="tbnote">Tiebreaker · ${tb.why} · ${tb.game.away.ab||tb.game.away.name} at ${tb.game.home.ab||tb.game.home.name}</p>`:"";
+  const actual=tb?tbTotal(tb.game):null;
+  const scored=rows.map(row=>{
+    const picks=typeof row.lineup==="string"?JSON.parse(row.lineup):(row.lineup||{});
+    let w=0,l=0,done=0;
+    state.games.forEach(g=>{
+      const pick=picks[g.id];
+      if(!pick||g.state!=="post") return;
+      done++;
+      const winner=+g.away.score>+g.home.score?g.away.id:+g.home.score>+g.away.score?g.home.id:"";
+      if(winner&&pick===winner) w++; else if(winner) l++;
+    });
+    const guess=picks._tb;
+    const meas=tbMeasure(guess, actual);
+    let note="";
+    if(guess!=null && guess!=="") note="TB "+guess;
+    if(actual!=null){
+      if(meas.miss) note="No total";
+      else note=meas.dist===0?"Exact":meas.dist+" off";
+    }
+    return {name:row.name,w,l,done,picks,guess,meas,note};
+  }).sort((a,b)=>{
+    const rec=b.w-a.w||a.l-b.l;
+    if(rec || actual==null) return rec||a.name.localeCompare(b.name);
+    return a.meas.miss-b.meas.miss||a.meas.dist-b.meas.dist||a.meas.over-b.meas.over||a.name.localeCompare(b.name);
+  });
+  let place=0, prev="";
+  scored.forEach((x,i)=>{
+    const key=x.w+"-"+x.l+(actual==null?"":"|"+x.meas.miss+"|"+x.meas.dist+"|"+x.meas.over);
+    if(key!==prev){ place=i+1; prev=key; }
+    x.place=place;
+  });
   state.board=scored;
-  $("boardList").innerHTML=scored.length?scored.map((x,i)=>{
-    return `<button class="seat" type="button" data-who="${x.name}"><div class="rk">${i+1}</div><div><b>${x.name}</b></div><div class="rec">${x.w}-${x.l}</div></button>`;
+  $("boardList").innerHTML=scored.length?tbLine+scored.map(x=>{
+    return `<button class="seat" type="button" data-who="${x.name}"><div class="rk">${x.place}</div><div><b>${x.name}</b>${x.note?`<span>${x.note}</span>`:""}</div><div class="rec">${x.w}-${x.l}</div></button>`;
   }).join(""):"<p style='padding:20px;color:#9b9288'>No locked cards in this league.</p>";
   $("boardList").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>openCard(b.dataset.who));
 }
@@ -339,6 +480,7 @@ $("lock").onclick=async()=>{
   }
   const need=state.games.filter(g=>!started(g));
   if(!need.length || need.some(g=>!card().picks[g.id])) return toast("Finish the open games");
+  if(!tbReady()) return toast("Add the tiebreaker");
   if(!card().name){
     const name=await askName();
     if(!name) return;
