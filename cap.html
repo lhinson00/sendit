@@ -487,7 +487,7 @@ function paintSlots(){
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
     const active = (window.PICK_SLOT||"")===k;
     if(!p) return `<button type="button" class="slot empty${active?" onpick":""}" data-pick="${k}"><div class="posmark">${slotLabel(k)}</div><span class="mark"></span><div class="who"><b>Empty</b><span>Add a ${slotLabel(k)}</span></div><div class="sal"></div><span></span></button>`;
-    return `<div class="slot${active?" onpick":""}"><div class="posmark">${slotLabel(k)}</div><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">$${(p.sal/1000).toFixed(1)}k</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
+    return `<div class="slot${active?" onpick":""}"><div class="posmark">${slotLabel(k)}</div><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">${p.priced?"$"+(p.sal/1000).toFixed(1)+"k":"…"}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
   }).join("")+`<div class="salbar" title="Salary used"><i style="width:${pct}%"></i></div>`;
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     if(slotFrozen(b.dataset.drop)) return toast("That game started — they stay on the card");
@@ -649,38 +649,64 @@ function gameFpts(g){
 }
 async function fetchLog(id, season){
   const q = season ? ("?season="+season) : "";
-  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog"+q);
-  return r.ok?parseSeasonGames(await r.json()):[];
+  const r=await fetch("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+id+"/gamelog"+q,{cache:"no-store"});
+  if(!r.ok) throw new Error("log "+r.status);
+  return parseSeasonGames(await r.json());
 }
-const LOG_KEY="sauceCap.logs.2026";
+const LOG_OK={};
+function logKey(){ return "sauceCap.logs."+capWeekId().id; }
+function bookKey(){ return "sauceCap.book.v1."+capWeekId().id; }
+function readBook(){
+  try{
+    const d=JSON.parse(localStorage.getItem(bookKey())||"null");
+    if(!d || d.week!==capWeekId().id || !d.sal) return null;
+    if(Object.keys(d.sal).length<80) return null;
+    return d;
+  }catch(e){ return null; }
+}
+function saveBook(){
+  const sal={};
+  (STATE.pool||[]).forEach(p=>{ if(p.priced && p.sal) sal[p.id]=p.sal; });
+  if(Object.keys(sal).length<80) return false;
+  try{ localStorage.setItem(bookKey(), JSON.stringify({week:capWeekId().id, at:Date.now(), sal})); }catch(e){ return false; }
+  return true;
+}
+function clearWeekStats(){
+  Object.keys(LOGS).forEach(k=>delete LOGS[k]);
+  Object.keys(LOG_OK).forEach(k=>delete LOG_OK[k]);
+  Object.keys(PRIOR).forEach(k=>delete PRIOR[k]);
+  Object.keys(TEAMDEF).forEach(k=>delete TEAMDEF[k]);
+  STATE.inj={}; STATE.injNews={};
+  try{ localStorage.removeItem("sauceCap.logs.2026"); }catch(e){}
+}
 function readLogCache(){
   try{
-    const d=JSON.parse(localStorage.getItem(LOG_KEY)||"null");
-    if(!d||!d.logs) return 0;
-    Object.keys(d.logs).forEach(id=>{ if(!Object.prototype.hasOwnProperty.call(LOGS,id)) LOGS[id]=d.logs[id]; });
-    Object.keys(d.prior||{}).forEach(id=>{ if(!PRIOR[id]) PRIOR[id]=d.prior[id]; });
-    return Number(d.at)||0;
-  }catch(e){ return 0; }
-}
-async function warmLogs(){
-  window.LOG_AT=readLogCache();
-  try{
-    const r=await fetch("/data/cap-logs.json",{cache:"no-store"});
-    if(!r.ok) return;
-    const d=await r.json();
-    const at=Number(d.at)||0;
-    if(at<=(window.LOG_AT||0)) return;
-    Object.keys(d.logs||{}).forEach(id=>{ LOGS[id]=d.logs[id]; });
-    Object.keys(d.prior||{}).forEach(id=>{ if(d.prior[id]&&d.prior[id].length) PRIOR[id]=d.prior[id]; });
-    window.LOG_AT=at;
+    const d=JSON.parse(localStorage.getItem(logKey())||"null");
+    if(!d || d.week!==capWeekId().id || !d.logs) return;
+    Object.keys(d.logs).forEach(id=>{ LOGS[id]=d.logs[id]; LOG_OK[id]=1; });
+    Object.keys(d.prior||{}).forEach(id=>{ if(d.prior[id]) PRIOR[id]=d.prior[id]; });
   }catch(e){}
 }
 function saveLogCache(){
   try{
     const logs={}, prior={};
-    Object.keys(LOGS).forEach(id=>{ logs[id]=LOGS[id]; });
+    Object.keys(LOG_OK).forEach(id=>{ if(LOGS[id]) logs[id]=LOGS[id]; });
     Object.keys(PRIOR).forEach(id=>{ prior[id]=PRIOR[id]; });
-    localStorage.setItem(LOG_KEY, JSON.stringify({at:Date.now(), logs, prior}));
+    localStorage.setItem(logKey(), JSON.stringify({week:capWeekId().id, at:Date.now(), logs, prior}));
+  }catch(e){}
+}
+async function warmLogs(){
+  readLogCache();
+  if(readBook()) return;
+  try{
+    const r=await fetch("/data/cap-logs.json",{cache:"no-store"});
+    if(!r.ok) return;
+    const d=await r.json();
+    if((Number(d.at)||0) < capWeekId().wed.getTime()) return;
+    Object.keys(d.logs||{}).forEach(id=>{
+      if(Array.isArray(d.logs[id])){ LOGS[id]=d.logs[id]; LOG_OK[id]=1; }
+    });
+    Object.keys(d.prior||{}).forEach(id=>{ if(d.prior[id]&&d.prior[id].length) PRIOR[id]=d.prior[id]; });
   }catch(e){}
 }
 function worthPrice(p){
@@ -692,30 +718,28 @@ function worthPrice(p){
   if(p.pos==="TE") return seat<=2 || p.starter;
   return false;
 }
-let logQueue=Promise.resolve();
-let logPaint=0;
-function primeLogs(list){
-  const fresh=Date.now()-(window.LOG_AT||0) < 10*60*1000;
-  const todo=(list||[]).filter(p=>worthPrice(p) && !(fresh && Object.prototype.hasOwnProperty.call(LOGS, p.id)));
-  if(!todo.length) return;
-  const kick=()=>{ repriceAll(); paintAll(); };
-  logQueue=logQueue.then(async()=>{
-    for(let i=0;i<todo.length;i+=18){
-      await Promise.all(todo.slice(i,i+18).map(async p=>{
-        try{ LOGS[p.id]=await fetchLog(p.id); }
-        catch(e){ if(!LOGS[p.id]) LOGS[p.id]=[]; }
+async function pullLogs(list){
+  for(let i=0;i<list.length;i+=12){
+    const chunk=list.slice(i,i+12);
+    await Promise.all(chunk.map(async p=>{
+      try{
+        LOGS[p.id]=await fetchLog(p.id);
+        LOG_OK[p.id]=1;
         if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter || p.pos==="QB")){
-          try{ PRIOR[p.id]=await fetchLog(p.id, 2025); }
-          catch(e){ if(!PRIOR[p.id]) PRIOR[p.id]=[]; }
+          try{ PRIOR[p.id]=await fetchLog(p.id, 2025); }catch(e){}
         }
-      }));
-      clearTimeout(logPaint);
-      logPaint=setTimeout(kick, 150);
-    }
-    window.LOG_AT=Date.now();
-    saveLogCache();
-    kick();
-  });
+      }catch(e){}
+    }));
+    const line=$("weekLine");
+    if(line) line.textContent=(STATE.label||"Week")+" · pricing "+Math.min(i+chunk.length, list.length)+"/"+list.length;
+  }
+}
+async function primeLogs(list){
+  if(readBook()) return;
+  const todo=(list||[]).filter(p=>worthPrice(p) && !LOG_OK[p.id]);
+  await pullLogs(todo);
+  await pullLogs(todo.filter(p=>!LOG_OK[p.id]));
+  saveLogCache();
 }
 function paintPool(){
   const pos = $("posFilt").value;
@@ -737,8 +761,8 @@ function paintPool(){
       <span class="pos">${p.pos}</span>
       <img alt="" src="${nflLogo(p.team)}"/>
       <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" @ "+p.opp):""} · ${leaderLine(p)||""}${tag}</span></div>
-      <div class="sal">$${Math.round(p.sal/100)/10}k</div>
-      <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p))?"disabled":""}>${on?"IN":"+"}</button>
+      <div class="sal">${p.priced?"$"+(Math.round(p.sal/100)/10)+"k":"…"}</div>
+      <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p)||!p.priced)?"disabled":""}>${on?"IN":"+"}</button>
     </div>`;
   }).join("") || `<p class="hint">${STATE.pool.length?"Nothing in this position / game filter.":"No players loaded. Refresh and try again."}</p>`;
   $("pool").querySelectorAll("[data-add]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); addPlayer(b.dataset.add); });
@@ -759,6 +783,7 @@ function addPlayer(id){
   if(STATE.locked) return toast("Unlock the card to make changes");
   const p = STATE.pool.find(x=>x.id===id);
   if(!p) return;
+  if(!p.priced) return toast("Price is not set yet");
   const taken = usedIds();
   if(taken.has(p.id)) return toast("Already on the card");
   const want = $("posFilt").value;
@@ -1062,7 +1087,9 @@ function posCeil(pos){
 function priceLikeDk(p){
   const [lo,hi]=bandFor(p.pos);
   const inj=injOf(p);
-  if(p.pos!=="DST" && !Object.prototype.hasOwnProperty.call(LOGS, p.id)) return Math.round(((lo+hi)/2)/100)*100;
+  if(p.pos==="DST"){
+    if(!TEAMDEF[p.team] || !TEAMDEF[p.team].live) return null;
+  } else if(!LOG_OK[p.id]) return null;
   const pts=fptsOf(p);
   if(hasBump(p) && p.pos==="QB" && pts<12) return 5600;
   if(hasBump(p) && pts<8){
@@ -1079,7 +1106,25 @@ function priceLikeDk(p){
   return sal;
 }
 function repriceAll(){
-  STATE.pool.forEach(p=>{ p.inj=injOf(p); p.sal=priceLikeDk(p); });
+  const book=readBook();
+  STATE.pool.forEach(p=>{
+    p.inj=injOf(p);
+    if(book && book.sal[p.id]!=null){
+      p.sal=book.sal[p.id];
+      p.priced=true;
+      return;
+    }
+    const sal=priceLikeDk(p);
+    p.priced=sal!=null;
+    p.sal=sal==null?0:sal;
+  });
+}
+function sealIfReady(){
+  if(readBook()) return true;
+  const need=(STATE.pool||[]).filter(p=>p.pos==="DST" || worthPrice(p));
+  const ok=need.filter(p=>p.priced);
+  if(!need.length || ok.length/need.length<0.85) return false;
+  return saveBook();
 }
 
 function chicagoNow(){
@@ -1173,16 +1218,17 @@ async function loadDefenses(){
         to: grab("team","miscellaneous","totalTakeaways"),
         st: grab("team","scoring","returnTouchdowns")+grab("team","defensive","miscTouchdowns"),
         sacks: grab("team","defensive","sacks"),
-        gp: gp||undefined
+        gp: gp||undefined,
+        live:1
       };
     }catch(e){}
   }));
-  repriceAll();
-  paintAll();
 }
 async function loadPool(){
-  $("pool").innerHTML="<p class='hint'>Loading slates…</p>";
-  window.LOG_AT=Math.max(window.LOG_AT||0, readLogCache());
+  $("pool").innerHTML="<p class='hint'>Setting this week’s prices…</p>";
+  $("weekLine").textContent=(STATE.label||"Week")+" · setting prices";
+  try{ localStorage.removeItem("sauceCap.logs.2026"); }catch(e){}
+  await warmLogs();
   const games=STATE.games||[];
   const tids=[...new Set(games.flatMap(g=>[g.homeId,g.awayId]).filter(Boolean))];
   const chunks=await Promise.all([
@@ -1196,15 +1242,23 @@ async function loadPool(){
     const chart=Object.keys(DEPTH).map(k=>DEPTH[k][p.id]).find(n=>n!=null);
     if(chart!=null) p.depth=chart;
     else if(p.starter && !p.depth) p.depth=1;
-    p.inj=injOf(p); p.sal=priceLikeDk(p); return p;
+    p.inj=injOf(p); p.sal=0; p.priced=false; return p;
   });
-  repriceAll();
-  $("weekLine").textContent=STATE.label+" · $50,000 · games played only";
+  const book=readBook();
+  if(!book){
+    await loadInjuries().catch(()=>{});
+    await loadDefenses();
+    await primeLogs(STATE.pool);
+    repriceAll();
+    const sealed=sealIfReady();
+    $("weekLine").textContent=STATE.label+" · $50,000 · "+(sealed?"week prices set":"prices still loading, refresh");
+  } else {
+    repriceAll();
+    $("weekLine").textContent=STATE.label+" · $50,000 · week prices set";
+    loadInjuries().then(()=>{ repriceAll(); paintAll(); }).catch(()=>{});
+  }
   paintAll();
-  primeLogs(STATE.pool);
-  loadInjuries().then(()=>{ repriceAll(); paintAll(); }).catch(()=>{});
   pullBoard().then(()=>paintStand()).catch(()=>{});
-  loadDefenses();
 }
 
 function num(v){ return Number(String(v||"0").replace(/,/g,""))||0; }
@@ -2010,10 +2064,12 @@ window.addEventListener("pagehide", capSpot);
 (async function boot(){
   try{
     const prevWeek=STATE.week;
-    const warm=warmLogs();
     await loadSlate();
-    await warm;
-    if(prevWeek && prevWeek!==STATE.week){ STATE.locked=false; STATE.lineup={}; STATE.name=""; STATE.sealName=""; saveStore(); }
+    if(prevWeek && prevWeek!==STATE.week){
+      STATE.locked=false; STATE.lineup={}; STATE.name=""; STATE.sealName="";
+      clearWeekStats();
+      saveStore();
+    }
     await loadPool();
     await pullBoard();
     await refreshLive();
