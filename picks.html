@@ -312,7 +312,7 @@ function tbCard(){
       <div class="sc"><em>${showSc?(g.away.score||"0"):"–"}</em><span>–</span><em>${showSc?(g.home.score||"0"):"–"}</em></div>
       <div class="nm r"><span class="who">${g.home.name}</span><span class="logoplate"><img alt="" src="${g.home.logo}"/></span></div>
     </div>
-    <label class="tbin">Total points<input id="tbIn" inputmode="numeric" maxlength="3" value="${guess==null?"":guess}" ${locked?"disabled":""}/></label>
+    <label class="tbin">${locked?"Submitted":"Total points"}<input id="tbIn" inputmode="numeric" maxlength="3" value="${locked?"":(guess==null?"":guess)}" placeholder="${locked?"In":""}" ${locked?"disabled":""}/></label>
     ${note?`<div class="sub">${note}</div>`:""}
   </article>`;
 }
@@ -398,7 +398,7 @@ function openCard(name){
     const actual=tbTotal(tb.game);
     let extra="";
     if(guess!=null && guess!==""){
-      extra=" · "+guess;
+      extra=" · In";
       if(actual!=null){
         const d=Math.abs(Number(guess)-actual);
         extra=" · "+(d===0?"Exact":d+" off");
@@ -428,7 +428,7 @@ async function paintBoard(){
     const guess=picks._tb;
     const meas=tbMeasure(guess, actual);
     let note="";
-    if(guess!=null && guess!=="") note="TB "+guess;
+    if(guess!=null && guess!=="") note="In";
     if(actual!=null){
       if(meas.miss) note="No total";
       else note=meas.dist===0?"Exact":meas.dist+" off";
