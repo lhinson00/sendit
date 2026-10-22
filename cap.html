@@ -549,6 +549,7 @@ function hasBump(p){
   return avail[0] && avail[0].id===p.id;
 }
 function isRelevant(p){
+  if(p.book) return true;
   const inj=injOf(p);
   const scored=Object.prototype.hasOwnProperty.call(LOGS, p.id) && playedRows(LOGS[p.id]).length>0;
   if(/practice/i.test(p.status||"")) return false;
@@ -1046,6 +1047,7 @@ function seasonPts(p){
   return card.pts;
 }
 function leaderLine(p){
+  if(p.line) return p.line;
   if(p.pos==="DST"){
     const d=TEAMDEF[p.team]||{};
     const bits=[];
@@ -1106,14 +1108,9 @@ function priceLikeDk(p){
   return sal;
 }
 function repriceAll(){
-  const book=readBook();
   STATE.pool.forEach(p=>{
     p.inj=injOf(p);
-    if(book && book.sal[p.id]!=null){
-      p.sal=book.sal[p.id];
-      p.priced=true;
-      return;
-    }
+    if(p.book){ p.priced=true; return; }
     const sal=priceLikeDk(p);
     p.priced=sal!=null;
     p.sal=sal==null?0:sal;
@@ -1225,39 +1222,15 @@ async function loadDefenses(){
   }));
 }
 async function loadPool(){
-  $("pool").innerHTML="<p class='hint'>Setting this week’s prices…</p>";
-  $("weekLine").textContent=(STATE.label||"Week")+" · setting prices";
-  try{ localStorage.removeItem("sauceCap.logs.2026"); }catch(e){}
-  await warmLogs();
-  const games=STATE.games||[];
-  const tids=[...new Set(games.flatMap(g=>[g.homeId,g.awayId]).filter(Boolean))];
-  const chunks=await Promise.all([
-    ...games.flatMap(g=>[loadRoster(g.awayId,g.awayAb,g), loadRoster(g.homeId,g.homeAb,g)]),
-    ...tids.map(loadDepth)
-  ]);
-  const seen=new Set();
-  STATE.pool=chunks.flat().filter(p=>p&&p.id).filter(p=>{
-    if(seen.has(p.id)) return false; seen.add(p.id); return true;
-  }).map(p=>{
-    const chart=Object.keys(DEPTH).map(k=>DEPTH[k][p.id]).find(n=>n!=null);
-    if(chart!=null) p.depth=chart;
-    else if(p.starter && !p.depth) p.depth=1;
-    p.inj=injOf(p); p.sal=0; p.priced=false; return p;
-  });
-  const book=readBook();
-  if(!book){
-    await loadInjuries().catch(()=>{});
-    await loadDefenses();
-    await primeLogs(STATE.pool);
-    repriceAll();
-    const sealed=sealIfReady();
-    $("weekLine").textContent=STATE.label+" · $50,000 · "+(sealed?"week prices set":"prices still loading, refresh");
-  } else {
-    repriceAll();
-    $("weekLine").textContent=STATE.label+" · $50,000 · week prices set";
-    loadInjuries().then(()=>{ repriceAll(); paintAll(); }).catch(()=>{});
-  }
+  const r=await fetch("/data/cap-week.json",{cache:"no-store"});
+  if(!r.ok) throw new Error("Price book missing");
+  const book=await r.json();
+  if(!book || book.week!==capWeekId().id || !(book.players||[]).length) throw new Error("This week's prices are not posted yet");
+  if(book.label) STATE.label=book.label;
+  STATE.pool=book.players.map(p=>Object.assign({priced:true, book:true}, p));
+  $("weekLine").textContent=(STATE.label||"Week")+" · $50,000";
   paintAll();
+  loadInjuries().then(()=>{ STATE.pool.forEach(p=>{ p.inj=injOf(p)||p.inj; }); paintAll(); }).catch(()=>{});
   pullBoard().then(()=>paintStand()).catch(()=>{});
 }
 
