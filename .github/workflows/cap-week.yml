@@ -1,0 +1,24 @@
+name: Sauce Cap week
+on:
+  schedule:
+    - cron: "0 13 * * 3"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-cap-week.mjs
+      - name: publish
+        run: |
+          git config user.name "sauce-cap"
+          git config user.email "sauce-cap@users.noreply.github.com"
+          git add data/cap-week.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Set this week's Sauce Cap prices."
+          git push
