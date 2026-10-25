@@ -7137,7 +7137,8 @@ async function openPolls(){
       fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings",{cache:"no-store"}),
       fetch("/data/cfb-polls.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
     ]);
-    const d=await res.json();
+    let d={rankings:[]};
+    try{ if(res && res.ok) d=await res.json(); }catch(e){}
     const polls=(d.rankings||[]).filter(p=>{
       const n=(p.name||"")+" "+(p.shortName||"");
       if(/fcs|division ii|division iii|div ii|div iii/i.test(n)) return false;
@@ -7145,33 +7146,41 @@ async function openPolls(){
     });
     const extra=(d.rankings||[]).filter(p=>!polls.includes(p) && /playoff|cfp/i.test((p.name||"")));
     let list=polls.length?polls:(d.rankings||[]).slice(0,2);
-    let coachesNote="";
-    const filePoll=fresh && fresh.coaches && (fresh.coaches.ranks||[]).length ? fresh.coaches : null;
-    if(filePoll){
-      const espnCoaches=list.find(p=>/coaches/i.test((p.name||"")+" "+(p.shortName||"")));
-      const topId=p=>String(((((p||{}).ranks||[])[0]||{}).team||{}).id||"");
-      const tnAt=p=>{
-        const row=((p||{}).ranks||[]).find(r=>String((r.team||{}).id)==="2633");
-        return row?String(row.current):"";
-      };
-      if(!espnCoaches || topId(espnCoaches)!==topId(filePoll) || tnAt(espnCoaches)!==tnAt(filePoll)){
-        list = espnCoaches ? list.map(p=>p===espnCoaches?filePoll:p) : [filePoll].concat(list);
-        coachesNote = "Coaches poll "+(fresh.date||"today");
-      }
+    const stamp=p=>{ const t=Date.parse((p&&p.date)||""); return isFinite(t)?t:0; };
+    const newer=(filePoll, espnPoll)=>{
+      if(!filePoll || !(filePoll.ranks||[]).length) return false;
+      if(!espnPoll) return true;
+      const ft=stamp(filePoll) || Date.parse((fresh&&fresh.iso)||(fresh&&fresh.date)||"");
+      const et=stamp(espnPoll);
+      return !!ft && ft>et;
+    };
+    const take=(kind, filePoll)=>{
+      if(!filePoll) return;
+      const hit=p=>kind==="ap"?/ap top|ap poll/i.test((p.name||"")+" "+(p.shortName||"")):/coaches/i.test((p.name||"")+" "+(p.shortName||""));
+      const espnPoll=list.find(hit);
+      if(!newer(filePoll, espnPoll)) return;
+      list = espnPoll ? list.map(p=>p===espnPoll?filePoll:p) : [filePoll].concat(list);
+    };
+    if(fresh){ take("coaches", fresh.coaches); take("ap", fresh.ap); }
+    if(!list.length && fresh){
+      list=[fresh.ap, fresh.coaches].filter(p=>p && (p.ranks||[]).length);
     }
     const col=p=>{
       const rows=(p.ranks||[]).slice(0,25).map(r=>{
         const t=r.team||{};
         const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||(t.id?("https://a.espncdn.com/i/teamlogos/ncaa/500/"+t.id+".png"):"");
         const rec=r.recordSummary||t.recordSummary||"";
-        const tr=r.trend!=null?r.trend:"";
-        return `<div class="pollrow" data-tid="${t.id||""}" data-tname="${String(t.displayName||t.nickname||"").replace(/"/g,"")}"><b class="rk">${r.current||""}</b><img alt="" src="${logo}"/><div><b>${t.abbreviation||t.nickname||""}</b><em>${t.displayName||""}${rec?(" · "+rec):""}</em></div><em>${tr?" "+tr:""}</em></div>`;
+        const tr=r.trend!=null && r.trend!=="-" ? r.trend : "";
+        const name=t.displayName||[t.location,t.name].filter(Boolean).join(" ")||t.nickname||"";
+        return `<div class="pollrow" data-tid="${t.id||""}" data-tname="${String(name).replace(/"/g,"")}"><b class="rk">${r.current||""}</b><img alt="" src="${logo}"/><div><b>${t.abbreviation||t.nickname||""}</b><em>${name}${rec?(" · "+rec):""}</em></div><em>${tr?" "+tr:""}</em></div>`;
       }).join("");
       return `<div class="pollcol"><h3>${p.name||p.shortName}</h3>${rows||"<p class='hint'>No ballot this week.</p>"}</div>`;
     };
     const cfp = extra[0] || (d.rankings||[]).find(p=>/playoff|cfp|committee/i.test(p.name||""));
-    const weekName=(d.latestWeek&&d.latestWeek.displayName)||"Week polls";
-    host.innerHTML = `<p class="hint">${coachesNote?coachesNote+" · AP still "+weekName:weekName} · tap a team</p><div class="pollgrid">${list.map(col).join("")}</div>` +
+    const when=p=>{ const t=stamp(p); return t?new Date(t).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):""; };
+    const label=list.map(p=>(p.shortName||p.name||"Poll")+(when(p)?(" "+when(p)):"")).join(" · ");
+    if(!list.length) throw new Error("No poll posted yet");
+    host.innerHTML = `<p class="hint">${label||((d.latestWeek&&d.latestWeek.displayName)||"Week polls")} · tap a team</p><div class="pollgrid">${list.map(col).join("")}</div>` +
       (cfp && !list.includes(cfp) ? `<div class="pollgrid">${col(cfp)}</div>` : `<p class="hint">College Football Playoff ranking publishes later in the season. </p>`);
     host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openTeam(b.dataset.tid, b.dataset.tname||"Team"));
   }catch(e){
