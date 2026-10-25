@@ -371,7 +371,10 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .tlead b{font-family:"Bebas Neue",sans-serif;font-size:22px}
 .pollrow b.rk{font-size:18px}
 .pollrow img{width:32px;height:32px;object-fit:contain}
-.pollrow em{font-style:normal;color:var(--muted);font-size:11px}
+.pollrow .pollwho{min-width:0}
+.pollrow .pollwho b{display:block;font-size:15px;font-weight:750;line-height:1.2}
+.pollrow .pollwho em{display:block;margin-top:2px;font-style:normal;color:var(--muted);font-size:11px}
+.pollrow > em{font-style:normal;color:#c9c2b8;font-size:13px;font-weight:700}
 .ldhead{display:flex;gap:6px;padding:8px var(--pad);overflow:auto}
 .ldhead button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:8px 12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
 .ldhead button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
@@ -7172,7 +7175,7 @@ async function openPolls(){
         const rec=r.recordSummary||t.recordSummary||"";
         const tr=r.trend!=null && r.trend!=="-" ? r.trend : "";
         const name=t.displayName||[t.location,t.name].filter(Boolean).join(" ")||t.nickname||"";
-        return `<div class="pollrow" data-tid="${t.id||""}" data-tname="${String(name).replace(/"/g,"")}"><b class="rk">${r.current||""}</b><img alt="" src="${logo}"/><div><b>${t.abbreviation||t.nickname||""}</b><em>${name}${rec?(" · "+rec):""}</em></div><em>${tr?" "+tr:""}</em></div>`;
+        return `<div class="pollrow" data-tid="${t.id||""}" data-tname="${String(name).replace(/"/g,"")}"><b class="rk">${r.current||""}</b><img alt="" src="${logo}"/><div class="pollwho"><b>${name}</b><em>${rec}</em></div><em>${tr}</em></div>`;
       }).join("");
       return `<div class="pollcol"><h3>${p.name||p.shortName}</h3>${rows||"<p class='hint'>No ballot this week.</p>"}</div>`;
     };
