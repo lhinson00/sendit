@@ -981,20 +981,6 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     </div>
   </div>
 </header>
-<div class="scflash" id="scFlash">
-  <div class="scwipe"></div>
-  <div class="scbug">
-    <span class="scnet">SPORTS<br>SAUCE</span>
-    <span class="sckind" id="scKicker">Tracker</span>
-  </div>
-  <div class="scmain">
-    <div class="scscore" id="scTitle"></div>
-    <div class="scteam" id="scTeam"></div>
-    <div class="scnums" id="scNums"></div>
-    <div class="scline" id="scBody"></div>
-  </div>
-</div>
-
 <button type="button" class="navback" id="navBack">Back</button>
 <section id="viewHome">
   <div class="hub">
@@ -5606,18 +5592,7 @@ let ALERT_SEED = false;
 let ALERT_Q = [];
 let ALERT_SHOWING = false;
 let ALERT_LAST = {sig:"", at:0};
-function flashAlert(msg){
-  const sig=String((msg&&msg.title)||"")+"|"+String((msg&&msg.kicker)||"")+"|"+String((msg&&msg.score)||"")+"|"+String((msg&&msg.team)||"");
-  const now=Date.now();
-  if(sig && sig===ALERT_LAST.sig && now-ALERT_LAST.at<120000) return;
-  if(ALERT_Q.some(m=>String(m.title)+"|"+String(m.kicker)+"|"+String(m.score||"")+"|"+String(m.team||"")===sig)) return;
-  window.ALERT_LOCK=window.ALERT_LOCK||{};
-  if(window.ALERT_LOCK[sig]) return;
-  window.ALERT_LOCK[sig]=now;
-  ALERT_LAST={sig, at:now};
-  ALERT_Q.push(msg);
-  pumpAlert();
-}
+function flashAlert(){ return; }
 function pumpAlert(){
   if(ALERT_SHOWING || !ALERT_Q.length) return;
   const msg=ALERT_Q.shift();
