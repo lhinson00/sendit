@@ -4311,7 +4311,7 @@ async function openPlayer(pid, name){
         return `<i class="${v>=FILT.line?"hit":"miss"}" style="height:${h}px"><b>${v}</b><em>${g.opp||""}</em></i>`;
       }).join("")}</div></div>`;
     }
-    window.FROM_TEAM_PLAYER = !!(window.TEAM_CTX && window.TEAM_CTX.id);
+    window.FROM_TEAM_PLAYER = !window.FROMLEAD && !!(window.TEAM_CTX && window.TEAM_CTX.id);
     if($("toGame")) $("toGame").textContent = window.FROM_TEAM_PLAYER ? "← Team" : fromKit ? "← Trends" : window.FROMLEAD ? "← Leaders" : "← Game";
     window.FROMKIT = fromKit;
     $("playerRoom").innerHTML = `
@@ -7711,6 +7711,9 @@ function nbaLogo(t){
   return (t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+mark+"/500/"+file+".png");
 }
 function nbaTab(which){
+  LEAGUE="nba";
+  if($("nflTabs")) $("nflTabs").hidden=true;
+  if($("nbaTabs")) $("nbaTabs").hidden=false;
   window.BOARD=which;
   if($("liveList")) $("liveList").hidden=which!=="slate";
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
@@ -7747,7 +7750,8 @@ async function openNbaStandings(){
 async function openNbaLeaders(){
   const host=$("boardPanel");
   host.hidden=false;
-  host.innerHTML="<p class='hint'>Loading NBA leaders…</p>";
+  const quiet=!!host.querySelector(".lrow");
+  if(!quiet) host.innerHTML="<p class='hint'>Loading NBA leaders…</p>";
   try{
     let year="2027", label="2026-27 regular season";
     try{
@@ -7759,8 +7763,7 @@ async function openNbaLeaders(){
         if(season.displayName) label=season.displayName+" regular season";
       }
     }catch(e){}
-    const day=new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"});
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"+year+"/types/2/leaders?limit=12&day="+day,{cache:"no-store"});
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"+year+"/types/2/leaders?limit=12&t="+Date.now(),{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -7772,9 +7775,15 @@ async function openNbaLeaders(){
     });
     await fillLeadNames("nba", cats);
     window.LEAD_CATS=cats;
-    window.LEAD_SIDE="off";
+    if(!quiet) window.LEAD_SIDE="off";
     window.LEAD_NOTE=label;
     paintLeaders();
+    if(!window.NBA_LEAD_TICK){
+      window.NBA_LEAD_TICK=setInterval(()=>{
+        const up=LEAGUE==="nba" && window.BOARD==="lead" && $("viewLive") && !$("viewLive").hidden;
+        if(up) openNbaLeaders();
+      }, 15*60*1000);
+    }
   }catch(e){
     host.innerHTML="<p class='hint'>NBA leaders did not load.</p>";
   }
@@ -8243,7 +8252,16 @@ document.addEventListener("click", ev=>{
     else if(row.dataset.pid){
       window.FROMKIT = !!(ev.target.closest("#kitPanel") || ev.target.closest(".kcard"));
       window.FROMLEAD = !!(ev.target.closest("#boardPanel") || ev.target.closest(".ltable"));
-      if(window.FROMLEAD) window.LEAD_BACK=LEAGUE;
+      if(window.FROMLEAD){
+        window.FROM_TEAM_PLAYER=false;
+        window.LEAD_BACK = ($("nbaTabs") && !$("nbaTabs").hidden) ? "nba"
+          : ($("cbbTabs") && !$("cbbTabs").hidden) ? "cbb"
+          : ($("nhlTabs") && !$("nhlTabs").hidden) ? "nhl"
+          : ($("mlbTabs") && !$("mlbTabs").hidden) ? "mlb"
+          : ($("mlsTabs") && !$("mlsTabs").hidden) ? "mls"
+          : ($("cfbTabs") && !$("cfbTabs").hidden) ? "cfb"
+          : LEAGUE;
+      }
       if(ev.target.closest(".tbook")) window.FROM_TEAM_PLAYER = true;
       openPlayer(row.dataset.pid, row.dataset.pname||"Player");
     }
@@ -8266,6 +8284,20 @@ $("toGame") && ($("toGame").onclick = ()=>{
     else if(window.FROMMLB) openMlbTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMTN) openTnTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else openTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
+    return;
+  }
+  if(window.FROMLEAD){
+    window.FROMLEAD=false;
+    window.FROM_TEAM_PLAYER=false;
+    show("live");
+    const lg=window.LEAD_BACK||LEAGUE;
+    if(lg==="nba") nbaTab("lead");
+    else if(lg==="cbb") cbbTab("lead");
+    else if(lg==="nhl") nhlTab("lead");
+    else if(lg==="cfb") cfbTab("lead");
+    else if(lg==="mlb") mlbTab("lead");
+    else if(lg==="mls") mlsTab("lead");
+    else nflTab("lead");
     return;
   }
   if(window.FROMTEAM){
@@ -8291,20 +8323,9 @@ $("toGame") && ($("toGame").onclick = ()=>{
     else if(window.FROMNFL){ window.FROMNFL=false; nflTab("stand"); }
     else if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
     else cfbTab("polls");
+    return;
   }
-  else if(window.FROMLEAD){
-    window.FROMLEAD=false;
-    show("live");
-    const lg=window.LEAD_BACK||LEAGUE;
-    if(lg==="nba") nbaTab("lead");
-    else if(lg==="cbb") cbbTab("lead");
-    else if(lg==="nhl") nhlTab("lead");
-    else if(lg==="cfb") cfbTab("lead");
-    else if(lg==="mlb") mlbTab("lead");
-    else if(lg==="mls") mlsTab("lead");
-    else nflTab("lead");
-  }
-  else if(window.FROMKIT){ show("live"); nflTab("kit"); }
+  if(window.FROMKIT){ show("live"); nflTab("kit"); }
   else if(window.FROMUFC || LEAGUE==="ufc"){ window.FROMUFC=false; show("live"); ufcTab(window.UFC_TAB||"card"); }
   else if(OPEN) show("game");
   else show("live");
