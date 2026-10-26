@@ -4667,9 +4667,22 @@ function scOf(x){
   if(typeof x.score==="object") return x.score.displayValue!=null?String(x.score.displayValue):(x.score.value!=null?String(x.score.value):"");
   return String(x.score);
 }
-function fmtWhen(iso){
+function listedDate(iso){
+  const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  return new Date(Date.UTC(+m[1], +m[2]-1, +m[3], 18));
+}
+function timeUnposted(iso, detail){
+  if(/TBD/i.test(detail||"")) return true;
+  return /T05:00(?::00)?(?:\.000)?Z$/.test(String(iso||""));
+}
+function fmtWhen(iso, detail){
   const d=new Date(iso||"");
   if(isNaN(d)) return "";
+  if(timeUnposted(iso, detail)){
+    const shown=listedDate(iso)||d;
+    return shown.toLocaleDateString("en-US",{timeZone:"UTC",weekday:"short",month:"short",day:"numeric"})+" · TBD";
+  }
   return d.toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 }
 function snapText(row, myId){
@@ -4686,7 +4699,7 @@ function snapText(row, myId){
     const dec=me.winner?"W":(opp.winner?"L":"");
     return (dec?dec+" ":"")+(ms!==""?ms+"–"+os+" ":"")+ha+" "+oa;
   }
-  return (fmtWhen(row.ev.date)||st.shortDetail||"Next")+" · "+ha+" "+oa;
+  return (fmtWhen(row.ev.date, st.shortDetail)||st.shortDetail||"Next")+" · "+ha+" "+oa;
 }
 function chiKey(dt){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(dt);
@@ -4726,6 +4739,13 @@ function whenBits(iso, live, scoreText, detail){
   if(live) return {label:detail?("Live · "+detail):"Live", big:scoreText||"Now"};
   const d=new Date(iso||"");
   if(isNaN(d)) return {label:"Next", big:""};
+  if(timeUnposted(iso, detail)){
+    const shown=listedDate(iso)||d;
+    return {
+      label:shown.toLocaleDateString("en-US",{timeZone:"UTC",weekday:"long"}),
+      big:shown.toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric"})
+    };
+  }
   const label=chiKey(d)===chiKey(new Date())?"Tonight":new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",weekday:"long"}).format(d);
   const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).formatToParts(d);
   const h=parts.find(x=>x.type==="hour").value;
@@ -7353,10 +7373,13 @@ async function openTeam(tid, name, sport){
       const ms=(me.score&&(me.score.displayValue||me.score.value))||"";
       const os=(opp.score&&(opp.score.displayValue||opp.score.value))||"";
       const dec = st.state==="post" ? (me.winner?"W":(opp.winner?"L":"·")) : (st.state==="in"?"LIVE":"");
-      const dt=String(ev.date||"").slice(0,10);
+      const note=st.shortDetail||st.detail||"";
+      const unposted=timeUnposted(ev.date, note);
+      const shown=unposted?(listedDate(ev.date)||new Date(ev.date||"")):new Date(ev.date||"");
+      const dt=!isNaN(shown)?shown.toLocaleDateString("en-US",{timeZone:unposted?"UTC":"America/Chicago",weekday:"short",month:"short",day:"numeric"}):"";
       const ha=me.homeAway==="home"?"vs":"@";
       const onm=(opp.team&&(opp.team.abbreviation||opp.team.displayName))||"";
-      return `<div class="tgame ${c.id?"prow":""}" data-gid="${c.id||ev.id||""}"><span>${dt}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${ha} ${onm}</b><em>${st.shortDetail||st.detail||""}</em></div><b>${ms&&os?ms+"–"+os:""}</b></div>`;
+      return `<div class="tgame ${c.id?"prow":""}" data-gid="${c.id||ev.id||""}"><span>${dt}</span><span class="dec ${dec}">${dec||"·"}</span><div><b>${ha} ${onm}</b><em>${unposted?"TBD":note}</em></div><b>${ms&&os?ms+"–"+os:""}</b></div>`;
     }).join("");
     const skill=/^(QB|RB|WR|TE|LB|DL|DE|DT|CB|S|DB)$/;
     const people=[];
