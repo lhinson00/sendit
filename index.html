@@ -7749,7 +7749,17 @@ async function openNbaLeaders(){
   host.hidden=false;
   host.innerHTML="<p class='hint'>Loading NBA leaders…</p>";
   try{
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2026/types/2/leaders?limit=12",{cache:"no-store"});
+    let year="2027", label="2026-27 regular season";
+    try{
+      const sb=await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",{cache:"no-store"});
+      if(sb.ok){
+        const s=await sb.json();
+        const season=(s.leagues&&s.leagues[0]&&s.leagues[0].season)||s.season||{};
+        if(season.year) year=String(season.year);
+        if(season.displayName) label=season.displayName+" regular season";
+      }
+    }catch(e){}
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"+year+"/types/2/leaders?limit=12",{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -7762,7 +7772,7 @@ async function openNbaLeaders(){
     await fillLeadNames("nba", cats);
     window.LEAD_CATS=cats;
     window.LEAD_SIDE="off";
-    window.LEAD_NOTE="2025-26 regular season. Preseason leaders are not posted yet.";
+    window.LEAD_NOTE=label;
     paintLeaders();
   }catch(e){
     host.innerHTML="<p class='hint'>NBA leaders did not load.</p>";
