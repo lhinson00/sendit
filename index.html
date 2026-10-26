@@ -7750,19 +7750,37 @@ async function openNbaStandings(){
   host.hidden=false;
   host.innerHTML="<p class='hint'>Loading NBA standings…</p>";
   try{
-    const res=await fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings",{cache:"no-store"});
+    const [res, divRes] = await Promise.all([
+      fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings",{cache:"no-store"}),
+      fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?level=3",{cache:"no-store"})
+    ]);
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
+    const divs=divRes.ok?await divRes.json():{children:[]};
+    const byName={};
+    (divs.children||[]).forEach(c=>{ byName[c.name||c.abbreviation||""]=c.children||[]; });
+    const row=(e,seed)=>{
+      const t=e.team||{};
+      const rec=stv(e.stats,"wins")+"-"+stv(e.stats,"losses");
+      const gb=stv(e.stats,"gamesBehind")||"—";
+      const ppg=stv(e.stats,"avgPointsFor")||"—";
+      return `<div class="srow" data-tid="${t.id||""}" data-tname="${String(t.displayName||"").replace(/"/g,"")}"><span class="seed">${seed}</span><img alt="" src="${nbaLogo(t)}"/><b>${t.abbreviation||""}</b><span>${rec}</span><span>${gb}</span><span>${ppg}</span></div>`;
+    };
+    const sheet=(entries, rank)=>{
+      const teams=entries.slice().sort(rank);
+      const rows=teams.map((e,i)=>row(e, stv(e.stats,"playoffSeed")||(i+1))).join("");
+      return `<div class="shead"><span></span><span></span><span></span><span>W-L</span><span>GB</span><span>PPG</span></div>${rows}`;
+    };
+    const bySeed=(a,b)=>Number(stv(a.stats,"playoffSeed")||99)-Number(stv(b.stats,"playoffSeed")||99);
+    const byRec=(a,b)=>Number(stv(b.stats,"wins")||0)-Number(stv(a.stats,"wins")||0) || Number(stv(a.stats,"losses")||99)-Number(stv(b.stats,"losses")||99);
     const blocks=(d.children||[]).map(conf=>{
-      const teams=((conf.standings||{}).entries||[]).slice().sort((a,b)=>Number(stv(a.stats,"playoffSeed")||99)-Number(stv(b.stats,"playoffSeed")||99));
-      const rows=teams.map(e=>{
-        const t=e.team||{};
-        const rec=stv(e.stats,"wins")+"-"+stv(e.stats,"losses");
-        const gb=stv(e.stats,"gamesBehind")||"—";
-        const ppg=stv(e.stats,"avgPointsFor")||"—";
-        return `<div class="srow" data-tid="${t.id||""}" data-tname="${String(t.displayName||"").replace(/"/g,"")}"><span class="seed">${stv(e.stats,"playoffSeed")||""}</span><img alt="" src="${nbaLogo(t)}"/><b>${t.abbreviation||""}</b><span>${rec}</span><span>${gb}</span><span>${ppg}</span></div>`;
+      const teams=((conf.standings||{}).entries)||[];
+      const inner=(byName[conf.name]||[]).map(div=>{
+        const ents=((div.standings||{}).entries)||[];
+        if(!ents.length) return "";
+        return `<h3 class="kicker" style="margin:16px 0 6px">${div.name||div.abbreviation||"Division"}</h3>${sheet(ents, byRec)}`;
       }).join("");
-      return `<section class="problock"><h3>${conf.name||conf.abbreviation||"Conference"}</h3><div class="shead"><span></span><span></span><span></span><span>W-L</span><span>GB</span><span>PPG</span></div>${rows}</section>`;
+      return `<section class="problock"><h3>${conf.name||conf.abbreviation||"Conference"}</h3>${sheet(teams, bySeed)}${inner}</section>`;
     }).join("");
     host.innerHTML=blocks||"<p class='hint'>Standings are not posted.</p>";
     host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openNbaTeam(b.dataset.tid, b.dataset.tname||"Team"));
