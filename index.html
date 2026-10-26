@@ -4394,14 +4394,24 @@ function paintGameLog(log){
   const blocks=types.flatMap(s=>(s.categories||[]).map(c=>({title:(s.displayName?s.displayName+" · ":"")+(c.displayName||"Games"), events:c.events||[]})));
   const use=blocks.length?blocks:[{title:"Games", events:((((types[0]||{}).categories||[])[0]||{}).events)||[]}];
   const meta=(!Array.isArray(log.events)&&log.events)||{};
-  const heads=log.labels||[];
+  let heads=log.labels||[];
+  const key=h=>String(h||"").toUpperCase().replace(/\s/g,"");
+  const minAt=heads.findIndex(h=>key(h)==="MIN"||key(h)==="MINS");
+  const ptsAt=heads.findIndex(h=>key(h)==="PTS"||key(h)==="POINTS");
+  let order=heads.map((_,i)=>i);
+  if(minAt>=0 && ptsAt>=0 && ptsAt!==minAt+1){
+    order.splice(ptsAt,1);
+    order.splice(order.indexOf(minAt)+1, 0, ptsAt);
+    heads=order.map(i=>heads[i]);
+  }
   const body=use.map(b=>{
     const rows=(b.events||[]).map(ev=>{
       const info=meta[ev.eventId]||{};
       const dt=info.gameDate?new Date(info.gameDate).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):"";
       const opp=(info.opponent&&(info.opponent.abbreviation||info.opponent.displayName))||"";
       const mark=info.gameResult||"";
-      return `<tr><td>${dt}</td><td>${info.atVs||""} ${opp}</td><td class="${mark}">${mark} ${info.score||""}</td>${(ev.stats||[]).map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
+      const stats=order.map(i=>(ev.stats||[])[i]);
+      return `<tr><td>${dt}</td><td>${info.atVs||""} ${opp}</td><td class="${mark}">${mark} ${info.score||""}</td>${stats.map(v=>`<td>${v??"—"}</td>`).join("")}</tr>`;
     }).join("");
     if(!rows) return "";
     return `<section class="problock"><h3>${b.title}</h3><div class="scroll"><table class="protable"><thead><tr><th>Date</th><th>Opp</th><th>Result</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
