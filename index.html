@@ -7759,7 +7759,8 @@ async function openNbaLeaders(){
         if(season.displayName) label=season.displayName+" regular season";
       }
     }catch(e){}
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"+year+"/types/2/leaders?limit=12",{cache:"no-store"});
+    const day=new Date().toLocaleDateString("en-CA",{timeZone:"America/Chicago"});
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/"+year+"/types/2/leaders?limit=12&day="+day,{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -8242,6 +8243,7 @@ document.addEventListener("click", ev=>{
     else if(row.dataset.pid){
       window.FROMKIT = !!(ev.target.closest("#kitPanel") || ev.target.closest(".kcard"));
       window.FROMLEAD = !!(ev.target.closest("#boardPanel") || ev.target.closest(".ltable"));
+      if(window.FROMLEAD) window.LEAD_BACK=LEAGUE;
       if(ev.target.closest(".tbook")) window.FROM_TEAM_PLAYER = true;
       openPlayer(row.dataset.pid, row.dataset.pname||"Player");
     }
@@ -8293,9 +8295,13 @@ $("toGame") && ($("toGame").onclick = ()=>{
   else if(window.FROMLEAD){
     window.FROMLEAD=false;
     show("live");
-    if(LEAGUE==="cfb") cfbTab("lead");
-    else if(LEAGUE==="mlb") mlbTab("lead");
-    else if(LEAGUE==="mls") mlsTab("lead");
+    const lg=window.LEAD_BACK||LEAGUE;
+    if(lg==="nba") nbaTab("lead");
+    else if(lg==="cbb") cbbTab("lead");
+    else if(lg==="nhl") nhlTab("lead");
+    else if(lg==="cfb") cfbTab("lead");
+    else if(lg==="mlb") mlbTab("lead");
+    else if(lg==="mls") mlsTab("lead");
     else nflTab("lead");
   }
   else if(window.FROMKIT){ show("live"); nflTab("kit"); }
