@@ -1,7 +1,10 @@
 name: Sauce Cap week
 on:
   schedule:
-    - cron: "0 13 * * 3"
+    # After midnight Chicago, then two backups. Times stay past midnight in both CDT and CST.
+    - cron: "15 6 * * 3"
+    - cron: "0 11 * * 3"
+    - cron: "0 15 * * 3"
   workflow_dispatch:
 permissions:
   contents: write
@@ -18,7 +21,19 @@ jobs:
         run: |
           git config user.name "sauce-cap"
           git config user.email "sauce-cap@users.noreply.github.com"
+          git fetch origin main
+          remote=$(git show origin/main:data/cap-week.json | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{const j=JSON.parse(s);process.stdout.write(j.week+" "+(j.players||[]).length)}catch(e){}})')
+          local=$(node -e 'const j=JSON.parse(require("fs").readFileSync("data/cap-week.json","utf8"));process.stdout.write(j.week+" "+(j.players||[]).length)')
+          echo "remote $remote"
+          echo "local $local"
+          rw=${remote%% *}; lw=${local%% *}
+          rn=${remote##* }; ln=${local##* }
+          if [ "$rw" = "$lw" ] && [ "${rn:-0}" -gt 80 ]; then
+            echo "this week is already posted"
+            exit 0
+          fi
           git add data/cap-week.json
           git diff --cached --quiet && exit 0
           git commit -m "Set this week's Sauce Cap prices."
+          git pull --rebase origin main
           git push

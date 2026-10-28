@@ -2061,8 +2061,9 @@ window.addEventListener("pagehide", capSpot);
       if(live || watching) refreshLive();
     }, 20000);
   }catch(e){
-    $("weekLine").textContent="Could not load the slate";
-    $("pool").innerHTML="<p class='hint'>"+(e.message||e)+"</p>";
+    const msg=e.message||String(e);
+    if(/slate/i.test(msg)) $("weekLine").textContent="Could not load the slate";
+    $("pool").innerHTML="<p class='hint'>"+msg+"</p>";
   }
 })();
 (function(){ const b=document.getElementById("navBack"); if(b){ b.hidden=false; document.body.appendChild(b); } })();

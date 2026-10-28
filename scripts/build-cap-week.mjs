@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
 const UA={"User-Agent":"SportsSauce/1.0"};
 function capWeekId(now=new Date()){
@@ -101,15 +101,41 @@ function worth(p){
 
 const stamp=capWeekId();
 const days=slateStamps();
+const bookPath=new URL("../data/cap-week.json", import.meta.url);
+if(!process.env.FORCE){
+  try{
+    const prev=JSON.parse(await readFile(bookPath, "utf8"));
+    if(prev.week===stamp.id && (prev.players||[]).length>80){
+      console.log("already posted", stamp.id, prev.players.length);
+      process.exit(0);
+    }
+  }catch(e){}
+}
 console.log("week", stamp.id, days.join(","));
 const pages=await Promise.all(days.map(day=>getJson("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates="+day).catch(()=>null)));
 const seen=new Set(), evs=[];
-let week="";
+let week="", seasonYear="";
+const chiYmd=iso=>iso?new Date(iso).toLocaleDateString("en-CA",{timeZone:"America/Chicago"}).replace(/-/g,""):"";
 pages.forEach(d=>{
   if(!d) return;
   if(!week && d.week) week=d.week.number;
-  (d.events||[]).forEach(ev=>{ if(!seen.has(ev.id)){ seen.add(ev.id); evs.push(ev); } });
+  const sy=(d.season&&d.season.year)||(d.leagues&&d.leagues[0]&&d.leagues[0].season&&d.leagues[0].season.year)||"";
+  if(!seasonYear && sy) seasonYear=String(sy);
+  (d.events||[]).forEach(ev=>{
+    const iso=ev.date||(((ev.competitions||[])[0]||{}).date)||"";
+    const ymd=chiYmd(iso);
+    if(!seen.has(ev.id) && days.includes(ymd)){ seen.add(ev.id); evs.push(ev); }
+  });
 });
+if(!seasonYear){
+  try{
+    const live=await getJson("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard");
+    seasonYear=String((live.season&&live.season.year)||(live.leagues&&live.leagues[0]&&live.leagues[0].season&&live.leagues[0].season.year)||"");
+  }catch(e){}
+}
+if(!seasonYear) seasonYear="2026";
+if(evs.length<8) throw new Error("slate too small: "+evs.length);
+console.log("season", seasonYear, "games", evs.length);
 const games=evs.map(ev=>{
   const c=(ev.competitions||[])[0]||{};
   const comps=c.competitors||[];
@@ -199,11 +225,11 @@ const need=players.filter(worth);
 console.log("pricing", need.length, "of", players.length);
 let done=0;
 await mapPool(need, 16, async p=>{
-  const d=await getJson("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog");
+  const d=await getJson("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog?season="+seasonYear);
   LOGS[p.id]=parseSeasonGames(d);
   if(!playedRows(LOGS[p.id]).length && ((p.depth||99)===1 || p.starter || p.pos==="QB")){
     try{
-      const prior=await getJson("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog?season=2025");
+      const prior=await getJson("https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/"+p.id+"/gamelog?season="+(Number(seasonYear)-1));
       PRIOR[p.id]=parseSeasonGames(prior);
     }catch(e){}
   }
@@ -232,7 +258,9 @@ function fptsOf(p){
   const card=rateOf(p);
   if(!card) return 0;
   if(p.pos==="DST") return card.ppg;
-  if(card.g>0 || card.proj) return card.ppg;
+  let ppg=card.ppg;
+  if(card.g>0 && card.g<4) ppg=ppg*(card.g/4);
+  if(card.g>0 || card.proj) return ppg;
   if(willPlay(p)) return card.ppg;
   return 0;
 }
