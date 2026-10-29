@@ -1179,26 +1179,56 @@ function viewPin(){
   const k = (window.VIEW_NOW||"home")+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
   window.VIEW_Y[k] = window.scrollY || document.documentElement.scrollTop || 0;
 }
+window.SCROLL_STACK = window.SCROLL_STACK || [];
+function armRestore(y){
+  window.RESTORE_Y = Math.max(0, Number(y)||0);
+  window.RESTORE_LOCK = window.SCROLL_LOCK||0;
+  const go=()=>{
+    if(window.RESTORE_Y==null) return;
+    if((window.SCROLL_LOCK||0)!==window.RESTORE_LOCK){ window.RESTORE_Y=null; return; }
+    const max=Math.max(0, (document.documentElement.scrollHeight||0)-window.innerHeight);
+    window.scrollTo(0, Math.min(window.RESTORE_Y, max));
+  };
+  go();
+  requestAnimationFrame(go);
+  [40,120,280,600,1100,1800,2600].forEach(t=>setTimeout(go, t));
+}
 function viewPop(name){
   const k = name+"|"+(LEAGUE||"")+"|"+(window.BOARD||"");
-  const y = window.VIEW_Y[k] || 0;
-  const lock=window.SCROLL_LOCK||0;
-  requestAnimationFrame(function(){ if((window.SCROLL_LOCK||0)!==lock) return; window.scrollTo(0, y); });
+  armRestore(window.VIEW_Y[k]||0);
 }
 async function show(name, opts){
   opts = opts||{};
+  const yNow = window.scrollY || document.documentElement.scrollTop || 0;
+  const returning = !!(opts.back || window.RETURNING);
+  if(window.RETURNING) window.RETURNING=false;
   viewPin();
   $("viewHome").hidden = name!=="home";
   $("viewLive").hidden = name!=="live";
   $("viewGame").hidden = name!=="game";
   if($("viewPlayer")) $("viewPlayer").hidden = name!=="player";
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
+  const came = window.VIEW_NOW;
   window.VIEW_NOW = name;
   const back=$("navBack");
   if(back){ back.hidden=false; document.body.appendChild(back); }
-  if(window.HOLD_Y!=null) stickScroll();
+  if(opts.reset){
+    window.SCROLL_STACK=[];
+    window.RESTORE_Y=null;
+    window.scrollTo(0,0);
+  } else if(returning){
+    window.JUST_BACK=true;
+    const saved=window.SCROLL_STACK.pop();
+    armRestore(saved?saved.y:0);
+    setTimeout(function(){ window.JUST_BACK=false; }, 0);
+  } else if(window.HOLD_Y!=null) stickScroll();
   else if(opts.keep) viewPop(name);
-  else window.scrollTo(0,0);
+  else if(opts.fresh || came!==name){
+    window.SCROLL_STACK.push({y:yNow});
+    if(window.SCROLL_STACK.length>40) window.SCROLL_STACK.shift();
+    window.RESTORE_Y=null;
+    window.scrollTo(0,0);
+  }
   if(window.trackUse) window.trackUse("view", name);
   const eye=$("brandEye"), title=$("brandTitle");
   if(eye) eye.textContent = name==="home" ? "Yours" : "Sports Sauce";
@@ -2462,11 +2492,12 @@ function tssaaTab(which){
   if($("eatPanel")) $("eatPanel").hidden=true;
   if($("tabTnFb")) $("tabTnFb").classList.toggle("on", which==="fb");
   if($("tabTnStand")) $("tabTnStand").classList.toggle("on", which==="stand");
-  if(which==="stand") paintTnStand();
-  else {
+  if(which==="stand"){
+    if(!window.JUST_BACK) paintTnStand();
+  } else {
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
-    paintTnSlate();
+    if(!window.JUST_BACK) paintTnSlate();
   }
 }
 async function loadLeague(lg){
@@ -3939,6 +3970,7 @@ function ufcTab(which){
   if($("kitPanel")) $("kitPanel").hidden=true;
   if($("liveList")) $("liveList").hidden = which!=="card";
   if($("boardPanel")) $("boardPanel").hidden = which==="card";
+  if(window.JUST_BACK) return;
   if(which==="card"){
     if($("boardPanel")) $("boardPanel").innerHTML="";
     if(typeof GAMES!=="undefined") paint(GAMES);
@@ -4132,7 +4164,7 @@ async function openPlayer(pid, name){
   armPin({kind:"player", lg:LEAGUE, id:String(pid||""), name:name||"Player"});
   if(LEAGUE==="mls"){ return openMlsPlayer(pid, name); }
   window.FROMUFC = false;
-  show("player");
+  show("player", {fresh:true});
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
     const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : LEAGUE==="cbb" ? "basketball/mens-college-basketball" : LEAGUE==="nba" ? "basketball/nba" : LEAGUE==="nhl" ? "hockey/nhl" : LEAGUE==="mls" ? "soccer/usa.1" : "baseball/mlb";
@@ -6352,10 +6384,10 @@ function nflTab(which){
   if($("tabEat")) $("tabEat").classList.toggle("on", eat);
   if($("tabLeadN")) $("tabLeadN").classList.toggle("on", lead);
   if($("tabStandN")) $("tabStandN").classList.toggle("on", stand);
-  if(kit) runKitchen();
-  if(eat){ rememberEatFrom(); paintSlip(); markEatBack(); }
-  if(lead) openLeaders("nfl");
-  if(stand) openNflStandings();
+  if(!window.JUST_BACK && kit) runKitchen();
+  if(!window.JUST_BACK && eat){ rememberEatFrom(); paintSlip(); markEatBack(); }
+  if(!window.JUST_BACK && lead) openLeaders("nfl");
+  if(!window.JUST_BACK && stand) openNflStandings();
 }
 
 
@@ -6469,8 +6501,8 @@ function mlsTab(which){
   if($("tabMlsSlate")) $("tabMlsSlate").classList.toggle("on", slate);
   if($("tabMlsStand")) $("tabMlsStand").classList.toggle("on", which==="stand");
   if($("tabMlsLead")) $("tabMlsLead").classList.toggle("on", which==="lead");
-  if(which==="stand") openMlsStandings();
-  if(which==="lead") openMlsLeaders();
+  if(!window.JUST_BACK && which==="stand") openMlsStandings();
+  if(!window.JUST_BACK && which==="lead") openMlsLeaders();
 }
 function idFromRef(ref){
   const m=String(ref||"").match(/\/(?:athletes|teams)\/(\d+)/);
@@ -6762,9 +6794,9 @@ function cfbTab(which){
   if($("tabPolls")) $("tabPolls").classList.toggle("on", which==="polls");
   if($("tabLeadC")) $("tabLeadC").classList.toggle("on", which==="lead");
   if($("tabCfbKit")) $("tabCfbKit").classList.toggle("on", kit);
-  if(kit) runKitchen();
-  if(which==="polls") openPolls();
-  if(which==="lead") openLeaders("cfb");
+  if(!window.JUST_BACK && kit) runKitchen();
+  if(!window.JUST_BACK && which==="polls") openPolls();
+  if(!window.JUST_BACK && which==="lead") openLeaders("cfb");
 }
 
 function mlbLogo(ab){
@@ -6872,11 +6904,11 @@ function mlbTab(which){
   if($("boardPanel")) $("boardPanel").hidden=!(which==="stand"||which==="lead");
   if($("tabMlbSlate")) $("tabMlbSlate").classList.toggle("on", slate);
   if($("tabMlbKit")) $("tabMlbKit").classList.toggle("on", kit);
-  if(kit) runKitchen();
+  if(!window.JUST_BACK && kit) runKitchen();
   if($("tabStand")) $("tabStand").classList.toggle("on", which==="stand");
   if($("tabLeadM")) $("tabLeadM").classList.toggle("on", which==="lead");
-  if(which==="stand") openMlbStandings();
-  if(which==="lead") openMlbLeaders();
+  if(!window.JUST_BACK && which==="stand") openMlbStandings();
+  if(!window.JUST_BACK && which==="lead") openMlbLeaders();
 }
 function stv(stats, name){
   const s=(stats||[]).find(x=>x.name===name || x.abbreviation===name);
@@ -7602,8 +7634,8 @@ function cbbTab(which){
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   if($("dayTabs")) $("dayTabs").hidden=which!=="slate";
   ["tabCbbSlate","tabCbbStand","tabCbbLead"].forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id==="tabCbbSlate"&&which==="slate")||(id==="tabCbbStand"&&which==="stand")||(id==="tabCbbLead"&&which==="lead")); });
-  if(which==="stand") openCbbStandings();
-  if(which==="lead") openCbbLeaders();
+  if(!window.JUST_BACK && which==="stand") openCbbStandings();
+  if(!window.JUST_BACK && which==="lead") openCbbLeaders();
 }
 async function openCbbStandings(){
   const host=$("boardPanel");
@@ -7743,8 +7775,8 @@ function nbaTab(which){
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   if($("dayTabs")) $("dayTabs").hidden=which!=="slate";
   ["tabNbaSlate","tabNbaStand","tabNbaLead"].forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id==="tabNbaSlate"&&which==="slate")||(id==="tabNbaStand"&&which==="stand")||(id==="tabNbaLead"&&which==="lead")); });
-  if(which==="stand") openNbaStandings();
-  if(which==="lead") openNbaLeaders();
+  if(!window.JUST_BACK && which==="stand") openNbaStandings();
+  if(!window.JUST_BACK && which==="lead") openNbaLeaders();
 }
 async function openNbaStandings(){
   const host=$("boardPanel");
@@ -8273,8 +8305,8 @@ function nhlTab(which){
   if($("liveList")) $("liveList").hidden=which!=="slate";
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   ["tabNhlSlate","tabNhlStand","tabNhlLead"].forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id==="tabNhlSlate"&&which==="slate")||(id==="tabNhlStand"&&which==="stand")||(id==="tabNhlLead"&&which==="lead")); });
-  if(which==="stand") openMlbStandings();
-  if(which==="lead") openMlbLeaders();
+  if(!window.JUST_BACK && which==="stand") openMlbStandings();
+  if(!window.JUST_BACK && which==="lead") openMlbLeaders();
 }
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
@@ -8313,11 +8345,12 @@ $("toGame") && ($("toGame").onclick = ()=>{
   if(window.FROM_YOURS && !window.FROM_TEAM_PLAYER){
     window.FROM_YOURS=false;
     window.FROMTEAM=false;
-    show("home");
+    show("home", {back:true});
     return;
   }
   if(window.FROM_TEAM_PLAYER && window.TEAM_CTX && window.TEAM_CTX.id){
     window.FROM_TEAM_PLAYER=false;
+    window.RETURNING=true;
     if(window.FROMNFL) openNflTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMMLS) openMlsTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMCBB) openCbbTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
@@ -8331,7 +8364,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
   if(window.FROMLEAD){
     window.FROMLEAD=false;
     window.FROM_TEAM_PLAYER=false;
-    show("live");
+    show("live", {back:true});
     const lg=window.LEAD_BACK||LEAGUE;
     if(lg==="nba") nbaTab("lead");
     else if(lg==="cbb") cbbTab("lead");
@@ -8344,7 +8377,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
   }
   if(window.FROMTEAM){
     window.FROMTEAM=false;
-    show("live");
+    show("live", {back:true});
     if(window.FROM_SLATE){
       window.FROM_SLATE=false;
       if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
@@ -8367,15 +8400,15 @@ $("toGame") && ($("toGame").onclick = ()=>{
     else cfbTab("polls");
     return;
   }
-  if(window.FROMKIT){ show("live"); nflTab("kit"); }
-  else if(window.FROMUFC || LEAGUE==="ufc"){ window.FROMUFC=false; show("live"); ufcTab(window.UFC_TAB||"card"); }
-  else if(OPEN) show("game");
-  else show("live");
+  if(window.FROMKIT){ show("live", {back:true}); nflTab("kit"); }
+  else if(window.FROMUFC || LEAGUE==="ufc"){ window.FROMUFC=false; show("live", {back:true}); ufcTab(window.UFC_TAB||"card"); }
+  else if(OPEN) show("game", {back:true});
+  else show("live", {back:true});
 });
-$("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home"); };
+$("goHome").onclick = ()=>{ if(poll) clearInterval(poll); poll=null; OPEN=null; show("home", {reset:true}); };
 $("toHome").onclick = ()=>{
   if($("eatPanel") && !$("eatPanel").hidden){ leaveEat(); return; }
-  if(poll) clearInterval(poll); poll=null; OPEN=null; show("home", {keep:true});
+  if(poll) clearInterval(poll); poll=null; OPEN=null; show("home", {back:true});
 };
 $("navBack") && ($("navBack").onclick=()=>{
   const v=window.VIEW_NOW;
@@ -8396,13 +8429,13 @@ $("toSlate").onclick = ()=>{
   if(window.FROM_YOURS){
     window.FROM_YOURS=false;
     window.FROMTEAM=false;
-    show("home");
+    show("home", {back:true});
     return;
   }
-  show("live", {keep:true});
+  show("live", {back:true});
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
-$("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home"));
+$("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home", {back:true}));
 setTimeout(restorePlace, 0);
 window.addEventListener("scroll", ()=>{ if(window.HOLD_Y!=null) return; clearTimeout(window.PIN_T); window.PIN_T=setTimeout(savePlace, 120); }, {passive:true});
 window.addEventListener("pagehide", savePlace);

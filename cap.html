@@ -830,6 +830,10 @@ function goBack(){
 }
 function tabTo(name, opt){
   if(name==="live"||name==="card") name="stand";
+  const yNow=window.scrollY||document.documentElement.scrollTop||0;
+  const prev=STATE.tab;
+  window.CAP_Y=window.CAP_Y||{};
+  if(prev && prev!==name) window.CAP_Y[prev]=yNow;
   if(!opt || !opt.back){ if(hist[hist.length-1]!==name) hist.push(name); }
   STATE.viewCard=null;
   STATE.tab=name;
@@ -841,7 +845,12 @@ function tabTo(name, opt){
   $("tab-stand").hidden = name!=="stand";
   const back=$("navBack"); if(back){ back.hidden=false; document.body.appendChild(back); }
   paintBudget();
-  if(name==="stand") refreshLive();
+  if(name==="stand" && !(opt&&opt.back)) refreshLive();
+  if(opt && opt.back){
+    const y=window.CAP_Y[name]||0;
+    const go=()=>window.scrollTo(0, y);
+    go(); requestAnimationFrame(go); [40,140,400].forEach(t=>setTimeout(go,t));
+  } else if(prev!==name) window.scrollTo(0,0);
   capSpot();
 }
 
