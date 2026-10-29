@@ -4325,7 +4325,8 @@ async function openPlayer(pid, name){
               ["HT/WT",[bio.displayHeight,bio.displayWeight].filter(Boolean).join(", ")],
               ["BORN",[bio.displayDOB, bio.age?"("+bio.age+")":""].filter(Boolean).join(" ")],
               ["FROM", bio.displayBirthPlace||""],
-              ["COLLEGE", (bio.college&&(bio.college.shortName||bio.college.name))||""]
+              ["COLLEGE", (bio.college&&(bio.college.shortName||bio.college.name))||""],
+              ["DRAFT", bio.displayDraft||""]
             ].filter(r=>r[1]).map(r=>`<div><i>${r[0]}</i><b>${r[1]}</b></div>`).join("")}</div>
             ${nextLine?`<p class="nextchip">Next · ${nextLine}</p>`:""}
           </div>
