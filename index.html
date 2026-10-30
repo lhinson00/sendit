@@ -352,14 +352,28 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .histhead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 8px;border-bottom:1px solid #3a2a18}
 .histhead span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .histhead b{font-family:"Bebas Neue",sans-serif;font-size:28px;color:#ff7a18;letter-spacing:.04em;line-height:1}
-.hrow{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #221e18}
-.hrow .yr{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em;color:#c9c2b8}
-.hrow .wl{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:.9;text-align:right}
+.hrow{padding:14px 0;border-bottom:1px solid #221e18}
+.hmain{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:4px 10px;align-items:baseline}
+.hrow .yr{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:#c9c2b8}
+.hconf{font-size:12px;color:#9a9186}
+.hrow .wl{font-family:"Bebas Neue",sans-serif;font-size:30px;letter-spacing:.03em;line-height:.9}
 .hrow .wl.up{color:#ff7a18}
 .hrow .wl.down{color:#8d867c}
-.hrow .end{grid-column:1 / -1;font-size:12px;color:#9a9186;line-height:1.35}
-.hrow .end.won{color:#3ee0a0}
-.hrow .end.lost{color:#e0b0a4}
+.hpost{margin-top:10px;background:#101218;border:1px solid #2a241c;border-left:3px solid #ff7a18}
+.hpost .plabel{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #2a241c;font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#ff7a18}
+.hseries{padding:8px 10px 10px;border-bottom:1px solid #1c1914}
+.hseries:last-child{border-bottom:0}
+.hseries .shead{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.hseries .shead b{font-size:13px;font-weight:750;line-height:1.3}
+.hseries .sres{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.03em;white-space:nowrap}
+.hseries .sres.won{color:#3ee0a0}
+.hseries .sres.lost{color:#ff8a8a}
+.hvs{margin-top:2px;font-size:12px;color:#c9c2b8}
+.hgame{display:grid;grid-template-columns:26px 16px minmax(0,1fr) auto;gap:6px;align-items:center;padding:4px 0 0;font-size:12px;color:#c9c2b8}
+.hgame b{font-family:"Bebas Neue",sans-serif;font-size:16px;color:#f7f2ea;font-weight:400;letter-spacing:.03em}
+.hgame .dec.W{color:#3ee0a0;font-weight:800}
+.hgame .dec.L{color:#ff8a8a;font-weight:800}
+.hmiss{margin-top:8px;padding:7px 10px;border:1px dashed #2a241c;color:#8d867c;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 .sgrp{margin:16px 0 8px}
 .sgrp h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -7033,12 +7047,52 @@ async function fillTeamHistory(kind, tid){
     if(!list.length){ host.innerHTML="<p class='hint'>No season history posted.</p>"; return; }
     const w=list.reduce((s,r)=>s+r.w,0), l=list.reduce((s,r)=>s+r.l,0), t=list.reduce((s,r)=>s+r.t,0);
     const mark=n=>n.w+"–"+n.l+(n.t?"–"+n.t:"");
+    const postBox=r=>{
+      if(!r.rounds) return "";
+      if(!r.rounds.length) return `<div class="hmiss">${esc(r.miss||"Did not qualify")}</div>`;
+      const blocks=r.rounds.map(s=>{
+        const sw=s.games.filter(g=>g.win).length, sl=s.games.length-sw, won=sw>sl;
+        if(s.games.length===1){
+          const g=s.games[0];
+          const sc=g.ms&&g.os?g.ms+"–"+g.os:"";
+          return `<div class="hseries one"><div class="shead"><b>${esc(s.round)}</b><span class="sres ${g.win?"won":"lost"}">${g.win?"W":"L"}${sc?" "+sc:""}</span></div><div class="hvs">${esc(g.ha+" "+g.opp)}</div></div>`;
+        }
+        const opp=s.games.every(g=>g.opp===s.games[0].opp)?s.games[0].opp:"";
+        const games=s.games.map((g,i)=>`<div class="hgame"><span>G${esc(g.g||i+1)}</span><span class="dec ${g.win?"W":"L"}">${g.win?"W":"L"}</span><span>${esc(g.ha+" "+(g.oppAb||g.opp))}</span><b>${g.ms&&g.os?esc(g.ms+"–"+g.os):""}</b></div>`).join("");
+        return `<div class="hseries"><div class="shead"><b>${esc(s.round)}</b><span class="sres ${won?"won":"lost"}">${sw}–${sl}${opp?" · "+esc(opp):""}</span></div>${games}</div>`;
+      }).join("");
+      const last=r.rounds[r.rounds.length-1];
+      const champ=last && last.games.filter(g=>g.win).length>last.games.filter(g=>!g.win).length && /super bowl|world series|nba finals|national championship|championship game/i.test(last.round) && !/first|wild|divisional|semi|sweet|elite|region/i.test(last.round);
+      return `<div class="hpost"><div class="plabel"><span>Postseason</span>${champ?"<span>Champions</span>":""}</div>${blocks}</div>`;
+    };
     host.innerHTML=`<div class="hlist"><div class="histhead"><span>${list.length} seasons</span><b>${w}–${l}${t?"–"+t:""}</b></div>`+list.map(r=>{
       const cls=r.w>r.l?"up":r.w<r.l?"down":"";
-      const tone=r.end.indexOf("Won ")===0?"won":r.end.indexOf("Lost ")===0?"lost":"";
-      const sub=[r.conf, r.end].filter(Boolean).join(" · ");
-      return `<div class="hrow"><span class="yr">${r.label}</span><span></span><b class="wl ${cls}">${mark(r)}</b>${sub?`<span class="end ${tone}">${sub}</span>`:""}</div>`;
+      return `<div class="hrow"><div class="hmain"><span class="yr">${r.label}</span><span class="hconf">${esc(r.conf||"")}</span><b class="wl ${cls}">${mark(r)}</b></div>${postBox(r)}</div>`;
     }).join("")+"</div>";
+  };
+  const roundOf=h=>{
+    let s=String(h||"Postseason").replace(/\s+Presented by.*$/i,"").replace(/^Men's Basketball Championship\s*[-–]\s*/i,"");
+    s=s.replace(/\s*[-–]\s*Game\s+\d+.*$/i,"").replace(/\s+Game\s+\d+.*$/i,"").trim();
+    s=s.replace(/\bNLWC\b/g,"NL Wild Card").replace(/\bALWC\b/g,"AL Wild Card").replace(/\s+[-–]\s+/g," · ");
+    return s||"Postseason";
+  };
+  const gamesOf=evs=>{
+    const groups=[];
+    evs.forEach(ev=>{
+      const c=(ev.competitions||[])[0]||{};
+      const st=ev.seasonType||{};
+      if(!(st.type===3 || /post/i.test(st.name||""))) return;
+      const comps=c.competitors||[];
+      const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(tid))||{};
+      const opp=comps.find(x=>x!==me)||{};
+      const num=x=>{ const s=x&&x.score; if(s==null) return ""; return typeof s==="object"?String(s.displayValue||s.value||""):String(s); };
+      const headline=((c.notes||[])[0]||{}).headline||"Postseason";
+      const g={round:roundOf(headline), g:(headline.match(/Game\s+(\d+)/i)||[])[1]||"", win:!!me.winner, ha:c.neutralSite?"vs":(me.homeAway==="home"?"vs":"@"), opp:(opp.team&&(opp.team.shortDisplayName||opp.team.displayName||opp.team.abbreviation))||"", oppAb:(opp.team&&opp.team.abbreviation)||"", ms:num(me), os:num(opp)};
+      let bucket=groups.find(x=>x.round===g.round);
+      if(!bucket){ bucket={round:g.round, games:[]}; groups.push(bucket); }
+      bucket.games.push(g);
+    });
+    return groups;
   };
   let cursor=0;
   async function worker(){
@@ -7059,20 +7113,14 @@ async function fillTeamHistory(kind, tid){
         } else if(!card && post) card=post;
       }
       if(!card || gen!==HIST_GEN) continue;
-      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), w:card.w, l:card.l, t:card.t, conf:confOf(regPack), end:live?"In progress":""};
+      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), w:card.w, l:card.l, t:card.t, conf:confOf(regPack), rounds:null, miss:""};
       rows.push(row);
       paint();
-      if(live) continue;
-      const evs=await pull(base+"/types/3/teams/"+tid+"/events?limit=25");
-      const items=(evs&&evs.items)||[];
-      if(!items.length) row.end=kind==="cfb"?"No bowl":"Missed playoffs";
-      else {
-        const ev=await pull(items[items.length-1].$ref);
-        const comp=((ev&&ev.competitions)||[])[0]||{};
-        const note=historyNote((((comp.notes||[])[0]||{}).headline)||(ev&&ev.shortName)||"Postseason");
-        const me=(comp.competitors||[]).find(c=>String(c.id)===String(tid));
-        row.end=((me&&me.winner)?"Won ":"Lost ")+note;
-      }
+      const sched=await pull("https://site.api.espn.com/apis/site/v2/sports/"+spec.sport+"/"+spec.league+"/teams/"+tid+"/schedule?season="+year+"&seasontype=3");
+      const events=((sched&&sched.events)||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+      const rounds=gamesOf(events);
+      row.rounds=rounds;
+      row.miss=rounds.length?"":(live?"Season in progress":(kind==="cfb"?"No bowl":"Did not qualify"));
       if(gen===HIST_GEN) paint();
     }
   }
