@@ -348,12 +348,18 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .tgame .dec{font-family:"Bebas Neue",sans-serif;font-size:22px}
 .tgame .dec.W{color:#3ee0a0}.tgame .dec.L{color:#ff8a8a}
 .tgame button{border:0;background:0;color:inherit;font:inherit;text-align:left;padding:0}
-.hrow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:2px 12px;align-items:baseline;padding:10px 0;border-bottom:1px solid #221e18}
-.hrow > b{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.03em}
-.hrow div b{font-size:15px}
-.hrow em{display:block;margin-top:2px;font-style:normal;font-size:12px;color:var(--muted);line-height:1.35}
-.hrow em.won{color:#3ee0a0}
-.hrow em.lost{color:#ff8a8a}
+.hlist{margin:6px 0 18px}
+.histhead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 8px;border-bottom:1px solid #3a2a18}
+.histhead span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.histhead b{font-family:"Bebas Neue",sans-serif;font-size:28px;color:#ff7a18;letter-spacing:.04em;line-height:1}
+.hrow{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:12px 0;border-bottom:1px solid #221e18}
+.hrow .yr{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em;color:#c9c2b8}
+.hrow .wl{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:.9;text-align:right}
+.hrow .wl.up{color:#ff7a18}
+.hrow .wl.down{color:#8d867c}
+.hrow .end{grid-column:1 / -1;font-size:12px;color:#9a9186;line-height:1.35}
+.hrow .end.won{color:#3ee0a0}
+.hrow .end.lost{color:#e0b0a4}
 .sgrp{margin:16px 0 8px}
 .sgrp h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -7026,11 +7032,13 @@ async function fillTeamHistory(kind, tid){
     const list=rows.slice().sort((a,b)=>b.year-a.year);
     if(!list.length){ host.innerHTML="<p class='hint'>No season history posted.</p>"; return; }
     const w=list.reduce((s,r)=>s+r.w,0), l=list.reduce((s,r)=>s+r.l,0), t=list.reduce((s,r)=>s+r.t,0);
-    host.innerHTML=`<p class="hint">${list.length} seasons on record · ${w}-${l}${t?"-"+t:""}</p>`+list.map(r=>{
-      const cls=r.end.indexOf("Won ")===0?"won":r.end.indexOf("Lost ")===0?"lost":"";
+    const mark=n=>n.w+"–"+n.l+(n.t?"–"+n.t:"");
+    host.innerHTML=`<div class="hlist"><div class="histhead"><span>${list.length} seasons</span><b>${w}–${l}${t?"–"+t:""}</b></div>`+list.map(r=>{
+      const cls=r.w>r.l?"up":r.w<r.l?"down":"";
+      const tone=r.end.indexOf("Won ")===0?"won":r.end.indexOf("Lost ")===0?"lost":"";
       const sub=[r.conf, r.end].filter(Boolean).join(" · ");
-      return `<div class="hrow"><b>${r.label}</b><div><b>${r.rec}</b><em class="${cls}">${sub}</em></div></div>`;
-    }).join("");
+      return `<div class="hrow"><span class="yr">${r.label}</span><span></span><b class="wl ${cls}">${mark(r)}</b>${sub?`<span class="end ${tone}">${sub}</span>`:""}</div>`;
+    }).join("")+"</div>";
   };
   let cursor=0;
   async function worker(){
@@ -7039,11 +7047,19 @@ async function fillTeamHistory(kind, tid){
       const year=years[cursor++];
       const base="https://sports.core.api.espn.com/v2/sports/"+spec.sport+"/leagues/"+spec.league+"/seasons/"+year;
       const live=year===end && historyLive(kind);
-      let rec=await pull(base+"/types/"+(live?2:3)+"/teams/"+tid+"/record?lang=en");
-      if(!overall(rec)) rec=await pull(base+"/types/"+(live?3:2)+"/teams/"+tid+"/record?lang=en");
-      const card=overall(rec);
+      const regPack=await pull(base+"/types/2/teams/"+tid+"/record?lang=en");
+      const reg=overall(regPack);
+      let card=reg;
+      if(!live){
+        const post=overall(await pull(base+"/types/3/teams/"+tid+"/record?lang=en"));
+        if(reg && post){
+          const pg=post.w+post.l+post.t, rg=reg.w+reg.l+reg.t;
+          if(pg>rg && post.w>=reg.w && post.l>=reg.l) card=post;
+          else if(pg>0 && pg<rg) card={w:reg.w+post.w, l:reg.l+post.l, t:reg.t+post.t};
+        } else if(!card && post) card=post;
+      }
       if(!card || gen!==HIST_GEN) continue;
-      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), rec:card.summary, w:card.w, l:card.l, t:card.t, conf:confOf(rec), end:live?"In progress":""};
+      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), w:card.w, l:card.l, t:card.t, conf:confOf(regPack), end:live?"In progress":""};
       rows.push(row);
       paint();
       if(live) continue;
