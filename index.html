@@ -348,6 +348,12 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .tgame .dec{font-family:"Bebas Neue",sans-serif;font-size:22px}
 .tgame .dec.W{color:#3ee0a0}.tgame .dec.L{color:#ff8a8a}
 .tgame button{border:0;background:0;color:inherit;font:inherit;text-align:left;padding:0}
+.hrow{display:grid;grid-template-columns:72px minmax(0,1fr);gap:2px 12px;align-items:baseline;padding:10px 0;border-bottom:1px solid #221e18}
+.hrow > b{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.03em}
+.hrow div b{font-size:15px}
+.hrow em{display:block;margin-top:2px;font-style:normal;font-size:12px;color:var(--muted);line-height:1.35}
+.hrow em.won{color:#3ee0a0}
+.hrow em.lost{color:#ff8a8a}
 .sgrp{margin:16px 0 8px}
 .sgrp h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -6972,6 +6978,91 @@ function packStat(L, cat){
 async function openNflTeam(tid, name){
   return openTeam(tid, name, "nfl");
 }
+function historyYear(kind){
+  const now=new Date(), y=now.getFullYear(), m=now.getMonth();
+  if(kind==="nba"||kind==="cbb") return m>=8?y+1:y;
+  if(kind==="mlb") return y;
+  return m>=7?y:y-1;
+}
+function historyLive(kind){
+  const m=new Date().getMonth();
+  if(kind==="nfl"||kind==="cfb") return m>=7 && m<=11;
+  if(kind==="nba"||kind==="cbb") return m>=9 || m<=2;
+  if(kind==="mlb") return m>=3 && m<=8;
+  return false;
+}
+function historyNote(s){
+  return String(s||"").replace(/\s+Presented by.*$/i,"").replace(/^Men's Basketball Championship\s*[-–]\s*/i,"").replace(/\s+[-–]\s+/g," · ").trim();
+}
+let HIST_GEN=0;
+async function fillTeamHistory(kind, tid){
+  const spec={
+    nfl:{sport:"football", league:"nfl"},
+    cfb:{sport:"football", league:"college-football"},
+    nba:{sport:"basketball", league:"nba"},
+    cbb:{sport:"basketball", league:"mens-college-basketball"},
+    mlb:{sport:"baseball", league:"mlb"}
+  }[kind];
+  const host=document.getElementById("teamHist");
+  if(!spec || !host || !tid) return;
+  const gen=++HIST_GEN;
+  const end=historyYear(kind);
+  const years=[];
+  for(let y=end; y>end-25; y--) years.push(y);
+  const rows=[];
+  const pull=async url=>{ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }catch(e){ return null; } };
+  const overall=d=>{
+    const it=((d&&d.items)||[]).find(x=>x && (x.name==="overall" || x.type==="total"));
+    if(!it || !(it.summary||it.displayValue)) return null;
+    const stat=n=>{ const s=(it.stats||[]).find(x=>x.name===n); return s?Number(s.value)||0:0; };
+    return {summary:it.summary||it.displayValue, w:stat("wins"), l:stat("losses"), t:stat("ties")};
+  };
+  const confOf=d=>{
+    const it=((d&&d.items)||[]).find(x=>x && /conf|division|div\./i.test((x.displayName||"")+" "+(x.name||"")) && !/overall/i.test(x.name||""));
+    return it && it.summary ? ((/div/i.test(it.displayName||it.name||"")?"Div ":"Conf ")+it.summary) : "";
+  };
+  const paint=()=>{
+    if(gen!==HIST_GEN || !document.getElementById("teamHist")) return;
+    const list=rows.slice().sort((a,b)=>b.year-a.year);
+    if(!list.length){ host.innerHTML="<p class='hint'>No season history posted.</p>"; return; }
+    const w=list.reduce((s,r)=>s+r.w,0), l=list.reduce((s,r)=>s+r.l,0), t=list.reduce((s,r)=>s+r.t,0);
+    host.innerHTML=`<p class="hint">${list.length} seasons on record · ${w}-${l}${t?"-"+t:""}</p>`+list.map(r=>{
+      const cls=r.end.indexOf("Won ")===0?"won":r.end.indexOf("Lost ")===0?"lost":"";
+      const sub=[r.conf, r.end].filter(Boolean).join(" · ");
+      return `<div class="hrow"><b>${r.label}</b><div><b>${r.rec}</b><em class="${cls}">${sub}</em></div></div>`;
+    }).join("");
+  };
+  let cursor=0;
+  async function worker(){
+    while(cursor<years.length){
+      if(gen!==HIST_GEN) return;
+      const year=years[cursor++];
+      const base="https://sports.core.api.espn.com/v2/sports/"+spec.sport+"/leagues/"+spec.league+"/seasons/"+year;
+      const live=year===end && historyLive(kind);
+      let rec=await pull(base+"/types/"+(live?2:3)+"/teams/"+tid+"/record?lang=en");
+      if(!overall(rec)) rec=await pull(base+"/types/"+(live?3:2)+"/teams/"+tid+"/record?lang=en");
+      const card=overall(rec);
+      if(!card || gen!==HIST_GEN) continue;
+      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), rec:card.summary, w:card.w, l:card.l, t:card.t, conf:confOf(rec), end:live?"In progress":""};
+      rows.push(row);
+      paint();
+      if(live) continue;
+      const evs=await pull(base+"/types/3/teams/"+tid+"/events?limit=25");
+      const items=(evs&&evs.items)||[];
+      if(!items.length) row.end=kind==="cfb"?"No bowl":"Missed playoffs";
+      else {
+        const ev=await pull(items[items.length-1].$ref);
+        const comp=((ev&&ev.competitions)||[])[0]||{};
+        const note=historyNote((((comp.notes||[])[0]||{}).headline)||(ev&&ev.shortName)||"Postseason");
+        const me=(comp.competitors||[]).find(c=>String(c.id)===String(tid));
+        row.end=((me&&me.winner)?"Won ":"Lost ")+note;
+      }
+      if(gen===HIST_GEN) paint();
+    }
+  }
+  await Promise.all(Array.from({length:6}, worker));
+  if(gen===HIST_GEN && !rows.length) host.innerHTML="<p class='hint'>No season history posted.</p>";
+}
 async function openMlbStandings(){
   const host=$("boardPanel");
   host.hidden=false;
@@ -7188,8 +7279,10 @@ async function openLeagueTeam(tid, name, sport){
         ${tableHtml}
         <h3 class="kicker" style="margin-top:18px">Last 5 · Next 5</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
+        ${sport==="mlb"?`<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons…</p></div>`:""}
         ${rosterSheet((rost.athletes||[]).map(g=>({title:g.position||"Roster", rows:(g.items||[]).map(p=>({id:p.id, name:p.displayName||"", no:p.jersey||"", pos:(p.position&&p.position.abbreviation)||""}))})))}
       </div>`;
+    if(sport==="mlb") fillTeamHistory("mlb", tid);
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
   }
@@ -7439,6 +7532,8 @@ async function openTeam(tid, name, sport){
         ${groupHtml}
         <h3 class="kicker">Schedule</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
+        <h3 class="kicker">Season history</h3>
+        <div id="teamHist"><p class="hint">Loading seasons…</p></div>
         ${face("Offense", off)}
         ${face("Defense", def)}
       </div>`;
@@ -7446,6 +7541,7 @@ async function openTeam(tid, name, sport){
       ev.stopPropagation();
       if(b.dataset.gid){ LEAGUE=isNfl?"nfl":"cfb"; openGame(b.dataset.gid, b.dataset.gid); }
     });
+    fillTeamHistory(isNfl?"nfl":"cfb", tid);
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
   }
@@ -7751,8 +7847,9 @@ async function openCbbTeam(tid, name){
       buckets[key].push(p);
     });
     const roster=rosterSheet(["G","F","C"].filter(k=>buckets[k].length).map(k=>({title:k==="G"?"Guards":k==="F"?"Forwards":"Centers", rows:buckets[k].sort((a,b)=>Number(a.jersey||99)-Number(b.jersey||99)).map(p=>({id:p.id, name:p.displayName||"", no:p.jersey||"", pos:(p.position&&p.position.abbreviation)||""}))})));
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NCAAB"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||"2026-27"}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}${roster?`<h3 class="kicker">Roster</h3>${roster}`:"<p class='hint'>Roster not posted.</p>"}</div>`;
+    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NCAAB"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||"2026-27"}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons…</p></div>${roster?`<h3 class="kicker">Roster</h3>${roster}`:"<p class='hint'>Roster not posted.</p>"}</div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
+    fillTeamHistory("cbb", tid);
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>College basketball team did not load.</p>";
   }
@@ -7925,8 +8022,9 @@ async function openNbaTeam(tid, name){
       buckets[key].push(p);
     });
     const roster=rosterSheet(["G","F","C"].filter(k=>buckets[k].length).map(k=>({title:k==="G"?"Guards":k==="F"?"Forwards":"Centers", rows:buckets[k].sort((a,b)=>Number(a.jersey||99)-Number(b.jersey||99)).map(p=>({id:p.id, name:p.displayName||"", no:p.jersey||"", pos:(p.position&&p.position.abbreviation)||""}))})));
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Roster</h3>${roster||"<p class='hint'>Roster not posted.</p>"}</div>`;
+    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons…</p></div><h3 class="kicker">Roster</h3>${roster||"<p class='hint'>Roster not posted.</p>"}</div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
+    fillTeamHistory("nba", tid);
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>NBA team did not load.</p>";
   }
