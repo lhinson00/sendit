@@ -145,6 +145,27 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ystat.live .ychips div{background:#102018}
 .ystat.live .ychips b{color:#e9fff5}
 .yempty{margin-top:12px;padding:16px;border:1px dashed #3a3228;border-radius:14px;color:#c9c2b8;font-size:14px;line-height:1.45}
+.ylinks{margin-top:12px}
+.ylinkhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ylinkhead span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#8d867c}
+.ylinkhead button,.ylinkform button{border:1px solid #3a3228;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px;border-radius:999px;padding:8px 12px;cursor:pointer}
+.ylinkform{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.ylinkform input{width:100%;background:#0c0d12;border:1px solid #3a3228;color:#fff;border-radius:10px;padding:12px;font:inherit;font-size:16px}
+.ylinkform button{align-self:flex-start;background:var(--orange);color:#140800;border-color:var(--orange)}
+.ylinknote{margin:8px 0 0;color:#8d867c;font-size:12px}
+.ylink{display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px;background:#120e0c;border:1px solid #2a241c;border-radius:14px;text-decoration:none;color:inherit}
+.ylink.live{display:block;border-color:#3ee0a0;box-shadow:inset 3px 0 0 #3ee0a0}
+.ylinktop{display:flex;align-items:center;gap:8px}
+.ylink a{flex:1;min-width:0;color:inherit;text-decoration:none}
+.ylink b{font-size:16px;line-height:1.2}
+.ylinktop b{flex:1;min-width:0}
+.ylink em{display:block;margin-top:2px;font-style:normal;font-size:12px;color:#9a9186;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ylive{flex:none;background:#3ee0a0;color:#042116;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 7px}
+.ystream{margin:6px 0 0;color:#f7f2ea;font-size:14px;font-weight:700}
+.yframe{position:relative;width:100%;aspect-ratio:16/9;margin-top:8px;background:#000;border-radius:10px;overflow:hidden}
+.yframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ylinkopen{display:inline-block;margin-top:8px;color:#ffc46b;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.ylink .yremove{margin-left:auto}
 .ypick{margin-top:12px;background:#101218;border:1px solid #2a241c;border-radius:14px;padding:6px 0 10px}
 .yq{display:block;width:calc(100% - 24px);margin:8px 12px 4px;background:#0c0d12;border:1px solid #3a3228;color:#fff;border-radius:10px;padding:12px;font:inherit;font-size:16px}
 .yhit{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;width:calc(100% - 16px);margin:0 8px;padding:8px;border:0;background:transparent;color:#fff;text-align:left;font:inherit;border-radius:10px;cursor:pointer}
@@ -1071,6 +1092,16 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       </div>
     </div>
     <p class="yhint" id="yHint" hidden>Tap the arrows. The top of the list is what you see first.</p>
+    <div class="ylinks" id="yLinks">
+      <div class="ylinkhead"><span>Links</span><button type="button" id="yLinkAdd">Add a link</button></div>
+      <form class="ylinkform" id="yLinkForm" hidden>
+        <input id="yLinkName" placeholder="Name — High Forest Sports" maxlength="60" autocomplete="off"/>
+        <input id="yLinkUrl" placeholder="https://youtube.com/@lchssports" inputmode="url" autocomplete="off"/>
+        <button type="submit">Save</button>
+      </form>
+      <p class="ylinknote">A YouTube channel shows the stream when it is live. The link stays either way. Saved on this device.</p>
+      <div id="yLinkList"></div>
+    </div>
     <div class="ygrid" id="yGrid"></div>
     <div class="ypick" id="yPick" hidden>
       <div class="pills" id="yLeagues"></div>
@@ -5559,6 +5590,127 @@ function openPin(p){
   if(p.lg==="mls") return openMlsTeam(p.id, p.name);
   return openTeam(p.id, p.name, p.lg==="cfb"?"cfb":p.lg);
 }
+let LINKS=[];
+try{ LINKS=JSON.parse(localStorage.getItem("sauceLinks")||"[]")||[]; }catch(e){ LINKS=[]; }
+if(!Array.isArray(LINKS)) LINKS=[];
+function saveLinks(){
+  try{ localStorage.setItem("sauceLinks", JSON.stringify(LINKS.map(l=>({id:l.id,name:l.name,url:l.url})))); }catch(e){}
+}
+function ytLiveUrl(raw){
+  try{
+    const u=new URL(String(raw||"").trim());
+    const host=u.hostname.replace(/^www\./,"");
+    if(host==="youtu.be") return "";
+    if(!/(^|\.)youtube\.com$/.test(host)) return "";
+    const path=u.pathname.replace(/\/+$/,"");
+    let m=path.match(/^\/@([^/]+)/);
+    if(m) return "https://www.youtube.com/@"+m[1]+"/live";
+    m=path.match(/^\/channel\/(UC[\w-]+)/);
+    if(m) return "https://www.youtube.com/channel/"+m[1]+"/live";
+    m=path.match(/^\/(?:c|user)\/([^/]+)/);
+    if(m) return "https://www.youtube.com"+path+"/live";
+    return "";
+  }catch(e){ return ""; }
+}
+function linkHost(raw){
+  try{ return new URL(String(raw||"").trim()).hostname.replace(/^www\./,""); }catch(e){ return ""; }
+}
+async function ytLive(url){
+  const tries=["https://api.allorigins.win/raw?url="+encodeURIComponent(url)];
+  for(const u of tries){
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(), 12000);
+    try{
+      const r=await fetch(u,{cache:"no-store",signal:ctl.signal});
+      if(!r.ok) continue;
+      const html=await r.text();
+      if(!/youtube/i.test(html) || html.length<5000) return null;
+      if(!/"isLiveNow":true/.test(html)) return {live:false};
+      const vid=(html.match(/watch\?v=([A-Za-z0-9_-]{11})/)||[])[1]||(html.match(/"videoId":"([A-Za-z0-9_-]{11})"/)||[])[1]||"";
+      let title=(html.match(/<meta property="og:title" content="([^"]*)"/)||[])[1]||"";
+      title=title.replace(/&/g,"&").replace(/&#39;/g,"'").replace(/"/g,'"');
+      if(!vid) return {live:false};
+      return {live:true, vid, title};
+    }catch(e){}
+    finally{ clearTimeout(timer); }
+  }
+  return null;
+}
+let LINK_SIG="";
+function paintLinks(){
+  const host=$("yLinkList");
+  if(!host) return;
+  const sig=LINKS.map(l=>[l.id,l.name,l.url,l._live?l._vid:"",l._title||""].join("|")).join("~");
+  if(sig===LINK_SIG) return;
+  LINK_SIG=sig;
+  if(!LINKS.length){ host.innerHTML=""; return; }
+  host.innerHTML=LINKS.map(l=>{
+    const open=ytLiveUrl(l.url)||l.url;
+    const drop=`<button type="button" class="yremove" data-linkdrop="${esc(l.id)}" aria-label="Remove">×</button>`;
+    if(l._live && l._vid){
+      return `<div class="ylink live"><div class="ylinktop"><span class="ylive">Live</span><b>${esc(l.name)}</b>${drop}</div><p class="ystream">${esc(l._title||"Live now")}</p><div class="yframe"><iframe src="https://www.youtube.com/embed/${encodeURIComponent(l._vid)}" title="${esc(l._title||l.name)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><a class="ylinkopen" href="${esc(open)}" target="_blank" rel="noopener">Open on YouTube</a></div>`;
+    }
+    return `<div class="ylink"><a href="${esc(open)}" target="_blank" rel="noopener"><b>${esc(l.name)}</b><em>${esc(linkHost(l.url)||"Link")}</em></a>${drop}</div>`;
+  }).join("");
+  host.querySelectorAll("[data-linkdrop]").forEach(b=>b.onclick=e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    LINKS=LINKS.filter(l=>l.id!==b.dataset.linkdrop);
+    saveLinks();
+    LINK_SIG="";
+    paintLinks();
+  });
+}
+async function checkLinks(){
+  if(window.VIEW_NOW && window.VIEW_NOW!=="home") return;
+  let changed=false;
+  for(const l of LINKS){
+    const liveUrl=ytLiveUrl(l.url);
+    l._yt=liveUrl;
+    if(!liveUrl){ if(l._live){ l._live=false; l._vid=""; changed=true; } continue; }
+    const hit=await ytLive(liveUrl);
+    if(!hit) continue;
+    const next=!!hit.live && !!hit.vid;
+    if(!!l._live!==next || (l._vid||"")!==(hit.vid||"") || (l._title||"")!==(hit.title||"")) changed=true;
+    l._live=next;
+    l._vid=hit.vid||"";
+    l._title=hit.title||"";
+  }
+  if(changed){ LINK_SIG=""; paintLinks(); }
+}
+function bootLinks(){
+  const add=$("yLinkAdd");
+  const form=$("yLinkForm");
+  if(!add || add.dataset.bound){ paintLinks(); return; }
+  add.dataset.bound="1";
+  add.onclick=()=>{
+    form.hidden=!form.hidden;
+    add.textContent=form.hidden?"Add a link":"Close";
+    if(!form.hidden && $("yLinkName")) $("yLinkName").focus();
+  };
+  form.onsubmit=e=>{
+    e.preventDefault();
+    const name=($("yLinkName").value||"").trim();
+    let url=($("yLinkUrl").value||"").trim();
+    if(!name || !url) return;
+    if(!/^https?:\/\//i.test(url)) url="https://"+url;
+    try{ url=new URL(url).toString(); }catch(err){ return; }
+    if(LINKS.some(l=>l.url===url)){ form.hidden=true; add.textContent="Add a link"; return; }
+    if(LINKS.length>=12) return;
+    LINKS.push({id:Date.now().toString(36), name, url});
+    saveLinks();
+    $("yLinkName").value="";
+    $("yLinkUrl").value="";
+    form.hidden=true;
+    add.textContent="Add a link";
+    LINK_SIG="";
+    paintLinks();
+    checkLinks();
+  };
+  paintLinks();
+  checkLinks();
+  setInterval(checkLinks, 180000);
+}
 function bootYours(){
   const leagues=$("yLeagues");
   const kind=$("yKind");
@@ -5679,6 +5831,7 @@ function bootYours(){
   }, 20000);
 }
 try{ bootYours(); }catch(e){}
+try{ bootLinks(); }catch(e){}
 let SLIP = [];
 try{ SLIP = JSON.parse(localStorage.getItem("sauceSlip")||"[]")||[]; }catch(e){ SLIP=[]; }
 function saveSlip(){ try{ localStorage.setItem("sauceSlip", JSON.stringify(SLIP)); }catch(e){} }
