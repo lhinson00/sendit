@@ -236,6 +236,9 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard.live .sc em{color:var(--orange)}
 .gcard .sub{font-size:12px;color:#c9c2b8;margin-top:6px;line-height:1.4}
 .gcard .sub b{color:var(--ember)}
+.gjump{display:flex;gap:8px;margin-top:10px}
+.gjump button{flex:1;border:1px solid #2a241c;background:#0c0e14;color:#f7f2ea;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:9px 6px;border-radius:6px}
+.gjump button.hl{color:#ff7a18;border-color:#3a2a18}
 .ufc-row{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:start;gap:4px 8px;padding:4px 0 8px}
 .ufc-row .f{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;min-width:0;width:100%;position:relative}
 .ufc-row .f .star{position:absolute;top:0;left:0;z-index:2}
@@ -350,17 +353,30 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .tgame .dec.W{color:#3ee0a0}.tgame .dec.L{color:#ff8a8a}
 .tgame button{border:0;background:0;color:inherit;font:inherit;text-align:left;padding:0}
 .hlist{margin:6px 0 18px}
-.histhead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 8px;border-bottom:1px solid #3a2a18}
+.histhead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0 6px;border-bottom:1px solid #3a2a18}
 .histhead span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:800}
 .histhead b{font-family:"Bebas Neue",sans-serif;font-size:28px;color:#ff7a18;letter-spacing:.04em;line-height:1}
-.hrow{padding:14px 0;border-bottom:1px solid #221e18}
-.hmain{display:grid;grid-template-columns:78px minmax(0,1fr) auto;gap:4px 10px;align-items:baseline}
-.hrow .yr{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:#c9c2b8}
-.hconf{font-size:12px;color:#9a9186}
-.hrow .wl{font-family:"Bebas Neue",sans-serif;font-size:30px;letter-spacing:.03em;line-height:.9}
-.hrow .wl.up{color:#ff7a18}
-.hrow .wl.down{color:#8d867c}
-.hpost{margin-top:10px;background:#101218;border:1px solid #2a241c;border-left:3px solid #ff7a18}
+.hnote{margin:8px 0 0;font-size:12px;color:#8d867c}
+.hdecade{display:flex;justify-content:space-between;align-items:baseline;margin:18px 0 2px;padding:8px 0 4px;border-bottom:1px solid #3a2a18}
+.hdecade span{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.08em;color:#f7f2ea}
+.hdecade b{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#ffd29a}
+.hrow{border-bottom:1px solid #221e18}
+.hgo{display:grid;grid-template-columns:72px minmax(0,1fr) minmax(0,42%);width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:12px 0;align-items:center;gap:8px}
+.hgo .yr{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:#c9c2b8}
+.hmid{display:flex;flex-direction:column;min-width:0}
+.hmid .wl{font-family:"Bebas Neue",sans-serif;font-size:24px;letter-spacing:.03em;line-height:.9}
+.hmid .wl.up{color:#ff7a18}
+.hmid .wl.down{color:#8d867c}
+.hmid i{margin-top:3px;font-style:normal;font-size:11px;color:#9a9186}
+.hchip{justify-self:end;text-align:right;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;line-height:1.25;color:#c9c2b8}
+.hchip.champ{color:#ffd29a}
+.hchip.won{color:#3ee0a0}
+.hchip.lost{color:#ffb4a2}
+.hchip.miss{color:#6f6a62;font-weight:650}
+.hdetail{display:none;padding:0 0 12px}
+.hrow.open .hdetail{display:block}
+.hpost{background:#101218;border:1px solid #2a241c;border-left:3px solid #ff7a18}
+.hpost.champ{border-left-color:#ffd29a}
 .hpost .plabel{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-bottom:1px solid #2a241c;font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#ff7a18}
 .hseries{padding:8px 10px 10px;border-bottom:1px solid #1c1914}
 .hseries:last-child{border-bottom:0}
@@ -374,7 +390,6 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .hgame b{font-family:"Bebas Neue",sans-serif;font-size:16px;color:#f7f2ea;font-weight:400;letter-spacing:.03em}
 .hgame .dec.W{color:#3ee0a0;font-weight:800}
 .hgame .dec.L{color:#ff8a8a;font-weight:800}
-.hmiss{margin-top:8px;padding:7px 10px;border:1px dashed #2a241c;color:#8d867c;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
 .sgrp{margin:16px 0 8px}
 .sgrp h3{margin:0 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -1830,6 +1845,7 @@ function paint(games){
         ${field}
         ${sub?`<div class="sub">${sub}</div>`:""}
         ${oddsTape(g,"peek")}
+        ${done?`<div class="gjump" data-stop="1"><button type="button" data-jump="box">Box score</button><button type="button" class="hl" data-jump="hl">Highlights</button></div>`:""}
       </div>`;
     };
     if(LEAGUE==="mlb" || LEAGUE==="mls"){
@@ -1859,6 +1875,12 @@ function paint(games){
     const face=e.target.closest("[data-fighter]");
     if(face){ e.preventDefault(); e.stopPropagation(); openFighter(face.dataset.fighter||"", face.dataset.fname||"Fighter"); return; }
     openGame(b.dataset.gid, b.dataset.fid||b.dataset.gid);
+  });
+  host.querySelectorAll("[data-jump]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const card=b.closest("[data-gid]");
+    if(!card) return;
+    openGame(card.dataset.gid, card.dataset.fid||card.dataset.gid, b.dataset.jump);
   });
   host.querySelectorAll("[data-fav]").forEach(b=>b.onclick=e=>{
     e.stopPropagation();
@@ -3789,11 +3811,14 @@ async function mlbLive(g){
   const half=ls.inningState==="Top"?"Top":ls.inningState==="Bottom"?"Bottom":(ls.inningState||"");
   return {pitches, balls, strikes, outs, onFirst:onBag("first"), onSecond:onBag("second"), onThird:onBag("third"), pitcher:guy(match.pitcher), batter:guy(match.batter), line:{innings:ls.innings||[], teams:ls.teams||{}, currentInning:ls.currentInning, half:ls.inningState||""}, label:(()=>{ if(!half||!ls.currentInning) return ""; const n=Number(ls.currentInning); const suf=n%10===1&&n%100!==11?"st":n%10===2&&n%100!==12?"nd":n%10===3&&n%100!==13?"rd":"th"; return half+" "+n+suf; })() , plays};
 }
-async function openGame(id, fid){
+async function openGame(id, fid, dest){
   OPEN = String(fid||id||"");
   window.NBA_SIG="";
   window.HL_TRIES=0;
   window.GAME_BUSY=false;
+  window.FTAB = dest==="hl"?"hl":dest==="box"?"box":"live";
+  window.GAME_PANE = dest==="hl"?"hl":dest==="box"?"box":"cast";
+  window.OPEN_JUMP = dest||"";
   if(window.trackUse) window.trackUse("game", (LEAGUE||"")+" "+String(id||fid||""));
   if(poll){ clearInterval(poll); poll=null; }
   show("game");
@@ -3920,6 +3945,13 @@ async function openGame(id, fid){
         if(!g.state) g.state=st0.state||"";
       }
       renderGame(g, sum);
+      if(window.OPEN_JUMP){
+        const want=window.OPEN_JUMP;
+        const el=want==="hl"
+          ? document.querySelector("#hlPane, #clipMount .fieldwrap, #clipMount")
+          : document.querySelector("#boxPane, #gameBody .boxtable, #gameBody .fsec[data-sec='box']");
+        if(el){ window.OPEN_JUMP=""; el.scrollIntoView({block:"start", behavior:"auto"}); }
+      }
       if(window.NBA_HOLD) window.NBA_SIG=window.NBA_HOLD;
       const headerC = (((sum.header||{}).competitions)||[])[0] || {};
       (headerC.competitors||[]).forEach(x=>{
@@ -7053,9 +7085,26 @@ async function fillTeamHistory(kind, tid){
     if(!list.length){ host.innerHTML="<p class='hint'>No season history posted.</p>"; return; }
     const w=list.reduce((s,r)=>s+r.w,0), l=list.reduce((s,r)=>s+r.l,0), t=list.reduce((s,r)=>s+r.t,0);
     const mark=n=>n.w+"–"+n.l+(n.t?"–"+n.t:"");
+    const shortRound=s=>String(s||"")
+      .replace(/\s+·.*$/,"")
+      .replace(/Super Bowl [IVXLCDM0-9]+/i,"Super Bowl")
+      .replace(/World Series/i,"World Series")
+      .replace(/Conference Championship/i,"Title Game")
+      .replace(/Divisional Round/i,"Divisional")
+      .replace(/Wild Card( Round| Game)?/i,"Wild Card")
+      .replace(/First Round/i,"First Round")
+      .trim();
+    const chip=r=>{
+      if(!r.rounds) return {t:"", k:""};
+      if(!r.rounds.length) return {t:r.miss||"No playoffs", k:"miss"};
+      const last=r.rounds[r.rounds.length-1];
+      const sw=last.games.filter(g=>g.win).length, sl=last.games.length-sw, won=sw>sl;
+      const champ=won && /super bowl|world series|nba finals|final four|national championship|championship game/i.test(last.round) && !/first|wild|divisional|semi|sweet|elite|region/i.test(last.round);
+      if(champ) return {t:"Champions", k:"champ"};
+      return {t:(won?"Won ":"Lost ")+shortRound(last.round), k:won?"won":"lost"};
+    };
     const postBox=r=>{
-      if(!r.rounds) return "";
-      if(!r.rounds.length) return `<div class="hmiss">${esc(r.miss||"Did not qualify")}</div>`;
+      if(!r.rounds || !r.rounds.length) return "";
       const blocks=r.rounds.map(s=>{
         const sw=s.games.filter(g=>g.win).length, sl=s.games.length-sw, won=sw>sl;
         if(s.games.length===1){
@@ -7067,14 +7116,41 @@ async function fillTeamHistory(kind, tid){
         const games=s.games.map((g,i)=>`<div class="hgame"><span>G${esc(g.g||i+1)}</span><span class="dec ${g.win?"W":"L"}">${g.win?"W":"L"}</span><span>${esc(g.ha+" "+(g.oppAb||g.opp))}</span><b>${g.ms&&g.os?esc(g.ms+"–"+g.os):""}</b></div>`).join("");
         return `<div class="hseries"><div class="shead"><b>${esc(s.round)}</b><span class="sres ${won?"won":"lost"}">${sw}–${sl}${opp?" · "+esc(opp):""}</span></div>${games}</div>`;
       }).join("");
-      const last=r.rounds[r.rounds.length-1];
-      const champ=last && last.games.filter(g=>g.win).length>last.games.filter(g=>!g.win).length && /super bowl|world series|nba finals|national championship|championship game/i.test(last.round) && !/first|wild|divisional|semi|sweet|elite|region/i.test(last.round);
-      return `<div class="hpost"><div class="plabel"><span>Postseason</span>${champ?"<span>Champions</span>":""}</div>${blocks}</div>`;
+      const champ=chip(r).k==="champ";
+      return `<div class="hpost${champ?" champ":""}"><div class="plabel"><span>Postseason</span>${champ?"<span>Champions</span>":""}</div>${blocks}</div>`;
     };
-    host.innerHTML=`<div class="hlist"><div class="histhead"><span>${list.length} seasons</span><b>${w}–${l}${t?"–"+t:""}</b></div>`+list.map(r=>{
+    window.HIST_OPEN=window.HIST_OPEN||{};
+    const bag=window.HIST_OPEN[kind+"|"+tid]||(window.HIST_OPEN[kind+"|"+tid]={});
+    if(!bag._set && list.some(r=>r.rounds)){
+      const top=list.find(r=>r.rounds && r.rounds.length);
+      if(top) bag[top.year]=1;
+      bag._set=1;
+    }
+    let decade=null, body="";
+    list.forEach(r=>{
+      const d=Math.floor(Number(r.year)/10)*10;
+      if(d!==decade){
+        decade=d;
+        const slice=list.filter(x=>Math.floor(Number(x.year)/10)*10===d);
+        const titles=slice.filter(x=>chip(x).k==="champ").length;
+        body+=`<div class="hdecade"><span>${d}s</span>${titles?`<b>${titles} title${titles>1?"s":""}</b>`:""}</div>`;
+      }
+      const c=chip(r);
       const cls=r.w>r.l?"up":r.w<r.l?"down":"";
-      return `<div class="hrow"><div class="hmain"><span class="yr">${r.label}</span><span class="hconf">${esc(r.conf||"")}</span><b class="wl ${cls}">${mark(r)}</b></div>${postBox(r)}</div>`;
-    }).join("")+"</div>";
+      const has=r.rounds && r.rounds.length;
+      const opened=!!(has && bag[r.year]);
+      const head=`<span class="yr">${r.label}</span><span class="hmid"><b class="wl ${cls}">${mark(r)}</b>${r.conf?`<i>${esc(r.conf)}</i>`:""}</span><span class="hchip ${c.k}">${esc(c.t)}</span>`;
+      body+=`<div class="hrow${opened?" open":""}">${has?`<button type="button" class="hgo" data-year="${r.year}">${head}</button><div class="hdetail">${postBox(r)}</div>`:`<div class="hgo">${head}</div>`}</div>`;
+    });
+    host.innerHTML=`<div class="hlist"><div class="histhead"><span>${list.length} seasons</span><b>${w}–${l}${t?"–"+t:""}</b></div><p class="hnote">Tap a season for the postseason path.</p>${body}</div>`;
+    host.querySelectorAll(".hgo[data-year]").forEach(b=>{
+      if(!b.dataset.year) return;
+      b.onclick=()=>{
+        const y=b.dataset.year;
+        bag[y]=bag[y]?0:1;
+        paint();
+      };
+    });
   };
   const roundOf=h=>{
     let s=String(h||"Postseason").replace(/\s+Presented by.*$/i,"").replace(/^Men's Basketball Championship\s*[-–]\s*/i,"");
