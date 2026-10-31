@@ -3792,6 +3792,7 @@ async function mlbLive(g){
 async function openGame(id, fid){
   OPEN = String(fid||id||"");
   window.NBA_SIG="";
+  window.HL_TRIES=0;
   window.GAME_BUSY=false;
   if(window.trackUse) window.trackUse("game", (LEAGUE||"")+" "+String(id||fid||""));
   if(poll){ clearInterval(poll); poll=null; }
@@ -3885,8 +3886,15 @@ async function openGame(id, fid){
         const awayC=comps0.find(x=>x.homeAway==="away")||comps0[0]||{};
         const homeC=comps0.find(x=>x.homeAway==="home")||comps0[1]||{};
         const lastP=((sum.plays||[]).filter(p=>p&&p.text).slice(-1)[0])||{};
-        const sig=String(lastP.id||"")+"|"+String(awayC.score==null?"":awayC.score)+"|"+String(homeC.score==null?"":homeC.score);
+        const sig=String(lastP.id||"")+"|"+String(awayC.score==null?"":awayC.score)+"|"+String(homeC.score==null?"":homeC.score)+"|"+String((sum.videos||[]).length);
         const clock=((hdr0.status||{}).type||{}).shortDetail||((hdr0.status||{}).type||{}).detail||"";
+        const st0=(hdr0.status||{}).type||{};
+        const post=!!(st0.completed || st0.state==="post");
+        if(post){
+          const need=!(sum.videos||[]).length;
+          window.HL_TRIES=need?(window.HL_TRIES||0)+1:0;
+          if(!need || window.HL_TRIES>45){ if(poll) clearInterval(poll); poll=null; }
+        }
         if(window.NBA_SIG===sig){
           const el=document.querySelector("#gameBody .scorestrip .clock");
           if(el && clock) el.textContent=clock;
@@ -3922,7 +3930,10 @@ async function openGame(id, fid){
       const state = (headerC.status||{}).type || {};
       if(state.state) g.state=state.state;
       pulseBoard(g);
-      if(state.completed || state.state==="post"){ if(poll) clearInterval(poll); poll=null; }
+      if(state.completed || state.state==="post"){
+        const waitClip=(LEAGUE==="nba"||LEAGUE==="cbb") && !(sum.videos||[]).length && (window.HL_TRIES||0)<=45;
+        if(!waitClip){ if(poll) clearInterval(poll); poll=null; }
+      }
     }catch(e){
       if(!$("gameBody")) $("gameRoom").innerHTML = "<p class='hint'>Could not open game. "+(e.message||"")+"</p>";
     }finally{
@@ -8337,7 +8348,11 @@ function renderNba(g, sum){
     return `<div class="leadgrid"><span>${label}</span>${side(away.id)}${side(home.id)}</div>`;
   };
   const leaders=`<section class="problock"><h3>Game leaders</h3>${statHead}${leadCard("points","PTS")}${leadCard("rebounds","REB")}${leadCard("assists","AST")}</section>`;
+  const done=st.state==="post";
+  const clips=done?videoClips(sum):"";
   if(!$("gameBody")) $("gameRoom").innerHTML="<div id='gameBody'></div>";
+  let pane=window.GAME_PANE||"cast";
+  if(!done && pane==="hl") pane="cast";
   const groups=((sum.boxscore||{}).players)||[];
   const boxTable=g=>{
     const block=((g.statistics)||[])[0]||{};
@@ -8374,29 +8389,32 @@ function renderNba(g, sum){
     const t=g.team||{};
     return `<button type="button" data-side="${i}" class="${String(i)===sideOn?"on":""}"><img alt="" src="${(t.logo)||logo(i?home:away)}"/>${t.abbreviation||""}</button>`;
   }).join("");
-  const pane=window.GAME_PANE||"cast";
   const awayPop=!!(fresh && callPlay && callPlay.made && String(callPlay.teamId)===String(away.id));
   const homePop=!!(fresh && callPlay && callPlay.made && String(callPlay.teamId)===String(home.id));
+  const hl=done?`<div id="hlPane" ${pane==="hl"?"":"hidden"}>${clips?`<div class="fieldwrap"><p class="hint">Game highlights</p><div class="clips">${clips}</div></div>`:"<p class='hint'>Highlights post after the game.</p>"}</div>`:"";
   $("gameBody").innerHTML=`<div class="cast">
     <div class="scorestrip"><img alt="" src="${logo(away)}"/><div><b class="${awayPop?"bump":""}">${sc(away)}</b><span>${nm(away)}</span><em>${rec(away)}</em></div><div class="clock">${st.shortDetail||st.detail||""}</div><div><b class="${homePop?"bump":""}">${sc(home)}</b><span>${nm(home)}</span><em>${rec(home)}</em></div><img alt="" src="${logo(home)}"/></div>
     ${line}
     <div class="casttabs">
       <button type="button" data-pane="cast" class="${pane==="cast"?"on":""}">Gamecast</button>
       <button type="button" data-pane="box" class="${pane==="box"?"on":""}">Box Score</button>
+      ${done?`<button type="button" data-pane="hl" class="${pane==="hl"?"on":""}">Highlights</button>`:""}
     </div>
-    <div id="castPane" ${pane==="box"?"hidden":""}>
+    <div id="castPane" ${pane==="cast"?"":"hidden"}>
       ${court}
       <section class="problock"><h3>Team stats</h3>${cmp}</section>
       ${leaders}
       <section class="problock"><h3>Play-by-play</h3><ol class="espnplays">${trail||"<li><span>No plays posted yet.</span></li>"}</ol></section>
     </div>
-    <div id="boxPane" ${pane==="cast"?"hidden":""}>${groups.length?`<div class="boxteams">${boxBtns}</div>${boxSides}`:"<p class='hint'>Box score not posted yet.</p>"}</div>
+    <div id="boxPane" ${pane==="box"?"":"hidden"}>${groups.length?`<div class="boxteams">${boxBtns}</div>${boxSides}`:"<p class='hint'>Box score not posted yet.</p>"}</div>
+    ${hl}
   </div>`;
   $("gameBody").querySelectorAll(".casttabs button").forEach(b=>{
     b.onclick=()=>{
       window.GAME_PANE=b.dataset.pane;
       $("castPane").hidden=b.dataset.pane!=="cast";
       $("boxPane").hidden=b.dataset.pane!=="box";
+      if($("hlPane")) $("hlPane").hidden=b.dataset.pane!=="hl";
       $("gameBody").querySelectorAll(".casttabs button").forEach(n=>n.classList.toggle("on", n===b));
     };
   });
