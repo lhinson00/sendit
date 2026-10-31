@@ -300,6 +300,18 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
 .pills button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
+.brack{padding:4px var(--pad) 28px}
+.bdiv{margin:6px 0 2px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d867c;font-weight:800}
+.bround{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18;font-weight:800}
+.bgame{background:#101218;border:1px solid #2a241c;border-radius:8px;margin:0 0 8px;padding:8px 10px 4px}
+.bmeta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#8d867c;letter-spacing:.04em}
+.bslot{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0}
+.bslot + .bslot{border-top:1px solid #221e18}
+.bslot .seed{font-size:11px;color:#9a9186}
+.bslot b{font-size:15px;font-weight:700}
+.bslot .host{color:#ff7a18;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;margin-right:5px}
+.bslot small{color:#8d867c;font-weight:600;margin-left:6px}
+.bslot .sc{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.03em}
 .pollgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:8px var(--pad) 24px}
 @media(max-width:800px){.pollgrid{grid-template-columns:1fr}}
 .pollcol h3{margin:0 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
@@ -1116,6 +1128,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <span class="tabs" id="tssaaTabs" hidden>
       <button type="button" class="tabbtn on" id="tabTnFb">Football</button>
       <button type="button" class="tabbtn" id="tabTnStand">Standings</button>
+      <button type="button" class="tabbtn" id="tabTnBrack">Brackets</button>
       <button type="button" class="tabbtn" id="tabTnBb" disabled title="Closer to November 1">Basketball</button>
     </span>
   </div>
@@ -2513,18 +2526,118 @@ function fmtTnDate(s){
   if(isNaN(dt)) return s;
   return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
 }
+const TN_BRACKS=[
+  {id:"20260101",label:"1A",division:"I"},
+  {id:"20260102",label:"2A",division:"I"},
+  {id:"20260103",label:"3A",division:"I"},
+  {id:"20260104",label:"4A",division:"I"},
+  {id:"20260105",label:"5A",division:"I"},
+  {id:"20260106",label:"6A",division:"I"},
+  {id:"20260107",label:"A",division:"II"},
+  {id:"20260108",label:"AA",division:"II"},
+  {id:"20260109",label:"AAA",division:"II"}
+];
+function tnBracketRound(label){
+  const n=Number((String(label||"").match(/(\d+)/)||[])[1]||0);
+  return {1:"First round",2:"Second round",3:"Quarterfinals",4:"Semifinals",5:"Championship"}[Math.floor(n/100)]||"Playoffs";
+}
+function parseTnBracket(html){
+  const text=s=>String(s||"").replace(/<br\s*\/?>/gi," ").replace(/<[^>]+>/g," ").replace(/&nbsp;/g," ").replace(/&/g,"&").replace(/&#39;/g,"'").replace(/\s+/g," ").trim();
+  const games=[];
+  (String(html||"").match(/<table class="game"[\s\S]*?<\/table>/gi)||[]).forEach(g=>{
+    const label=text((g.match(/class="label">([\s\S]*?)<\/div>/i)||[])[1]);
+    const when=text((g.match(/class="infoBottom">([\s\S]*?)<\/div>/i)||[])[1]);
+    const id=(g.match(/data-eventid="(\d+)"/i)||[])[1]||"";
+    const teams=[];
+    (g.match(/<tr>([\s\S]*?)<\/tr>/gi)||[]).forEach(row=>{
+      if(!/schoolName/i.test(row)) return;
+      teams.push({
+        seed:text((row.match(/class="seed">([\s\S]*?)<\/td>/i)||[])[1]),
+        name:text((row.match(/class="schoolName"[^>]*>([\s\S]*?)<\/span>/i)||[])[1]),
+        rec:text((row.match(/<small>([\s\S]*?)<\/small>/i)||[])[1]).replace(/[()]/g,""),
+        host:/hostIndicator/i.test(row),
+        score:text((row.match(/class="[^"]*score[^"]*"[^>]*>([\s\S]*?)</i)||[])[1])
+      });
+    });
+    if(label) games.push({id, label, when, teams:teams.slice(0,2)});
+  });
+  games.sort((a,b)=>Number((a.label.match(/(\d+)/)||[])[1]||0)-Number((b.label.match(/(\d+)/)||[])[1]||0));
+  return games;
+}
+async function loadTnBracketFile(){
+  if(window.TN_BRACKETS) return;
+  window.TN_BRACKETS={};
+  try{
+    const r=await fetch("/data/tssaa-brackets.json",{cache:"no-store"});
+    if(!r.ok) return;
+    const d=await r.json();
+    (d.classes||[]).forEach(c=>{ window.TN_BRACKETS[c.id]=c.games||[]; });
+  }catch(e){}
+}
+async function refreshTnBracket(id){
+  const src="https://tssaasports.com/event/bracket.cfm?id="+id;
+  try{
+    const r=await fetch("https://api.allorigins.win/raw?url="+encodeURIComponent(src),{cache:"no-store"});
+    if(!r.ok) return false;
+    const html=await r.text();
+    if(!/class="game"/i.test(html)) return false;
+    const games=parseTnBracket(html);
+    if(!games.length) return false;
+    window.TN_BRACKETS[id]=games;
+    return true;
+  }catch(e){ return false; }
+}
+function paintTnBrackets(){
+  const host=$("boardPanel");
+  if(!host) return;
+  host.hidden=false;
+  if($("liveList")) $("liveList").hidden=true;
+  const id=window.TN_BRACK||"20260102";
+  window.TN_BRACK=id;
+  const meta=TN_BRACKS.find(x=>x.id===id)||TN_BRACKS[1];
+  if($("liveMeta")) $("liveMeta").textContent="TSSAA · Division "+meta.division+" · "+meta.label+" · Playoffs";
+  const pills=TN_BRACKS.map(c=>`<button type="button" data-brack="${c.id}" class="${c.id===id?"on":""}">${c.division==="II"?"II ":""}${c.label}</button>`).join("");
+  const games=(window.TN_BRACKETS&&window.TN_BRACKETS[id])||[];
+  let body="", round="";
+  if(!games.length) body="<p class='hint'>Loading the bracket…</p>";
+  games.forEach(g=>{
+    const name=tnBracketRound(g.label);
+    if(name!==round){ round=name; body+=`<h3 class="bround">${name}</h3>`; }
+    const slots=(g.teams||[]).map(t=>`<div class="bslot"><span class="seed">${esc(t.seed||"")}</span><span><b>${t.host&&t.name?'<i class="host">H</i>':""}${esc(t.name||"TBD")}</b>${t.rec?`<small>${esc(t.rec)}</small>`:""}</span><span class="sc">${esc(t.score||"")}</span></div>`).join("");
+    body+=`<div class="bgame"><div class="bmeta"><span>${esc(g.label||"")}</span><span>${esc(g.when||"")}</span></div>${slots}</div>`;
+  });
+  host.innerHTML=`<div class="brack"><div class="pills">${pills}</div><p class="bdiv">${meta.division==="II"?"Division II":"Division I"} · Class ${esc(meta.label)}</p>${body}</div>`;
+  host.querySelectorAll("[data-brack]").forEach(b=>b.onclick=()=>{
+    window.TN_BRACK=b.dataset.brack;
+    paintTnBrackets();
+    refreshTnBracket(b.dataset.brack).then(ok=>{
+      if(ok && window.TN_TAB==="brack" && window.TN_BRACK===b.dataset.brack) paintTnBrackets();
+    });
+  });
+}
+async function openTnBrackets(){
+  await loadTnBracketFile();
+  if(window.TN_TAB!=="brack") return;
+  paintTnBrackets();
+  const id=window.TN_BRACK||"20260102";
+  const ok=await refreshTnBracket(id);
+  if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
+}
 function tssaaTab(which){
   window.TN_TAB=which;
   if(!(window.TNFB&&window.TNFB.games&&window.TNFB.games.length)){
-    loadTnPack().then(()=>{ paintTnSlate(); if(which==="stand") paintTnStand(); });
+    loadTnPack().then(()=>{ if(which==="stand") paintTnStand(); else if(which!=="brack") paintTnSlate(); });
   }
   if($("tabEatAny")) $("tabEatAny").hidden=true;
   markEatBack();
   if($("eatPanel")) $("eatPanel").hidden=true;
   if($("tabTnFb")) $("tabTnFb").classList.toggle("on", which==="fb");
   if($("tabTnStand")) $("tabTnStand").classList.toggle("on", which==="stand");
+  if($("tabTnBrack")) $("tabTnBrack").classList.toggle("on", which==="brack");
   if(which==="stand"){
     if(!window.JUST_BACK) paintTnStand();
+  } else if(which==="brack"){
+    openTnBrackets();
   } else {
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
@@ -8516,6 +8629,7 @@ function nhlTab(which){
 }
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
+$("tabTnBrack") && ($("tabTnBrack").onclick=()=>tssaaTab("brack"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
  runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls();
