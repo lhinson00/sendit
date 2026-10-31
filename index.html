@@ -286,13 +286,14 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .gcard.tncard .sc{flex-direction:row;gap:8px;font-size:34px;padding-top:2px;align-self:center}
 .regcut{margin:10px 0 6px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8a8478}
 .rknum{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:.06em;color:var(--orange);flex:none}
-.newstick{margin:22px var(--pad) 18px;overflow:hidden;background:#16130f;border-radius:8px;box-shadow:inset 0 0 0 1px #3a2a18, inset 0 -2px 0 #ff7a18}
-.newsview{overflow:hidden}
-.newstrack{display:flex;width:max-content;will-change:transform}
-.newsrun{display:flex;flex:none}
-.newsrun b{position:relative;font-family:"Barlow Condensed",sans-serif;font-weight:500;font-size:18px;letter-spacing:.03em;color:#f7f2ea;padding:8px 0 8px 28px;white-space:nowrap}
-.newsrun b:before{content:"";position:absolute;left:12px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:#ff7a18}
-@keyframes newstick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.newstick{margin:10px var(--pad) 8px;background:#101218;border:1px solid #2a241c;border-top:2px solid var(--orange)}
+.wireh{display:flex;justify-content:space-between;align-items:baseline;padding:8px 12px 2px}
+.wireh span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--orange)}
+.wirelist{list-style:none;margin:0;padding:0 12px 4px}
+.wirelist li{position:relative;padding:9px 0 9px 14px;border-top:1px solid #221e18;font-size:15px;line-height:1.35;font-weight:650;color:#f7f2ea}
+.wirelist li:first-child{border-top:0}
+.wirelist li:before{content:"";position:absolute;left:0;top:16px;width:5px;height:5px;border-radius:50%;background:#ff7a18}
+.wiremore{display:block;width:100%;border:0;border-top:1px solid #2a241c;background:transparent;color:#ff7a18;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:10px 12px;text-align:left}
 .pills{display:flex;gap:6px;overflow:auto;padding:8px var(--pad) 4px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
 .pills button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
@@ -1106,7 +1107,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   </div>
   <div id="cfbPills" class="pills" hidden></div>
   <div id="dayTabs" class="pills" hidden></div>
-  <div id="newsClick" class="newstick" hidden><div class="newsview"><div class="newstrack" id="newsTrack"></div></div></div>
+  <div id="newsClick" class="newstick" hidden></div>
   <div id="liveList" class="list"></div>
   <div id="boardPanel" hidden></div>
   <div id="kitPanel" hidden>
@@ -1925,43 +1926,26 @@ function dayTabLabel(off){
 }
 
 const NEWS_SLUG={nfl:"nfl",cfb:"college-football",mlb:"mlb",nhl:"nhl",nba:"nba",cbb:"mens-college-basketball",mls:"soccer",ufc:"mma"};
-runNewsClock();
-function newsEpoch(){
-  let epoch=Number(localStorage.getItem("sauceNewsEpoch")||0);
-  if(!epoch){
-    epoch=Date.now();
-    try{ localStorage.setItem("sauceNewsEpoch", String(epoch)); }catch(e){}
-  }
-  return epoch;
-}
-function runNewsClock(){
-  if(window.NEWS_CLOCK) return;
-  window.NEWS_CLOCK=1;
-  const step=()=>{
-    const el=$("newsTrack");
-    if(el){
-      const p=((Date.now()-newsEpoch())%60000)/60000;
-      el.style.transform="translateX("+(-p*50)+"%)";
-    }
-    requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
+const NEWS_LABEL={nfl:"NFL",cfb:"NCAAF",mlb:"MLB",nhl:"NHL",nba:"NBA",cbb:"NCAAB",mls:"MLS",ufc:"UFC"};
 function paintNews(){
-  const host=$("newsTrack");
+  const host=$("newsClick");
   const arts=window.NEWS||[];
   if(!host || !arts.length) return;
-  const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&","<":"<",">":">"}[c]));
-  const line=arts.map(a=>"<b>"+esc(a)+"</b>").join("");
-  host.innerHTML="<div class='newsrun'>"+line+"</div><div class='newsrun'>"+line+"</div>";
-  runNewsClock();
+  const draw=all=>{
+    const list=all?arts:arts.slice(0,6);
+    const rest=arts.length-list.length;
+    host.innerHTML=`<div class="wireh"><span>${NEWS_LABEL[window.NEWS_LG]||"Wire"}</span><span>${arts.length} headlines</span></div><ul class="wirelist">${list.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>${rest?`<button type="button" class="wiremore">Rest of the wire · ${rest}</button>`:""}`;
+    const btn=host.querySelector(".wiremore");
+    if(btn) btn.onclick=()=>draw(true);
+  };
+  draw(false);
 }
 async function loadNews(lg){
   const host=$("newsClick");
   if(!host) return;
   const slug=NEWS_SLUG[lg];
   if(!slug){ host.hidden=true; return; }
-  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; runNewsClock(); return; }
+  if(window.NEWS_LG===lg && (window.NEWS||[]).length){ host.hidden=false; paintNews(); return; }
   try{
     const res=await fetch("https://cdn.espn.com/core/"+slug+"/?xhr=1",{cache:"no-store"});
     const d=res.ok?await res.json():{};
