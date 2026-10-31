@@ -303,26 +303,24 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .brack{padding:4px var(--pad) 28px}
 .bdiv{margin:6px 0 2px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d867c;font-weight:800}
 .bhint{margin:0 0 8px;font-size:11px;color:#8d867c}
-.btree{display:flex;align-items:stretch;overflow-x:auto;padding:6px 8px 16px;-webkit-overflow-scrolling:touch;background:#f6f1e8;border:1px solid #d7cec2;border-radius:8px}
-.brcol{display:flex;flex-direction:column;width:196px;flex:none}
-.brcol h3{height:28px;margin:0;line-height:28px;text-align:center;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5c4634;font-weight:800}
-.brbody{flex:1;display:flex;flex-direction:column}
-.brslot{flex:1;display:flex;align-items:center;min-height:54px;padding:3px 0}
-.brgame{width:100%;background:#fff;border:1px solid #1c1a17;color:#161410}
-.brgame .side{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:4px;align-items:center;padding:4px 6px;border-bottom:1px solid #1c1a17;min-height:22px}
-.brgame .seed{font-size:10px;line-height:1.1;color:#5e584f;font-weight:700}
-.brgame .nm{min-width:0}
-.brgame .nm b{display:block;font-size:12px;line-height:1.15;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.brgame .side.win b{font-weight:850}
-.brgame .side.bye b{color:#8a8478;font-weight:650}
+.btree{display:flex;align-items:flex-start;overflow-x:auto;padding:8px 8px 14px;-webkit-overflow-scrolling:touch;background:#f6f1e8;border:1px solid #d7cec2;border-radius:8px}
+.brcol{position:relative;width:228px;flex:none}
+.brcol h3{height:26px;margin:0;padding:0;line-height:26px;text-align:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#5c4634;font-weight:800;font-family:inherit}
+.brbody{position:relative}
+.brslot{position:absolute;left:0;right:0;height:62px}
+.brgame{height:62px;box-sizing:border-box;display:flex;flex-direction:column;background:#fff;border:1px solid #1c1a17;color:#161410}
+.brgame .side{flex:none;display:flex;align-items:center;gap:4px;height:22px;box-sizing:border-box;padding:0 6px;border-bottom:1px solid #1c1a17}
+.brgame .seed{flex:none;width:48px;font-size:10px;line-height:1;color:#5e584f;font-weight:700}
+.brgame .who{flex:1;min-width:0;font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brgame .side.win .who{font-weight:850}
+.brgame .side.bye .who{color:#8a8478;font-weight:650}
 .brgame .host{color:#c2410c;font-style:normal;font-size:9px;font-weight:800;margin-right:3px}
-.brgame small{display:block;font-size:10px;color:#6e685f;font-weight:650}
-.brgame .sc{font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.03em}
-.brgame .when{padding:2px 6px 3px;text-align:right;font-size:10px;color:#6e685f;background:#f7f3ec}
-.brgut{width:16px;flex:none;display:flex;flex-direction:column;padding-top:28px}
-.brjoin{position:relative;min-height:54px}
-.brjoin:before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:10px;border-top:2px solid #1c1a17;border-right:2px solid #1c1a17;border-bottom:2px solid #1c1a17}
-.brjoin:after{content:"";position:absolute;left:10px;right:0;top:50%;border-top:2px solid #1c1a17}
+.brgame .rec{flex:none;font-size:10px;color:#6e685f;font-weight:650}
+.brgame .sc{flex:none;font-family:"Bebas Neue",sans-serif;font-size:16px;line-height:1}
+.brgame .when{flex:1;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:10px;color:#6e685f;background:#f7f3ec}
+.brgut{position:relative;width:18px;flex:none}
+.brline{position:absolute;left:0;width:12px;box-sizing:border-box;border-top:2px solid #1c1a17;border-right:2px solid #1c1a17;border-bottom:2px solid #1c1a17}
+.brline i{position:absolute;left:12px;width:6px;top:50%;margin-top:-1px;border-top:2px solid #1c1a17}
 .pollgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:8px var(--pad) 24px}
 @media(max-width:800px){.pollgrid{grid-template-columns:1fr}}
 .pollcol h3{margin:0 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
@@ -2622,27 +2620,37 @@ function paintTnBrackets(){
   const names=buckets.length===4?four:five;
   buckets.forEach((b,i)=>{ b.name=names[i]||(i===buckets.length-1?"Championship":"Round"); });
   const base=(buckets[0]&&buckets[0].games.length)||1;
+  const GH=62, GAP=10, UNIT=GH+GAP, HEAD=26;
+  const bodyH=base*UNIT-GAP;
   let tree="";
   if(!games.length) tree="<p class='hint'>Loading the bracket…</p>";
   else {
+    const piece=(t, win)=>{
+      const name=t.name||"TBD";
+      const bye=/^bye$/i.test(name);
+      const right=t.score?`<span class="sc">${esc(t.score)}</span>`:(t.rec?`<span class="rec">${esc(t.rec)}</span>`:"");
+      return `<div class="side${bye?" bye":""}${win?" win":""}"><span class="seed">${esc(t.seed||"")}</span><span class="who">${t.host&&t.name&&!bye?'<i class="host">H</i>':""}${esc(bye?"Bye":name)}</span>${right}</div>`;
+    };
     buckets.forEach((rnd,i)=>{
-      const span=base/Math.max(1,rnd.games.length);
-      tree+=`<section class="brcol"><h3>${rnd.name}</h3><div class="brbody">`+rnd.games.map(g=>{
+      const slot=UNIT*(base/Math.max(1,rnd.games.length));
+      tree+=`<section class="brcol" style="height:${HEAD+bodyH}px"><h3>${rnd.name}</h3><div class="brbody" style="height:${bodyH}px">`+rnd.games.map((g,gi)=>{
         const teams=(g.teams&&g.teams.length?g.teams:[{},{}]).slice(0,2);
         const nums=teams.map(t=>parseInt(t.score,10));
         const scored=nums.length===2 && nums.every(n=>!isNaN(n)) && nums[0]!==nums[1];
-        const sides=teams.map((t,ti)=>{
-          const name=t.name||"TBD";
-          const bye=/^bye$/i.test(name);
-          const win=scored && nums[ti]===Math.max(nums[0],nums[1]);
-          return `<div class="side${bye?" bye":""}${win?" win":""}"><span class="seed">${esc(t.seed||"")}</span><span class="nm">${t.host&&t.name&&!bye?'<i class="host">H</i>':""}<b>${esc(bye?"Bye":name)}</b>${t.rec?`<small>${esc(t.rec)}</small>`:""}</span>${t.score?`<span class="sc">${esc(t.score)}</span>`:""}</div>`;
-        }).join("");
-        return `<div class="brslot" style="flex:${span} 1 0"><div class="brgame">${sides}<div class="when">${esc(g.when||"")}</div></div></div>`;
+        const top=gi*slot+(slot-GH)/2;
+        const sides=teams.map((t,ti)=>piece(t, scored && nums[ti]===Math.max(nums[0],nums[1]))).join("");
+        return `<div class="brslot" style="top:${top}px"><div class="brgame">${sides}<div class="when">${esc(g.when||"")}</div></div></div>`;
       }).join("")+`</div></section>`;
       if(i<buckets.length-1){
-        const next=Math.max(1,buckets[i+1].games.length);
-        const jspan=base/next;
-        tree+=`<div class="brgut" aria-hidden="true"><div class="brbody">`+Array.from({length:next},()=>`<div class="brjoin" style="flex:${jspan} 1 0"></div>`).join("")+`</div></div>`;
+        const srcSlot=slot;
+        const nNext=Math.max(1,buckets[i+1].games.length);
+        let lines="";
+        for(let j=0;j<nNext;j++){
+          const c0=j*2*srcSlot+srcSlot/2;
+          const c1=c0+srcSlot;
+          lines+=`<div class="brline" style="top:${HEAD+c0}px;height:${c1-c0}px"><i></i></div>`;
+        }
+        tree+=`<div class="brgut" style="height:${HEAD+bodyH}px">${lines}</div>`;
       }
     });
     tree=`<div class="btree">${tree}</div>`;
