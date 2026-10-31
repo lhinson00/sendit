@@ -302,16 +302,27 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .pills button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
 .brack{padding:4px var(--pad) 28px}
 .bdiv{margin:6px 0 2px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8d867c;font-weight:800}
-.bround{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18;font-weight:800}
-.bgame{background:#101218;border:1px solid #2a241c;border-radius:8px;margin:0 0 8px;padding:8px 10px 4px}
-.bmeta{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#8d867c;letter-spacing:.04em}
-.bslot{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0}
-.bslot + .bslot{border-top:1px solid #221e18}
-.bslot .seed{font-size:11px;color:#9a9186}
-.bslot b{font-size:15px;font-weight:700}
-.bslot .host{color:#ff7a18;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.08em;margin-right:5px}
-.bslot small{color:#8d867c;font-weight:600;margin-left:6px}
-.bslot .sc{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.03em}
+.bhint{margin:0 0 8px;font-size:11px;color:#8d867c}
+.btree{display:flex;align-items:stretch;overflow-x:auto;padding:6px 8px 16px;-webkit-overflow-scrolling:touch;background:#f6f1e8;border:1px solid #d7cec2;border-radius:8px}
+.brcol{display:flex;flex-direction:column;width:196px;flex:none}
+.brcol h3{height:28px;margin:0;line-height:28px;text-align:center;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5c4634;font-weight:800}
+.brbody{flex:1;display:flex;flex-direction:column}
+.brslot{flex:1;display:flex;align-items:center;min-height:54px;padding:3px 0}
+.brgame{width:100%;background:#fff;border:1px solid #1c1a17;color:#161410}
+.brgame .side{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:4px;align-items:center;padding:4px 6px;border-bottom:1px solid #1c1a17;min-height:22px}
+.brgame .seed{font-size:10px;line-height:1.1;color:#5e584f;font-weight:700}
+.brgame .nm{min-width:0}
+.brgame .nm b{display:block;font-size:12px;line-height:1.15;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brgame .side.win b{font-weight:850}
+.brgame .side.bye b{color:#8a8478;font-weight:650}
+.brgame .host{color:#c2410c;font-style:normal;font-size:9px;font-weight:800;margin-right:3px}
+.brgame small{display:block;font-size:10px;color:#6e685f;font-weight:650}
+.brgame .sc{font-family:"Bebas Neue",sans-serif;font-size:16px;letter-spacing:.03em}
+.brgame .when{padding:2px 6px 3px;text-align:right;font-size:10px;color:#6e685f;background:#f7f3ec}
+.brgut{width:16px;flex:none;display:flex;flex-direction:column;padding-top:28px}
+.brjoin{position:relative;min-height:54px}
+.brjoin:before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:10px;border-top:2px solid #1c1a17;border-right:2px solid #1c1a17;border-bottom:2px solid #1c1a17}
+.brjoin:after{content:"";position:absolute;left:10px;right:0;top:50%;border-top:2px solid #1c1a17}
 .pollgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:8px var(--pad) 24px}
 @media(max-width:800px){.pollgrid{grid-template-columns:1fr}}
 .pollcol h3{margin:0 0 10px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
@@ -2598,15 +2609,45 @@ function paintTnBrackets(){
   if($("liveMeta")) $("liveMeta").textContent="TSSAA · Division "+meta.division+" · "+meta.label+" · Playoffs";
   const pills=TN_BRACKS.map(c=>`<button type="button" data-brack="${c.id}" class="${c.id===id?"on":""}">${c.division==="II"?"II ":""}${c.label}</button>`).join("");
   const games=(window.TN_BRACKETS&&window.TN_BRACKETS[id])||[];
-  let body="", round="";
-  if(!games.length) body="<p class='hint'>Loading the bracket…</p>";
+  const buckets=[];
   games.forEach(g=>{
-    const name=tnBracketRound(g.label);
-    if(name!==round){ round=name; body+=`<h3 class="bround">${name}</h3>`; }
-    const slots=(g.teams||[]).map(t=>`<div class="bslot"><span class="seed">${esc(t.seed||"")}</span><span><b>${t.host&&t.name?'<i class="host">H</i>':""}${esc(t.name||"TBD")}</b>${t.rec?`<small>${esc(t.rec)}</small>`:""}</span><span class="sc">${esc(t.score||"")}</span></div>`).join("");
-    body+=`<div class="bgame"><div class="bmeta"><span>${esc(g.label||"")}</span><span>${esc(g.when||"")}</span></div>${slots}</div>`;
+    const n=Number((String(g.label||"").match(/(\d+)/)||[])[1]||0);
+    const key=Math.floor(n/100)||1;
+    let b=buckets.find(x=>x.key===key);
+    if(!b){ b={key, games:[]}; buckets.push(b); }
+    b.games.push(g);
   });
-  host.innerHTML=`<div class="brack"><div class="pills">${pills}</div><p class="bdiv">${meta.division==="II"?"Division II":"Division I"} · Class ${esc(meta.label)}</p>${body}</div>`;
+  const four=["First round","Quarterfinals","Semifinals","Championship"];
+  const five=["First round","Second round","Quarterfinals","Semifinals","Championship"];
+  const names=buckets.length===4?four:five;
+  buckets.forEach((b,i)=>{ b.name=names[i]||(i===buckets.length-1?"Championship":"Round"); });
+  const base=(buckets[0]&&buckets[0].games.length)||1;
+  let tree="";
+  if(!games.length) tree="<p class='hint'>Loading the bracket…</p>";
+  else {
+    buckets.forEach((rnd,i)=>{
+      const span=base/Math.max(1,rnd.games.length);
+      tree+=`<section class="brcol"><h3>${rnd.name}</h3><div class="brbody">`+rnd.games.map(g=>{
+        const teams=(g.teams&&g.teams.length?g.teams:[{},{}]).slice(0,2);
+        const nums=teams.map(t=>parseInt(t.score,10));
+        const scored=nums.length===2 && nums.every(n=>!isNaN(n)) && nums[0]!==nums[1];
+        const sides=teams.map((t,ti)=>{
+          const name=t.name||"TBD";
+          const bye=/^bye$/i.test(name);
+          const win=scored && nums[ti]===Math.max(nums[0],nums[1]);
+          return `<div class="side${bye?" bye":""}${win?" win":""}"><span class="seed">${esc(t.seed||"")}</span><span class="nm">${t.host&&t.name&&!bye?'<i class="host">H</i>':""}<b>${esc(bye?"Bye":name)}</b>${t.rec?`<small>${esc(t.rec)}</small>`:""}</span>${t.score?`<span class="sc">${esc(t.score)}</span>`:""}</div>`;
+        }).join("");
+        return `<div class="brslot" style="flex:${span} 1 0"><div class="brgame">${sides}<div class="when">${esc(g.when||"")}</div></div></div>`;
+      }).join("")+`</div></section>`;
+      if(i<buckets.length-1){
+        const next=Math.max(1,buckets[i+1].games.length);
+        const jspan=base/next;
+        tree+=`<div class="brgut" aria-hidden="true"><div class="brbody">`+Array.from({length:next},()=>`<div class="brjoin" style="flex:${jspan} 1 0"></div>`).join("")+`</div></div>`;
+      }
+    });
+    tree=`<div class="btree">${tree}</div>`;
+  }
+  host.innerHTML=`<div class="brack"><div class="pills">${pills}</div><p class="bdiv">${meta.division==="II"?"Division II":"Division I"} · Class ${esc(meta.label)}</p><p class="bhint">Swipe across the bracket.</p>${tree}</div>`;
   host.querySelectorAll("[data-brack]").forEach(b=>b.onclick=()=>{
     window.TN_BRACK=b.dataset.brack;
     paintTnBrackets();
