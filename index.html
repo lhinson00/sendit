@@ -563,6 +563,9 @@ tr.prow{cursor:pointer}tr.prow:hover td{background:#1a140c}
 .play.hot{border-color:var(--orange)}
 .box{margin:0 var(--pad) 16px;background:#101218;border:1px solid #2a241c;overflow:auto}
 .box h3{margin:0;padding:10px 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+.fboxside .box{margin-bottom:10px}
+.fbox table.bx th:first-child,.fbox table.bx td:first-child{position:sticky;left:0;background:#101218;z-index:1;min-width:118px}
+.fbox table.bx td:not(:first-child),.fbox table.bx th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
 table.bx{width:100%;border-collapse:collapse;font-size:12px}
 table.bx th,table.bx td{padding:7px 8px;border-top:1px solid #1c1c22;text-align:left}
 table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
@@ -2830,6 +2833,42 @@ function boxHtml(sum){
     }).join("");
   }).join("");
 }
+function fbBoxHtml(sum){
+  const sides=((sum.boxscore||{}).players)||[];
+  if(!sides.length) return "<p class='hint'>Box not up yet.</p>";
+  const comps=((((sum.header||{}).competitions)||[])[0]||{}).competitors||[];
+  const wantId=c=>String((c&&(c.id||(c.team&&c.team.id)))||"");
+  const order=[comps.find(x=>x.homeAway==="away"), comps.find(x=>x.homeAway==="home")].filter(Boolean).map(wantId);
+  const ranked=sides.slice().sort((a,b)=>{
+    const ia=order.indexOf(String((a.team&&a.team.id)||""));
+    const ib=order.indexOf(String((b.team&&b.team.id)||""));
+    return (ia<0?9:ia)-(ib<0?9:ib);
+  });
+  const prefer=["passing","rushing","receiving","kicking"];
+  const on=String(window.FB_BOX||"0");
+  const buttons=ranked.map((side,i)=>{
+    const t=side.team||{};
+    const ab=t.abbreviation||t.shortDisplayName||"";
+    return `<button type="button" data-fbox="${i}" class="${String(i)===on?"on":""}">${t.logo?`<img alt="" src="${esc(t.logo)}"/>`:""}${esc(ab)}</button>`;
+  }).join("");
+  const panes=ranked.map((side,i)=>{
+    const groups=(side.statistics||[]).filter(g=>g&&(g.athletes||[]).length&&prefer.indexOf(g.name)>=0)
+      .sort((a,b)=>prefer.indexOf(a.name)-prefer.indexOf(b.name));
+    const tables=groups.map(grp=>{
+      const labels=(grp.labels||grp.names||[]).slice(0,8);
+      const title=grp.label||grp.displayName||grp.name||"";
+      const head="<tr><th>Player</th>"+labels.map(l=>"<th>"+esc(l)+"</th>").join("")+"</tr>";
+      const rows=(grp.athletes||[]).map(a=>{
+        const n=(a.athlete&&a.athlete.displayName)||"";
+        const pid=(a.athlete&&a.athlete.id)||"";
+        return "<tr class='prow' data-pid='"+pid+"' data-pname='"+String(n).replace(/"/g,"")+"'><td><span class='pname'>"+esc(n)+"</span></td>"+(a.stats||[]).slice(0,8).map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>";
+      }).join("");
+      return "<div class='box fbox'><h3>"+esc(title)+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
+    }).join("");
+    return `<div class="fboxside" data-fbox="${i}" ${String(i)===on?"":"hidden"}>${tables||"<p class='hint'>No box yet.</p>"}</div>`;
+  }).join("");
+  return `<div class="boxteams">${buttons}</div>${panes}`;
+}
 function playsHtml(sum){
   const plays = (sum.plays||[]).slice(-8).reverse();
   if(!plays.length) return "";
@@ -3492,7 +3531,7 @@ function renderFootball(g, sum){
         ${scoreList||"<p class='hint'>No scores yet.</p>"}
       </div>
     </div>
-    <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${boxHtml(sum)}</div>
+    <div class="fsec" data-sec="box" ${tab==="box"?"":"hidden"}>${fbBoxHtml(sum)}</div>
     <div class="fsec" data-sec="lead" ${tab==="lead"?"":"hidden"}>${leadBoard||"<p class='hint'>Leaders post when the box is up.</p>"}</div>`}`;
   if(pregame){
     if($("clipMount")){ $("clipMount").innerHTML=""; $("clipMount").hidden=true; }
@@ -3508,6 +3547,11 @@ function renderFootball(g, sum){
     document.querySelectorAll("[data-ftab]").forEach(x=>x.classList.toggle("on", x===b));
     document.querySelectorAll(".fsec").forEach(s=>s.hidden = s.dataset.sec!==window.FTAB);
     if($("clipMount")) $("clipMount").hidden = window.FTAB!=="hl" && window.FTAB!=="live";
+  });
+  document.querySelectorAll(".boxteams [data-fbox]").forEach(b=>b.onclick=()=>{
+    window.FB_BOX=b.dataset.fbox;
+    document.querySelectorAll(".boxteams [data-fbox]").forEach(n=>n.classList.toggle("on", n===b));
+    document.querySelectorAll(".fboxside").forEach(n=>{ n.hidden=n.dataset.fbox!==b.dataset.fbox; });
   });
   const tapeEl=document.querySelector("#gameBody .dtape");
   const onMark=tapeEl&&tapeEl.querySelector(".dmark.on");
