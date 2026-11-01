@@ -564,8 +564,15 @@ tr.prow{cursor:pointer}tr.prow:hover td{background:#1a140c}
 .box{margin:0 var(--pad) 16px;background:#101218;border:1px solid #2a241c;overflow:auto}
 .box h3{margin:0;padding:10px 12px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
 .fboxside .box{margin-bottom:10px}
-.fbox table.bx th:first-child,.fbox table.bx td:first-child{position:sticky;left:0;background:#101218;z-index:1;min-width:118px}
+.fbox table.bx th:first-child,.fbox table.bx td:first-child{position:sticky;left:0;z-index:1;min-width:118px}
 .fbox table.bx td:not(:first-child),.fbox table.bx th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.fbox table.bx tbody tr:nth-child(odd) td{background:#16130f}
+.fbox table.bx tbody tr:nth-child(even) td{background:#101218}
+.fbox table.bx thead th{background:#101218}
+.fbox table.bx td.num{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.03em;line-height:.9;color:#f7f2ea}
+.fbox table.bx td.hot{color:#ff7a18}
+.fbox table.bx td.td{color:#3ee0a0;font-weight:800}
+.fbox tr.lead td:first-child{box-shadow:inset 3px 0 0 #ff7a18}
 table.bx{width:100%;border-collapse:collapse;font-size:12px}
 table.bx th,table.bx td{padding:7px 8px;border-top:1px solid #1c1c22;text-align:left}
 table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase}
@@ -2857,11 +2864,26 @@ function fbBoxHtml(sum){
     const tables=groups.map(grp=>{
       const labels=(grp.labels||grp.names||[]).slice(0,8);
       const title=grp.label||grp.displayName||grp.name||"";
+      const key=labels.findIndex(l=>/^(YDS|PTS)$/i.test(String(l)));
+      let best=-1;
+      if(key>=0) (grp.athletes||[]).forEach(a=>{
+        const n=parseFloat(String((a.stats||[])[key]).replace(/[^0-9.]/g,""));
+        if(!isNaN(n) && n>best) best=n;
+      });
       const head="<tr><th>Player</th>"+labels.map(l=>"<th>"+esc(l)+"</th>").join("")+"</tr>";
-      const rows=(grp.athletes||[]).map(a=>{
+      const rows=(grp.athletes||[]).map((a,ai)=>{
         const n=(a.athlete&&a.athlete.displayName)||"";
         const pid=(a.athlete&&a.athlete.id)||"";
-        return "<tr class='prow' data-pid='"+pid+"' data-pname='"+String(n).replace(/"/g,"")+"'><td><span class='pname'>"+esc(n)+"</span></td>"+(a.stats||[]).slice(0,8).map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>";
+        const cells=(a.stats||[]).slice(0,labels.length).map((v,vi)=>{
+          const lab=String(labels[vi]||"");
+          const num=parseFloat(String(v).replace(/[^0-9.]/g,""));
+          const cls=[];
+          if(/^(YDS|PTS|RTG|QBR)$/i.test(lab)) cls.push("num");
+          if(key===vi && !isNaN(num) && num===best && best>0) cls.push("hot");
+          if(/^TD$/i.test(lab) && !isNaN(num) && num>0) cls.push("td");
+          return `<td class="${cls.join(" ")}">${esc(v)}</td>`;
+        }).join("");
+        return `<tr class="prow${ai===0?" lead":""}" data-pid="${pid}" data-pname="${String(n).replace(/"/g,"")}"><td><span class="pname">${esc(n)}</span></td>${cells}</tr>`;
       }).join("");
       return "<div class='box fbox'><h3>"+esc(title)+"</h3><table class='bx'><thead>"+head+"</thead><tbody>"+rows+"</tbody></table></div>";
     }).join("");
