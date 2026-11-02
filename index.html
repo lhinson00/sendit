@@ -71,23 +71,25 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ownlock{display:flex;gap:8px;margin-top:10px}
 .ownlock input{flex:1;background:#0c0d12;border:1px solid #3a3228;color:#fff;padding:10px;border-radius:8px}
 .ownlock button,.ownbtn{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:10px 14px;border-radius:8px}
-.hub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:8px var(--pad) 2px}
+.hub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px var(--pad) 14px;border-bottom:1px solid #1c1814}
 .hubk{grid-column:1/-1;margin:2px 0 0}
-.hubcard{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;padding:9px 4px;border-radius:12px;border:1px solid #2a241c;background:#101218;color:#fff}
-.hubcard img{width:16px;height:16px;object-fit:contain;margin:0;flex:none}
-.hubcard b{font-family:"Bebas Neue",sans-serif;font-size:15px;letter-spacing:.04em;font-weight:400;white-space:nowrap}
+.hubcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:62px;padding:8px 2px;border-radius:14px;border:1px solid #2a241c;background:#101218;color:#fff}
+.hubcard img{width:22px;height:22px;object-fit:contain;margin:0;flex:none}
+.hubcard b{font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:.04em;font-weight:400;white-space:nowrap}
 .hubcard span{display:none}
-.hubcard .duo{display:inline-flex;align-items:center;gap:1px;flex:none}
-.hubcard .duo img{width:14px;height:14px}
+.hubcard .duo{display:inline-flex;align-items:center;gap:2px;flex:none}
+.hubcard .duo img{width:16px;height:16px}
 .hubcard.cap{text-decoration:none;color:#fff;border-color:rgba(255,122,24,.45)}
 .hubcard.cap b{color:#ff7a18}
-.hubcard.tssaa img{width:18px;height:18px;object-fit:contain;background:#fff;border-radius:4px;padding:1px}
-.yours{padding:6px var(--pad) 4px}
-.yhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:16px}
+.hubcard.tssaa img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:5px;padding:1px}
+.yours{padding:4px var(--pad) 28px}
+.yhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:16px}
+.ytitle{min-width:0}
+.ykick{margin:0;font-size:10px;letter-spacing:.18em;font-weight:800;text-transform:uppercase;color:var(--muted)}
 .yacts{display:flex;gap:8px;align-items:center;flex:none}
-.yord{border:1px solid #3a3228;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px;border-radius:999px;padding:12px 14px;cursor:pointer}
+.yord{border:1px solid #3a3228;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:11px;border-radius:999px;padding:8px 12px;cursor:pointer}
 .yord.on{background:var(--orange);color:#140800;border-color:var(--orange)}
-.yadd{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px;border-radius:999px;padding:12px 16px;cursor:pointer}
+.yadd{border:0;background:var(--orange);color:#140800;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:11px;border-radius:999px;padding:8px 14px;cursor:pointer}
 .yhint{margin:10px 0 0;color:#c9c2b8;font-size:13px}
 .ygrid.ordering{grid-template-columns:1fr !important}
 .ycard.ysort{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px}
@@ -97,9 +99,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ycard.ysort .ymove{display:flex;gap:8px;margin-left:auto;flex:none}
 .ycard.ysort .ymove button{width:52px;height:52px;border:0;border-radius:14px;background:#24180f;color:#ffc46b;font:800 22px Manrope,sans-serif;padding:0}
 .ycard.ysort .ymove button:disabled{opacity:.28}
-.yday{margin:0;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
+.yday{margin:3px 0 0;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
 .ylede{margin:8px 0 0;color:var(--muted);font-size:13px}
-.ycard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#120e0c;border:1px solid rgba(255,122,24,.28);border-radius:16px;padding:12px;cursor:pointer;position:relative}
+.ycard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:12px;cursor:pointer;position:relative}
 .ycard.now{border-color:var(--orange);background:linear-gradient(180deg,#1c120c,#120e0c 46%)}
 .ycard.live{border-color:#3ee0a0;background:linear-gradient(180deg,#0e1a14,#120e0c 46%);box-shadow:inset 3px 0 0 #3ee0a0}
 .ycard.final .ywhen em{color:#f4efe6}
@@ -146,7 +148,8 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ystat.live .ychips b{color:#e9fff5}
 .yempty{margin-top:12px;padding:16px;border:1px dashed #3a3228;border-radius:14px;color:#c9c2b8;font-size:14px;line-height:1.45}
 .ygrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
-.ylinks{margin-top:22px;padding-top:14px;border-top:1px solid #221e18}
+.ylinks{margin-top:8px;padding-top:16px;border-top:1px solid #1c1814}
+.ylink{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;background:#0c0d12;border:1px solid #241e18;border-radius:12px;text-decoration:none;color:inherit}
 .ylinkhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ylinkhead span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#8d867c}
 .ylinkhead button,.ylinkform button{border:1px solid #3a3228;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:11px;border-radius:999px;padding:8px 12px;cursor:pointer}
@@ -154,7 +157,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ylinkform input{width:100%;background:#0c0d12;border:1px solid #3a3228;color:#fff;border-radius:10px;padding:12px;font:inherit;font-size:16px}
 .ylinkform button{align-self:flex-start;background:var(--orange);color:#140800;border-color:var(--orange)}
 .ylinknote{margin:8px 0 0;color:#8d867c;font-size:12px}
-.ylink{display:flex;align-items:center;gap:10px;margin-top:8px;padding:12px;background:#120e0c;border:1px solid #2a241c;border-radius:14px;text-decoration:none;color:inherit}
+.ylink{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;background:#0c0d12;border:1px solid #241e18;border-radius:12px;text-decoration:none;color:inherit}
 .ylink.live{display:block;border-color:#3ee0a0;box-shadow:inset 3px 0 0 #3ee0a0}
 .ylinktop{display:flex;align-items:center;gap:8px}
 .ylink a{flex:1;min-width:0;color:inherit;text-decoration:none}
@@ -1099,20 +1102,23 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   </div>
   <div class="yours" id="yours">
     <div class="yhead">
-      <p class="yday" id="yDay"></p>
+      <div class="ytitle">
+        <p class="ykick">Yours</p>
+        <p class="yday" id="yDay"></p>
+      </div>
       <div class="yacts">
         <button type="button" class="yord" id="yOrd" hidden>Order</button>
         <button type="button" class="yadd" id="yAdd">Add</button>
       </div>
     </div>
     <p class="yhint" id="yHint" hidden>Tap the arrows. The top of the list is what you see first.</p>
-    <div class="ygrid" id="yGrid"></div>
     <div class="ypick" id="yPick" hidden>
       <div class="pills" id="yLeagues"></div>
       <div class="pills" id="yKind"></div>
       <input class="yq" id="yq" placeholder="Search a team or player" autocomplete="off" enterkeyhint="search"/>
       <div id="yHits"></div>
     </div>
+    <div class="ygrid" id="yGrid"></div>
     <div class="ylinks" id="yLinks">
       <div class="ylinkhead"><span>Links</span><button type="button" id="yLinkAdd">Add a link</button></div>
       <form class="ylinkform" id="yLinkForm" hidden>
