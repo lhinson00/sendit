@@ -1090,6 +1090,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <button class="hubcard" data-lg="nhl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nhl.png"/><b>NHL</b><span>Tonight</span></button>
     <button class="hubcard" data-lg="nba"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nba.png"/><b>NBA</b><span>Preseason</span></button>
     <button class="hubcard" data-lg="cbb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png"/><b>NCAAB</b><span>Men's hoops</span></button>
+    <button class="hubcard" data-lg="wcbb"><img alt="" src="https://a.espncdn.com/redesign/assets/img/icons/ESPN-icon-basketball.png"/><b>NCAAW</b><span>Women's hoops</span></button>
     <button class="hubcard" data-lg="mls"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/mls.png"/><b>MLS</b><span>Match night</span></button>
     <button class="hubcard" data-lg="ufc"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/ufc.png"/><b>UFC</b><span>The card</span></button>
     <button class="hubcard tssaa" data-lg="tssaa"><img alt="" src="https://cms-files.tssaa.org/images/logos/tssaa-logo.png"/><b>TSSAA</b><span>Tennessee</span></button>
@@ -1167,6 +1168,11 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <button type="button" class="tabbtn" id="tabCbbStand">Standings</button>
       <button type="button" class="tabbtn" id="tabCbbLead">Leaders</button>
     </span>
+    <span class="tabs" id="wcbbTabs" hidden>
+      <button type="button" class="tabbtn on" id="tabWcbbSlate">Slate</button>
+      <button type="button" class="tabbtn" id="tabWcbbStand">Standings</button>
+      <button type="button" class="tabbtn" id="tabWcbbLead">Leaders</button>
+    </span>
     <span class="tabs" id="mlsTabs" hidden>
       <button type="button" class="tabbtn on" id="tabMlsSlate">Slate</button>
       <button type="button" class="tabbtn" id="tabMlsStand">Standings</button>
@@ -1240,6 +1246,7 @@ const URLS = {
   nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
   nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
   cbb: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard",
+  wcbb: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/womens-college-basketball/scoreboard",
   ufc: "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
   mls: "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard"
 };
@@ -1250,6 +1257,7 @@ const SUM = {
   nhl: id => "https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event="+id,
   nba: id => "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event="+id,
   cbb: id => "https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary?event="+id,
+  wcbb: id => "https://site.web.api.espn.com/apis/site/v2/sports/basketball/womens-college-basketball/summary?event="+id,
   ufc: id => "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/summary?event="+id,
   mls: id => "https://site.web.api.espn.com/apis/site/v2/sports/soccer/usa.1/summary?event="+id
 };
@@ -1352,7 +1360,7 @@ function savePlace(){
       : "home";
     sessionStorage.setItem("saucePlace", JSON.stringify({
       view, league:LEAGUE, tab:window.BOARD||"", open:OPEN||"", eat,
-      team:window.TEAM_CTX||null, teamSport:window.FROMCBB?"cbb":window.FROMNBA?"nba":window.FROMNHL?"nhl":window.FROMMLB?"mlb":window.FROMNFL?"nfl":window.FROMMLS?"mls":"",
+      team:window.TEAM_CTX||null, teamSport:window.FROMWCBB?"wcbb":window.FROMCBB?"cbb":window.FROMNBA?"nba":window.FROMNHL?"nhl":window.FROMMLB?"mlb":window.FROMNFL?"nfl":window.FROMMLS?"mls":"",
       player:window.PLAYER_CTX||null,
       y: window.HOLD_Y!=null ? window.HOLD_Y : (window.scrollY||document.documentElement.scrollTop||0),
       ufcTab: window.UFC_TAB||"",
@@ -1378,6 +1386,7 @@ async function restorePlace(){
       if(p.ufcOpen && (p.ufcTab||"")==="sched"){ window.UFC_OPEN=p.ufcOpen; paintUfcSchedule(); }
     } else if(LEAGUE==="nba" && p.tab && p.tab!=="slate") nbaTab(p.tab);
     else if(LEAGUE==="cbb" && p.tab && p.tab!=="slate") cbbTab(p.tab);
+    else if(LEAGUE==="wcbb" && p.tab && p.tab!=="slate") wcbbTab(p.tab);
     else if(p.tab==="kit" && LEAGUE==="nfl") nflTab("kit");
     else if(p.tab==="lead" && LEAGUE==="nfl") nflTab("lead");
     else if(p.tab==="stand" && LEAGUE==="nfl") nflTab("stand");
@@ -1394,6 +1403,7 @@ async function restorePlace(){
       openPlayer(p.player.id, p.player.name||"Player");
     } else if(p.view==="player" && p.team && p.team.id){
       if(p.teamSport==="cbb") openCbbTeam(p.team.id, p.team.name||"Team");
+      else if(p.teamSport==="wcbb") openWcbbTeam(p.team.id, p.team.name||"Team");
       else if(p.teamSport==="nba") openNbaTeam(p.team.id, p.team.name||"Team");
       else if(p.teamSport==="nhl") openLeagueTeam(p.team.id, p.team.name||"Team", "nhl");
       else if(p.teamSport==="mlb") openMlbTeam(p.team.id, p.team.name||"Team");
@@ -1959,6 +1969,7 @@ function paint(games){
     else if(LEAGUE==="mls") openMlsTeam(b.dataset.tid, b.dataset.tname||"Team");
     else if(LEAGUE==="nba") openNbaTeam(b.dataset.tid, b.dataset.tname||"Team");
     else if(LEAGUE==="cbb") openCbbTeam(b.dataset.tid, b.dataset.tname||"Team");
+    else if(LEAGUE==="wcbb") openWcbbTeam(b.dataset.tid, b.dataset.tname||"Team");
     else if(LEAGUE==="nhl") openLeagueTeam(b.dataset.tid, b.dataset.tname||"Team", "nhl");
     else if(LEAGUE==="cfb") openTeam(b.dataset.tid, b.dataset.tname||"Team");
   });
@@ -2011,8 +2022,8 @@ function dayTabLabel(off){
   return dt.toLocaleDateString("en-US",{weekday:"short",month:"numeric",day:"numeric",timeZone:"America/Chicago"});
 }
 
-const NEWS_SLUG={nfl:"nfl",cfb:"college-football",mlb:"mlb",nhl:"nhl",nba:"nba",cbb:"mens-college-basketball",mls:"soccer",ufc:"mma"};
-const NEWS_LABEL={nfl:"NFL",cfb:"NCAAF",mlb:"MLB",nhl:"NHL",nba:"NBA",cbb:"NCAAB",mls:"MLS",ufc:"UFC"};
+const NEWS_SLUG={nfl:"nfl",cfb:"college-football",mlb:"mlb",nhl:"nhl",nba:"nba",cbb:"mens-college-basketball",wcbb:"womens-college-basketball",mls:"soccer",ufc:"mma"};
+const NEWS_LABEL={nfl:"NFL",cfb:"NCAAF",mlb:"MLB",nhl:"NHL",nba:"NBA",cbb:"NCAAB",wcbb:"NCAAW",mls:"MLS",ufc:"UFC"};
 function paintNews(){
   const host=$("newsClick");
   const arts=window.NEWS||[];
@@ -2046,7 +2057,7 @@ function bindNews(){}
 function paintDayTabs(lg){
   const host=$("dayTabs");
   if(!host) return;
-  const daily=lg==="mlb"||lg==="nhl"||lg==="nba"||lg==="cbb";
+  const daily=lg==="mlb"||lg==="nhl"||lg==="nba"||lg==="cbb"||lg==="wcbb";
   const weekly=lg==="nfl"||lg==="cfb";
   if(!daily && !weekly){ host.hidden=true; host.innerHTML=""; return; }
   host.hidden=false;
@@ -2132,7 +2143,7 @@ async function pullScoreboard(lg){
   const base=URLS[lg];
   if(lg==="nfl") return pullNflEvents();
   if(lg==="cfb") return pullCfbEvents();
-  if(lg==="mlb" || lg==="nhl" || lg==="nba" || lg==="cbb") return pullDayBoard(lg);
+  if(lg==="mlb" || lg==="nhl" || lg==="nba" || lg==="cbb" || lg==="wcbb") return pullDayBoard(lg);
   if(lg!=="mlb" && lg!=="mls"){
     const res=await fetch(base,{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
@@ -2748,7 +2759,7 @@ async function loadLeague(lg){
   if(lg==="tssaa"){
     if($("nflTabs")) $("nflTabs").hidden=true;
     if($("cfbTabs")) $("cfbTabs").hidden=true;
-    if($("mlbTabs")) $("mlbTabs").hidden=true; if($("nhlTabs")) $("nhlTabs").hidden=true; if($("nbaTabs")) $("nbaTabs").hidden=true; if($("cbbTabs")) $("cbbTabs").hidden=true;
+    if($("mlbTabs")) $("mlbTabs").hidden=true; if($("nhlTabs")) $("nhlTabs").hidden=true; if($("nbaTabs")) $("nbaTabs").hidden=true; if($("cbbTabs")) $("cbbTabs").hidden=true; if($("wcbbTabs")) $("wcbbTabs").hidden=true;
     if($("mlsTabs")) $("mlsTabs").hidden=true;
     if($("ufcTabs")) $("ufcTabs").hidden=true;
     if($("kitPanel")) $("kitPanel").hidden=true;
@@ -2778,6 +2789,7 @@ async function loadLeague(lg){
     if($("mlbTabs")) $("mlbTabs").hidden = lg!=="mlb"; if($("nhlTabs")) $("nhlTabs").hidden = lg!=="nhl";
     if($("nbaTabs")) $("nbaTabs").hidden = lg!=="nba";
     if($("cbbTabs")) $("cbbTabs").hidden = lg!=="cbb";
+    if($("wcbbTabs")) $("wcbbTabs").hidden = lg!=="wcbb";
     if($("mlsTabs")) $("mlsTabs").hidden = lg!=="mls";
     if($("ufcTabs")) $("ufcTabs").hidden = lg!=="ufc";
     if($("tssaaTabs")) $("tssaaTabs").hidden = true;
@@ -3672,7 +3684,7 @@ function renderHockey(g, sum){
 function renderGame(g, sum){
   if(LEAGUE==="nfl" || LEAGUE==="cfb"){ renderFootball(g,sum); return; }
   if(LEAGUE==="nhl"){ renderHockey(g,sum); return; }
-  if(LEAGUE==="nba" || LEAGUE==="cbb"){ renderNba(g,sum); return; }
+  if(LEAGUE==="nba" || LEAGUE==="cbb" || LEAGUE==="wcbb"){ renderNba(g,sum); return; }
   if(LEAGUE==="mls"){ renderSoccer(g,sum); return; }
   const hdr = ((sum.header||{}).competitions||[])[0]||{};
   const comps = hdr.competitors || [];
@@ -4151,7 +4163,7 @@ async function openGame(id, fid, dest){
           }
         }catch(e){}
       }
-      if((LEAGUE==="nba" || LEAGUE==="cbb") && $("gameBody")){
+      if((LEAGUE==="nba" || LEAGUE==="cbb" || LEAGUE==="wcbb") && $("gameBody")){
         const hdr0=((sum.header||{}).competitions||[])[0]||{};
         const comps0=hdr0.competitors||[];
         const awayC=comps0.find(x=>x.homeAway==="away")||comps0[0]||{};
@@ -4209,7 +4221,7 @@ async function openGame(id, fid, dest){
       if(state.state) g.state=state.state;
       pulseBoard(g);
       if(state.completed || state.state==="post"){
-        const waitClip=(LEAGUE==="nba"||LEAGUE==="cbb") && !(sum.videos||[]).length && (window.HL_TRIES||0)<=45;
+        const waitClip=(LEAGUE==="nba"||LEAGUE==="cbb"||LEAGUE==="wcbb") && !(sum.videos||[]).length && (window.HL_TRIES||0)<=45;
         if(!waitClip){ if(poll) clearInterval(poll); poll=null; }
       }
     }catch(e){
@@ -4219,7 +4231,7 @@ async function openGame(id, fid, dest){
     }
   }
   await tickGame();
-  poll = setInterval(tickGame, LEAGUE==="nba"?2000:(LEAGUE==="cbb"?4000:(LEAGUE==="mlb"?4000:12000)));
+  poll = setInterval(tickGame, LEAGUE==="nba"?2000:((LEAGUE==="cbb"||LEAGUE==="wcbb")?4000:(LEAGUE==="mlb"?4000:12000)));
 }
 function showUfcLineup(card, games, box){
   const host=box||$("ufcLineup");
@@ -4466,7 +4478,7 @@ async function openPlayer(pid, name){
   show("player", {fresh:true});
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
-    const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : LEAGUE==="cbb" ? "basketball/mens-college-basketball" : LEAGUE==="nba" ? "basketball/nba" : LEAGUE==="nhl" ? "hockey/nhl" : LEAGUE==="mls" ? "soccer/usa.1" : "baseball/mlb";
+    const path = LEAGUE==="nfl" ? "football/nfl" : LEAGUE==="cfb" ? "football/college-football" : LEAGUE==="wcbb" ? "basketball/womens-college-basketball" : LEAGUE==="cbb" ? "basketball/mens-college-basketball" : LEAGUE==="nba" ? "basketball/nba" : LEAGUE==="nhl" ? "hockey/nhl" : LEAGUE==="mls" ? "soccer/usa.1" : "baseball/mlb";
     const ovrRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/overview",{cache:"no-store"});
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
@@ -4506,7 +4518,7 @@ async function openPlayer(pid, name){
       const line = (ev.stats||[]).slice(0,7).join(" · ");
       return "<tr><td>"+String(info.gameDate||"").slice(0,10)+"</td><td>"+dec+" "+opp+"</td><td>"+line+"</td></tr>";
     }).join("");
-    const sportShot = LEAGUE==="cbb" ? "mens-college-basketball" : LEAGUE==="nba" ? "nba" : LEAGUE==="nfl" ? "nfl" : LEAGUE==="cfb" ? "college-football" : LEAGUE==="nhl" ? "nhl" : LEAGUE==="mls" ? "soccer" : "mlb";
+    const sportShot = LEAGUE==="wcbb" ? "womens-college-basketball" : LEAGUE==="cbb" ? "mens-college-basketball" : LEAGUE==="nba" ? "nba" : LEAGUE==="nfl" ? "nfl" : LEAGUE==="cfb" ? "college-football" : LEAGUE==="nhl" ? "nhl" : LEAGUE==="mls" ? "soccer" : "mlb";
     const apiShot = (d.athlete && d.athlete.headshot && (d.athlete.headshot.href || d.athlete.headshot)) || "";
     const shot = apiShot || ("https://a.espncdn.com/i/headshots/"+sportShot+"/players/full/"+pid+".png");
     try{
@@ -4574,7 +4586,7 @@ async function openPlayer(pid, name){
       : isRush || kitPos==="RB" ? [["YDS","YDS"],["TD","TD"],["CAR","CAR"]]
       : isDef ? [["TOT","TOT"],["SACK","SACK"],["TFL","TFL"]]
       : [["YDS","YDS"],["REC","REC"],["TD","TD"]];
-    const leadKeys = (LEAGUE==="nba" || LEAGUE==="cbb")
+    const leadKeys = (LEAGUE==="nba" || LEAGUE==="cbb" || LEAGUE==="wcbb")
       ? [["PTS","PTS"],["REB","REB"],["AST","AST"]]
       : (LEAGUE==="nhl")
       ? [["G","G"],["A","A"],["PTS","PTS"]]
@@ -4780,7 +4792,7 @@ function bindPlayerTabs(){
 const LOGS = {};
 const ROSTER = [];
 const FILT = {pos:"WR", stat:"recYds", line:20, game:""};
-let FAV = {nfl:{},cfb:{},mlb:{},nba:{},nhl:{},cbb:{},ufc:{},tssaa:{},mls:{}};
+let FAV = {nfl:{},cfb:{},mlb:{},nba:{},nhl:{},cbb:{},wcbb:{},ufc:{},tssaa:{},mls:{}};
 try{ FAV = Object.assign(FAV, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
 function saveFav(){ try{ localStorage.setItem("sauceFav", JSON.stringify(FAV)); }catch(e){} }
 function isFav(id){ return !!(id && FAV[LEAGUE] && FAV[LEAGUE][String(id)]); }
@@ -4831,10 +4843,10 @@ function starBtn(id, name){
   return `<button type="button" class="star${isFav(id)?" on":""}" data-fav="${id||""}" data-fname="${String(name||"").replace(/"/g,"")}">${isFav(id)?"★":"☆"}</button>`;
 }
 const PIN_KEY="saucePins";
-const YLG=[["nfl","NFL"],["cfb","NCAAF"],["nba","NBA"],["nhl","NHL"],["mlb","MLB"],["cbb","NCAAB"],["mls","MLS"],["tssaa","TSSAA"]];
-const YPATH={nfl:"football/nfl",cfb:"football/college-football",nba:"basketball/nba",nhl:"hockey/nhl",mlb:"baseball/mlb",cbb:"basketball/mens-college-basketball",mls:"soccer/usa.1"};
-const YSHOT={nfl:"nfl",cfb:"college-football",nba:"nba",nhl:"nhl",mlb:"mlb",cbb:"mens-college-basketball",mls:"soccer",ufc:"mma"};
-const YLEAGUE={nfl:"nfl",cfb:"college-football",nba:"nba",nhl:"nhl",mlb:"mlb",cbb:"mens-college-basketball",mls:"usa.1"};
+const YLG=[["nfl","NFL"],["cfb","NCAAF"],["nba","NBA"],["nhl","NHL"],["mlb","MLB"],["cbb","NCAAB"],["wcbb","NCAAW"],["mls","MLS"],["tssaa","TSSAA"]];
+const YPATH={nfl:"football/nfl",cfb:"football/college-football",nba:"basketball/nba",nhl:"hockey/nhl",mlb:"baseball/mlb",cbb:"basketball/mens-college-basketball",wcbb:"basketball/womens-college-basketball",mls:"soccer/usa.1"};
+const YSHOT={nfl:"nfl",cfb:"college-football",nba:"nba",nhl:"nhl",mlb:"mlb",cbb:"mens-college-basketball",wcbb:"womens-college-basketball",mls:"soccer",ufc:"mma"};
+const YLEAGUE={nfl:"nfl",cfb:"college-football",nba:"nba",nhl:"nhl",mlb:"mlb",cbb:"mens-college-basketball",wcbb:"womens-college-basketball",mls:"usa.1"};
 let PINS=[];
 try{ PINS=JSON.parse(localStorage.getItem(PIN_KEY)||"[]")||[]; }catch(e){ PINS=[]; }
 if(!Array.isArray(PINS)) PINS=[];
@@ -4846,7 +4858,7 @@ function esc(s){
   const map={"&":"\u0026amp;","<":"\u0026lt;",">":"\u0026gt;","\"":"\u0026quot;"};
   return String(s==null?"":s).replace(/[&<>"]/g, c=>map[c]||c);
 }
-function lgLabel(lg){ return ({nfl:"NFL",cfb:"NCAAF",nba:"NBA",nhl:"NHL",mlb:"MLB",cbb:"NCAAB",mls:"MLS",tssaa:"TSSAA",ufc:"UFC"})[lg]||String(lg||"").toUpperCase(); }
+function lgLabel(lg){ return ({nfl:"NFL",cfb:"NCAAF",nba:"NBA",nhl:"NHL",mlb:"MLB",cbb:"NCAAB",wcbb:"NCAAW",mls:"MLS",tssaa:"TSSAA",ufc:"UFC"})[lg]||String(lg||"").toUpperCase(); }
 function pinKey(p){ return (p&&p.kind||"team")+"|"+(p&&p.lg||"")+"|"+String(p&&p.id||""); }
 function savePins(){ try{ localStorage.setItem(PIN_KEY, JSON.stringify(PINS.map(p=>{ const c=Object.assign({}, p); delete c._line; delete c._live; delete c._dirty; delete c._book; return c; }))); }catch(e){} }
 function isPinned(p){ const k=pinKey(p); return PINS.some(x=>pinKey(x)===k); }
@@ -4923,7 +4935,7 @@ function armPin(pin){
 function teamLogo(p){
   if(p.logo && p.kind!=="player") return p.logo;
   if(p.kind==="team" && p.logo) return p.logo;
-  if(p.lg==="cfb"||p.lg==="cbb") return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+p.id+".png";
+  if(p.lg==="cfb"||p.lg==="cbb"||p.lg==="wcbb") return "https://a.espncdn.com/i/teamlogos/ncaa/500/"+p.id+".png";
   const fold={nfl:"nfl",nba:"nba",nhl:"nhl",mlb:"mlb",mls:"soccer"}[p.lg];
   if(!fold) return "";
   if(p.abbr) return "https://a.espncdn.com/i/teamlogos/"+fold+"/500/"+String(p.abbr).toLowerCase()+".png";
@@ -5234,7 +5246,7 @@ function chipsFor(lg, pos, names, stats){
       if(n("interceptions")) pushChip(out, g("interceptions"), "INT");
       if(n("passesDefended")) pushChip(out, g("passesDefended"), "PD");
     }
-  } else if(lg==="nba"||lg==="cbb"){
+  } else if(lg==="nba"||lg==="cbb"||lg==="wcbb"){
     pushChip(out, g("points","PTS")||"0", "PTS");
     pushChip(out, g("totalRebounds","rebounds","REB")||"0", "REB");
     pushChip(out, g("assists","AST")||"0", "AST");
@@ -5639,6 +5651,7 @@ function openPin(p){
   if(p.lg==="nfl") return openNflTeam(p.id, p.name);
   if(p.lg==="nba") return openNbaTeam(p.id, p.name);
   if(p.lg==="cbb") return openCbbTeam(p.id, p.name);
+  if(p.lg==="wcbb") return openWcbbTeam(p.id, p.name);
   if(p.lg==="nhl") return openLeagueTeam(p.id, p.name, "nhl");
   if(p.lg==="mlb") return openMlbTeam(p.id, p.name);
   if(p.lg==="mls") return openMlsTeam(p.id, p.name);
@@ -6187,7 +6200,7 @@ function alertFromFav(g, prev){
   }
 }
 async function tickSlip(){
-  try{ FAV = Object.assign({nfl:{},cfb:{},mlb:{},ufc:{},tssaa:{},mls:{}}, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
+  try{ FAV = Object.assign({nfl:{},cfb:{},mlb:{},nba:{},nhl:{},cbb:{},wcbb:{},ufc:{},tssaa:{},mls:{}}, JSON.parse(localStorage.getItem("sauceFav")||"{}")); }catch(e){}
   window.SLIP_GAMES = window.SLIP_GAMES || {};
   window.FAV_SNAP = window.FAV_SNAP || {};
   window.SLIP_GAMES = window.SLIP_GAMES || {};
@@ -7395,19 +7408,19 @@ async function openNflTeam(tid, name){
 }
 function historyYear(kind){
   const now=new Date(), y=now.getFullYear(), m=now.getMonth();
-  if(kind==="nba"||kind==="cbb") return m>=8?y+1:y;
+  if(kind==="nba"||kind==="cbb"||kind==="wcbb") return m>=8?y+1:y;
   if(kind==="mlb") return y;
   return m>=7?y:y-1;
 }
 function historyLive(kind){
   const m=new Date().getMonth();
   if(kind==="nfl"||kind==="cfb") return m>=7 && m<=11;
-  if(kind==="nba"||kind==="cbb") return m>=9 || m<=2;
+  if(kind==="nba"||kind==="cbb"||kind==="wcbb") return m>=9 || m<=2;
   if(kind==="mlb") return m>=3 && m<=8;
   return false;
 }
 function historyNote(s){
-  return String(s||"").replace(/\s+Presented by.*$/i,"").replace(/^Men's Basketball Championship\s*[-–]\s*/i,"").replace(/\s+[-–]\s+/g," · ").trim();
+  return String(s||"").replace(/\s+Presented by.*$/i,"").replace(/^(?:Men|Women)'s Basketball Championship\s*[-–]\s*/i,"").replace(/\s+[-–]\s+/g," · ").trim();
 }
 let HIST_GEN=0;
 async function fillTeamHistory(kind, tid){
@@ -7416,13 +7429,14 @@ async function fillTeamHistory(kind, tid){
     cfb:{sport:"football", league:"college-football"},
     nba:{sport:"basketball", league:"nba"},
     cbb:{sport:"basketball", league:"mens-college-basketball"},
+    wcbb:{sport:"basketball", league:"womens-college-basketball"},
     mlb:{sport:"baseball", league:"mlb"}
   }[kind];
   const host=document.getElementById("teamHist");
   if(!spec || !host || !tid) return;
   const gen=++HIST_GEN;
   const end=historyYear(kind);
-  const floor={nfl:1922,cfb:1869,nba:1946,cbb:1938,mlb:1876}[kind]||1920;
+  const floor={nfl:1922,cfb:1869,nba:1946,cbb:1938,wcbb:1982,mlb:1876}[kind]||1920;
   const rows=[];
   const pull=async url=>{ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }catch(e){ return null; } };
   const overall=d=>{
@@ -7554,7 +7568,7 @@ async function fillTeamHistory(kind, tid){
         } else if(!card && post) card=post;
       }
       if(!card || (card.w+card.l+card.t)===0 || gen!==HIST_GEN) continue;
-      const row={year, label:(kind==="nba"||kind==="cbb")?((year-1)+"-"+String(year).slice(2)):String(year), w:card.w, l:card.l, t:card.t, conf:confOf(regPack), rounds:null, miss:""};
+      const row={year, label:(kind==="nba"||kind==="cbb"||kind==="wcbb")?((year-1)+"-"+String(year).slice(2)):String(year), w:card.w, l:card.l, t:card.t, conf:confOf(regPack), rounds:null, miss:""};
       rows.push(row);
       paint();
       const sched=await pull("https://site.api.espn.com/apis/site/v2/sports/"+spec.sport+"/"+spec.league+"/teams/"+tid+"/schedule?season="+year+"&seasontype=3");
@@ -8042,8 +8056,8 @@ function refId(ref){
 }
 async function fillLeadNames(sport, cats){
   const ids=[...new Set(cats.flatMap(c=>(c.leaders||[]).map(L=>L.athlete&&L.athlete.id).filter(Boolean)))];
-  const league = sport==="cbb"?"mens-college-basketball":sport==="nba"?"nba":sport==="nhl"?"nhl":sport==="mlb"?"mlb":sport==="cfb"?"college-football":"nfl";
-  const path = sport==="cbb"?"basketball/mens-college-basketball":sport==="nba"?"basketball/nba":sport==="nhl"?"hockey/nhl":sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
+  const league = sport==="wcbb"?"womens-college-basketball":sport==="cbb"?"mens-college-basketball":sport==="nba"?"nba":sport==="nhl"?"nhl":sport==="mlb"?"mlb":sport==="cfb"?"college-football":"nfl";
+  const path = sport==="wcbb"?"basketball/womens-college-basketball":sport==="cbb"?"basketball/mens-college-basketball":sport==="nba"?"basketball/nba":sport==="nhl"?"hockey/nhl":sport==="mlb"?"baseball/mlb":sport==="cfb"?"football/college-football":"football/nfl";
   const book={};
   const chunk=ids.slice();
   await Promise.all(chunk.map(async id=>{
@@ -8162,7 +8176,7 @@ function paintLeaders(){
   const shot = a => {
     if(!a) return "";
     if(a.headshot) return typeof a.headshot==="string"?a.headshot:(a.headshot.href||"");
-    const folder = LEAGUE==="cbb" ? "mens-college-basketball" : LEAGUE==="nba" || nba ? "nba" : LEAGUE==="nhl" || nhl ? "nhl" : LEAGUE==="mlb" || mlb ? "mlb" : LEAGUE==="nfl" ? "nfl" : "college-football";
+    const folder = LEAGUE==="wcbb" ? "womens-college-basketball" : LEAGUE==="cbb" ? "mens-college-basketball" : LEAGUE==="nba" || nba ? "nba" : LEAGUE==="nhl" || nhl ? "nhl" : LEAGUE==="mlb" || mlb ? "mlb" : LEAGUE==="nfl" ? "nfl" : "college-football";
     return a.id ? ("https://a.espncdn.com/i/headshots/"+folder+"/players/full/"+a.id+".png") : "";
   };
   host.innerHTML = `<div class="ldhead">
@@ -8212,60 +8226,74 @@ $("tabNbaStand") && ($("tabNbaStand").onclick=()=>nbaTab("stand"));
 $("tabNbaLead") && ($("tabNbaLead").onclick=()=>nbaTab("lead"));
 
 
-function cbbTab(which){
+function hoopMeta(lg){
+  if(lg==="wcbb") return {lg:"wcbb", slug:"womens-college-basketball", label:"NCAAW", lead:"2027", sched:"2027", note:"NCAAW 2026-27", stand:"2026-27 standings"};
+  return {lg:"cbb", slug:"mens-college-basketball", label:"NCAAB", lead:"2026", sched:"2027", note:"NCAAB 2025-26 season. This year's leaders are not posted yet.", stand:"2025-26 standings"};
+}
+function hoopTab(lg, which){
   window.BOARD=which;
+  if(which!=="slate") window.FROM_SLATE=false;
   if($("liveList")) $("liveList").hidden=which!=="slate";
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   if($("dayTabs")) $("dayTabs").hidden=which!=="slate";
-  ["tabCbbSlate","tabCbbStand","tabCbbLead"].forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id==="tabCbbSlate"&&which==="slate")||(id==="tabCbbStand"&&which==="stand")||(id==="tabCbbLead"&&which==="lead")); });
-  if(!window.JUST_BACK && which==="stand") openCbbStandings();
-  if(!window.JUST_BACK && which==="lead") openCbbLeaders();
+  const ids=lg==="wcbb"?["tabWcbbSlate","tabWcbbStand","tabWcbbLead"]:["tabCbbSlate","tabCbbStand","tabCbbLead"];
+  ids.forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id.endsWith("Slate")&&which==="slate")||(id.endsWith("Stand")&&which==="stand")||(id.endsWith("Lead")&&which==="lead")); });
+  if(!window.JUST_BACK && which==="stand") openHoopStandings(lg);
+  if(!window.JUST_BACK && which==="lead") openHoopLeaders(lg);
 }
-async function openCbbStandings(){
+function cbbTab(which){ hoopTab("cbb", which); }
+function wcbbTab(which){ hoopTab("wcbb", which); }
+async function openHoopStandings(lg){
+  const meta=hoopMeta(lg);
   const host=$("boardPanel");
   host.hidden=false;
-  host.innerHTML="<p class='hint'>Loading college basketball standings…</p>";
+  host.innerHTML="<p class='hint'>Loading "+meta.label+" standings…</p>";
   try{
-    const res=await fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/mens-college-basketball/standings",{cache:"no-store"});
+    const res=await fetch("https://site.web.api.espn.com/apis/v2/sports/basketball/"+meta.slug+"/standings",{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
-    window.CBB_CONF=(d.children||[]).map(conf=>({
+    if(LEAGUE!==lg) return;
+    window.HOOP_CONF=window.HOOP_CONF||{};
+    window.HOOP_CONF[lg]=(d.children||[]).map(conf=>({
       id:String(conf.abbreviation||conf.id||"").toLowerCase(),
       name:conf.shortName||conf.name||"Conference",
       teams:((conf.standings||{}).entries||[]).slice().sort((a,b)=>Number(stv(a.stats,"playoffSeed")||99)-Number(stv(b.stats,"playoffSeed")||99))
     }));
-    paintCbbStand("all");
+    paintHoopStand(lg, "all");
   }catch(e){
-    host.innerHTML="<p class='hint'>College basketball standings did not load.</p>";
+    if(LEAGUE===lg) host.innerHTML="<p class='hint'>"+meta.label+" standings did not load.</p>";
   }
 }
-
-function paintCbbStand(id){
+function openCbbStandings(){ return openHoopStandings("cbb"); }
+function paintHoopStand(lg, id){
+  const meta=hoopMeta(lg);
   const host=$("boardPanel");
-  const all=window.CBB_CONF||[];
-  const majors=["acc","big10","big12","sec","bige","wcc","mwest","american"];
+  const all=(window.HOOP_CONF&&window.HOOP_CONF[lg])||[];
+  const majors=["acc","big10","big12","sec","bige","wcc","mwest","american","be"];
   const chips=[{id:"all",name:"All"}].concat(all.map(c=>({id:c.id,name:c.name})));
   const order=chips.filter(c=>c.id==="all"||majors.indexOf(c.id)>=0).concat(chips.filter(c=>c.id!=="all"&&majors.indexOf(c.id)<0));
   const show=id==="all"?all:all.filter(c=>c.id===id);
   const blocks=show.map(conf=>{
     const rows=conf.teams.map((e,i)=>{
-      const t=e.team||{};
+      const tm=e.team||{};
       const rec=stv(e.stats,"wins")+"-"+stv(e.stats,"losses");
-      const nm=t.shortDisplayName||t.displayName||t.abbreviation||"";
-      return `<button type="button" class="cbbrow" data-tid="${t.id||""}" data-tname="${String(t.displayName||nm).replace(/"/g,"")}"><em>${i+1}</em><img alt="" src="${nbaLogo(t)}"/><b>${nm}</b><span>${rec}</span></button>`;
+      const nm=tm.shortDisplayName||tm.displayName||tm.abbreviation||"";
+      return `<button type="button" class="cbbrow" data-tid="${tm.id||""}" data-tname="${String(tm.displayName||nm).replace(/"/g,"")}"><em>${i+1}</em><img alt="" src="${nbaLogo(tm)}"/><b>${nm}</b><span>${rec}</span></button>`;
     }).join("");
     return `<section class="problock"><h3>${conf.name}</h3>${rows}</section>`;
   }).join("");
-  host.innerHTML=`<p class="kicker">2025-26 standings</p><div class="ldhead">${order.map(c=>`<button type="button" data-conf="${c.id}" class="${c.id===id?"on":""}">${c.name}</button>`).join("")}</div>${blocks}`;
-  host.querySelectorAll("[data-conf]").forEach(b=>b.onclick=()=>paintCbbStand(b.dataset.conf));
-  host.querySelectorAll(".cbbrow").forEach(b=>b.onclick=()=>openCbbTeam(b.dataset.tid, b.dataset.tname||"Team"));
+  host.innerHTML=`<p class="kicker">${meta.stand}</p><div class="ldhead">${order.map(c=>`<button type="button" data-conf="${c.id}" class="${c.id===id?"on":""}">${c.name}</button>`).join("")}</div>${blocks}`;
+  host.querySelectorAll("[data-conf]").forEach(b=>b.onclick=()=>paintHoopStand(lg, b.dataset.conf));
+  host.querySelectorAll(".cbbrow").forEach(b=>b.onclick=()=>openHoopTeam(lg, b.dataset.tid, b.dataset.tname||"Team"));
 }
-async function openCbbLeaders(){
+function paintCbbStand(id){ paintHoopStand("cbb", id); }
+async function openHoopLeaders(lg){
+  const meta=hoopMeta(lg);
   const host=$("boardPanel");
   host.hidden=false;
-  host.innerHTML="<p class='hint'>Loading college basketball leaders…</p>";
+  host.innerHTML="<p class='hint'>Loading "+meta.label+" leaders…</p>";
   try{
-    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/mens-college-basketball/seasons/2026/types/2/leaders?limit=12",{cache:"no-store"});
+    const res=await fetch("https://sports.core.api.espn.com/v2/sports/basketball/leagues/"+meta.slug+"/seasons/"+meta.lead+"/types/2/leaders?limit=12",{cache:"no-store"});
     if(!res.ok) throw new Error("unavailable");
     const d=await res.json();
     const cats=(d.categories||[]).map(c=>{
@@ -8275,37 +8303,42 @@ async function openCbbLeaders(){
       });
       return {name:c.name||"", displayName:c.displayName||c.name||"", leaders};
     });
-    await fillLeadNames("cbb", cats);
+    await fillLeadNames(lg, cats);
+    if(LEAGUE!==lg) return;
     window.LEAD_CATS=cats;
     window.LEAD_SIDE="off";
-    window.LEAD_NOTE="NCAAB 2025-26 season. This year's leaders are not posted yet.";
+    window.LEAD_NOTE=meta.note;
     paintLeaders();
   }catch(e){
-    host.innerHTML="<p class='hint'>College basketball leaders did not load.</p>";
+    if(LEAGUE===lg) host.innerHTML="<p class='hint'>"+meta.label+" leaders did not load.</p>";
   }
 }
-async function openCbbTeam(tid, name){
+function openCbbLeaders(){ return openHoopLeaders("cbb"); }
+async function openHoopTeam(lg, tid, name){
   if(!tid) return;
+  const meta=hoopMeta(lg);
   window.FROMTEAM=true;
-  window.FROMCBB=true;
+  window.FROMCBB=lg==="cbb";
+  window.FROMWCBB=lg==="wcbb";
   window.FROMNBA=false;
   window.FROMMLB=false;
   window.FROMNHL=false;
   window.FROMNFL=false;
+  window.FROMMLS=false;
+  window.FROMTN=false;
   window.TEAM_CTX={id:tid, name:name||"Team"};
-  armPin({kind:"team", lg:"cbb", id:String(tid), name:name||"Team"});
-  LEAGUE="cbb";
-  if($("toGame")) $("toGame").textContent="← Standings";
+  armPin({kind:"team", lg:lg, id:String(tid), name:name||"Team"});
+  LEAGUE=lg;
+  if($("toGame")) $("toGame").textContent=window.FROM_YOURS?"← Home":window.FROM_SLATE?"← Slate":"← Standings";
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Opening "+name+"…</p>";
-  const base="https://site.web.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/"+tid;
+  const base="https://site.web.api.espn.com/apis/site/v2/sports/basketball/"+meta.slug+"/teams/"+tid;
   try{
     const pull=async url=>{ try{ const res=await fetch(url,{cache:"no-store"}); if(!res.ok) return {}; return await res.json(); }catch(e){ return {}; } };
-    const [sched]=await Promise.all([
-      pull(base+"/schedule?season=2027&seasontype=2")
-    ]);
-    const t=sched.team||{};
-    const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
+    const sched=await pull(base+"/schedule?season="+meta.sched+"&seasontype=2");
+    if(LEAGUE!==lg || !window.TEAM_CTX || String(window.TEAM_CTX.id)!==String(tid)) return;
+    const tm=sched.team||{};
+    const rec=((tm.record&&tm.record.items)||[]).find(x=>x.type==="total")||{};
     const gameLine=ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8320,26 +8353,31 @@ async function openCbbTeam(tid, name){
       const line=stt.state==="pre"?when:(ms+"-"+os);
       return `<div class="tgame" data-gid="${ev.id||c.id||""}"><span>${String(ev.date||"").slice(5,10).replace("-","/")}</span><img alt="" src="${nbaLogo(opp.team||{})}"/><div><b>${ha} ${onm}</b><em>${(String(line||"").split(" - ")[1])||line||"TBD"}</em></div><b class="tscore"></b></div>`;
     };
-    const next=(t.nextEvent||[])[0];
+    const next=(tm.nextEvent||[])[0];
     const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
     const now=Date.now();
     const past=all.filter(ev=>new Date(ev.date||0).getTime()<now).slice(-5);
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NCAAB"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||"2026-27"}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading every season…</p></div></div>`;
+    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading every season…</p></div></div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
-    fillTeamHistory("cbb", tid);
+    fillTeamHistory(lg, tid);
   }catch(e){
-    $("playerRoom").innerHTML="<p class='hint'>College basketball team did not load.</p>";
+    if(LEAGUE===lg) $("playerRoom").innerHTML="<p class='hint'>"+meta.label+" team did not load.</p>";
   }
 }
+function openCbbTeam(tid, name){ return openHoopTeam("cbb", tid, name); }
+function openWcbbTeam(tid, name){ return openHoopTeam("wcbb", tid, name); }
 $("tabCbbSlate") && ($("tabCbbSlate").onclick=()=>cbbTab("slate"));
 $("tabCbbStand") && ($("tabCbbStand").onclick=()=>cbbTab("stand"));
 $("tabCbbLead") && ($("tabCbbLead").onclick=()=>cbbTab("lead"));
+$("tabWcbbSlate") && ($("tabWcbbSlate").onclick=()=>wcbbTab("slate"));
+$("tabWcbbStand") && ($("tabWcbbStand").onclick=()=>wcbbTab("stand"));
+$("tabWcbbLead") && ($("tabWcbbLead").onclick=()=>wcbbTab("lead"));
 
 function nbaLogo(t){
-  const mark=LEAGUE==="cbb"?"ncaa":"nba";
-  const file=LEAGUE==="cbb"?String(t.id||""):String(t.abbreviation||"").toLowerCase();
+  const mark=(LEAGUE==="cbb"||LEAGUE==="wcbb")?"ncaa":"nba";
+  const file=(LEAGUE==="cbb"||LEAGUE==="wcbb")?String(t.id||""):String(t.abbreviation||"").toLowerCase();
   return (t.logos&&t.logos[0]&&t.logos[0].href)||("https://a.espncdn.com/i/teamlogos/"+mark+"/500/"+file+".png");
 }
 function nbaTab(which){
@@ -8715,7 +8753,7 @@ function renderNba(g, sum){
       shotMark=`<g class="shotpt"><circle cx="${x}" cy="${y}" r="9" fill="rgba(8,8,10,.35)" stroke="#ff5a5a" stroke-width="2"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ff5a5a" stroke-width="2"/><line x1="${x2}" y1="${y1}" x2="${x1}" y2="${y2}" stroke="#ff5a5a" stroke-width="2"/></g>`;
     }
   }
-  const sport=LEAGUE==="cbb"?"mens-college-basketball":"nba";
+  const sport=LEAGUE==="wcbb"?"womens-college-basketball":LEAGUE==="cbb"?"mens-college-basketball":"nba";
   const callTeam=callPlay?sideOf(callPlay.teamId):null;
   const face=callPlay&&callPlay.pid?("https://a.espncdn.com/i/headshots/"+sport+"/players/full/"+callPlay.pid+".png"):(callTeam?logo(callTeam):"");
   const qshort=callPlay?String(callPlay.q||"").replace(" Quarter",""):"";
@@ -8773,7 +8811,7 @@ function renderNba(g, sum){
       const L=(leadMap[cat]||{})[String(id)];
       if(!L) return `<div class="leadside"></div>`;
       const a=L.athlete||{};
-      const shot=`https://a.espncdn.com/i/headshots/${LEAGUE==="cbb"?"mens-college-basketball":"nba"}/players/full/${a.id}.png`;
+      const shot=`https://a.espncdn.com/i/headshots/${LEAGUE==="wcbb"?"womens-college-basketball":LEAGUE==="cbb"?"mens-college-basketball":"nba"}/players/full/${a.id}.png`;
       const team=String(id)===String(away.id)?away:home;
       return `<div class="leadside${team===home?" flip":""} prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shot}"/><div><b>${L.displayValue||""}</b><span>${a.shortName||""}</span><em>${ab(team)}</em></div></div>`;
     };
@@ -8905,6 +8943,7 @@ document.addEventListener("click", ev=>{
       if(window.FROMLEAD){
         window.FROM_TEAM_PLAYER=false;
         window.LEAD_BACK = ($("nbaTabs") && !$("nbaTabs").hidden) ? "nba"
+          : ($("wcbbTabs") && !$("wcbbTabs").hidden) ? "wcbb"
           : ($("cbbTabs") && !$("cbbTabs").hidden) ? "cbb"
           : ($("nhlTabs") && !$("nhlTabs").hidden) ? "nhl"
           : ($("mlbTabs") && !$("mlbTabs").hidden) ? "mlb"
@@ -8929,6 +8968,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
     window.RETURNING=true;
     if(window.FROMNFL) openNflTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMMLS) openMlsTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
+    else if(window.FROMWCBB) openWcbbTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMCBB) openCbbTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMNBA) openNbaTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team");
     else if(window.FROMNHL) openLeagueTeam(window.TEAM_CTX.id, window.TEAM_CTX.name||"Team", "nhl");
@@ -8943,6 +8983,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
     show("live", {back:true});
     const lg=window.LEAD_BACK||LEAGUE;
     if(lg==="nba") nbaTab("lead");
+    else if(lg==="wcbb") wcbbTab("lead");
     else if(lg==="cbb") cbbTab("lead");
     else if(lg==="nhl") nhlTab("lead");
     else if(lg==="cfb") cfbTab("lead");
@@ -8959,6 +9000,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
       if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
       else if(window.FROMMLS){ window.FROMMLS=false; mlsTab("slate"); }
       else if(window.FROMMLB){ window.FROMMLB=false; mlbTab("slate"); }
+      else if(window.FROMWCBB){ window.FROMWCBB=false; wcbbTab("slate"); }
       else if(window.FROMCBB){ window.FROMCBB=false; cbbTab("slate"); }
       else if(window.FROMNBA){ window.FROMNBA=false; nbaTab("slate"); }
       else if(window.FROMNHL){ window.FROMNHL=false; mlbTab("slate"); }
@@ -8967,6 +9009,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
       return;
     }
     if(window.FROMMLS){ window.FROMMLS=false; mlsTab("stand"); }
+    else if(window.FROMWCBB){ window.FROMWCBB=false; wcbbTab("stand"); }
     else if(window.FROMCBB){ window.FROMCBB=false; cbbTab("stand"); }
     else if(window.FROMNBA){ window.FROMNBA=false; nbaTab("stand"); }
     else if(window.FROMNHL){ window.FROMNHL=false; mlbTab("stand"); }
