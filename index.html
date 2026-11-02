@@ -2643,7 +2643,7 @@ function paintTnBrackets(){
   if(!host) return;
   host.hidden=false;
   if($("liveList")) $("liveList").hidden=true;
-  const id=window.TN_BRACK||"20260102";
+  const id=window.TN_BRACK||"20260101";
   window.TN_BRACK=id;
   const meta=TN_BRACKS.find(x=>x.id===id)||TN_BRACKS[1];
   if($("liveMeta")) $("liveMeta").textContent="TSSAA · Division "+meta.division+" · "+meta.label+" · Playoffs";
@@ -2710,7 +2710,7 @@ async function openTnBrackets(){
   await loadTnBracketFile();
   if(window.TN_TAB!=="brack") return;
   paintTnBrackets();
-  const id=window.TN_BRACK||"20260102";
+  const id=window.TN_BRACK||"20260101";
   const ok=await refreshTnBracket(id);
   if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
 }
@@ -2758,9 +2758,9 @@ async function loadLeague(lg){
     $("liveMeta").textContent = "TSSAA · Football";
     if(typeof keepTnLive==="function") window.TNFB=keepTnLive(window.TNFB||{games:[]});
     const today=fridaySelDate();
-    const hasToday=((window.TNFB&&window.TNFB.games)||[]).some(g=>g.date===today);
-    if(hasToday){ window.TN_WEEK=today; tssaaTab(window.TN_TAB||"fb"); }
-    else if($("liveList")) $("liveList").innerHTML = "<p class='hint'>Friday slate</p>";
+    if(((window.TNFB&&window.TNFB.games)||[]).some(g=>g.date===today)) window.TN_WEEK=today;
+    if(!window.TN_BRACK) window.TN_BRACK="20260101";
+    tssaaTab(window.TN_TAB||"brack");
     const packer = typeof loadTnPack==="function" ? loadTnPack() : Promise.resolve();
     packer.then(()=>{
       const day=fridaySelDate();
@@ -9009,7 +9009,10 @@ $("toSlate").onclick = ()=>{
   }
   show("live", {back:true});
 };
-document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>loadLeague(b.dataset.lg));
+document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>{
+  if(b.dataset.lg==="tssaa"){ window.TN_TAB="brack"; window.TN_BRACK="20260101"; }
+  loadLeague(b.dataset.lg);
+});
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home", {back:true}));
 setTimeout(restorePlace, 0);
 window.addEventListener("scroll", ()=>{ if(window.HOLD_Y!=null) return; clearTimeout(window.PIN_T); window.PIN_T=setTimeout(savePlace, 120); }, {passive:true});
