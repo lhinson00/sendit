@@ -2813,6 +2813,27 @@ async function openTnBrackets(){
   const ok=await refreshTnBracket(id);
   if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
 }
+function tnPlace(){
+  return {tab:window.TN_TAB||"pick", bbq:window.TN_BB_Q||"", bbid:window.TN_BB_ID||"", gbq:window.TN_GB_Q||"", gbid:window.TN_GB_ID||"", brack:window.TN_BRACK||""};
+}
+function tnPush(){
+  window.TN_STACK=window.TN_STACK||[];
+  const snap=tnPlace();
+  const prev=window.TN_STACK[window.TN_STACK.length-1];
+  if(prev && prev.tab===snap.tab && prev.bbid===snap.bbid && prev.gbid===snap.gbid && prev.bbq===snap.bbq && prev.gbq===snap.gbq && prev.brack===snap.brack) return;
+  window.TN_STACK.push(snap);
+  if(window.TN_STACK.length>24) window.TN_STACK.shift();
+}
+function tnBack(){
+  const s=(window.TN_STACK||[]).pop();
+  if(!s) return false;
+  window.TN_BB_Q=s.bbq||""; window.TN_BB_ID=s.bbid||"";
+  window.TN_GB_Q=s.gbq||""; window.TN_GB_ID=s.gbid||"";
+  if(s.brack) window.TN_BRACK=s.brack;
+  tssaaTab(s.tab||"pick");
+  window.scrollTo(0,0);
+  return true;
+}
 function paintTnPick(){
   const host=$("liveList");
   if(!host) return;
@@ -2823,6 +2844,7 @@ function paintTnPick(){
     <button type="button" data-tnpick="gb" style="--bar:#9b6dff"><b>Girls Basketball</b><span>Schedules and rosters</span></button>
   </div>`;
   host.querySelectorAll("[data-tnpick]").forEach(b=>b.onclick=()=>{
+    tnPush();
     if(b.dataset.tnpick==="fb"){ window.TN_BRACK="20260101"; tssaaTab("brack"); }
     else tssaaTab(b.dataset.tnpick);
   });
@@ -2859,7 +2881,7 @@ function paintTnHoop(kind){
     }).join("") || "<p class='hint'>Roster not posted.</p>";
     host.innerHTML=`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div><p class="hint">* region or district game</p>`;
     const back=$("bbBack");
-    if(back) back.onclick=()=>{ window[idKey]=""; paintTnHoop(kind); };
+    if(back) back.onclick=()=>{ if(!tnBack()){ window[idKey]=""; paintTnHoop(kind); } };
     return;
   }
   const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
@@ -2871,10 +2893,14 @@ function paintTnHoop(kind){
     try{ box.setSelectionRange(end,end); }catch(e){}
     box.oninput=()=>{ window[qKey]=box.value; paintTnHoop(kind); };
   }
-  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window[idKey]=b.dataset.bb; paintTnHoop(kind); });
+  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ tnPush(); window[idKey]=b.dataset.bb; paintTnHoop(kind); });
 }
 function tssaaTab(which){
   window.TN_TAB=which;
+  if(which!=="pick"){
+    window.TN_STACK=window.TN_STACK||[];
+    if(!window.TN_STACK.length) window.TN_STACK.push({tab:"pick", bbq:"", bbid:"", gbq:"", gbid:"", brack:window.TN_BRACK||"20260101"});
+  }
   if(!(window.TNFB&&window.TNFB.games&&window.TNFB.games.length)){
     loadTnPack().then(()=>{ if(which==="stand") paintTnStand(); else if(which==="fb") paintTnSlate(); else if(which==="bb"||which==="gb") paintTnHoop(which); });
   }
@@ -7684,7 +7710,7 @@ async function fillTeamHistory(kind, tid){
   if(!spec || !host || !tid) return;
   const gen=++HIST_GEN;
   const end=historyYear(kind);
-  const floor={nfl:1922,cfb:1869,nba:1946,cbb:1938,wcbb:1982,mlb:1876}[kind]||1920;
+  const floor=2002;
   const rows=[];
   const pull=async url=>{ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) return null; return await r.json(); }catch(e){ return null; } };
   const overall=d=>{
@@ -7727,6 +7753,11 @@ async function fillTeamHistory(kind, tid){
     const chip=r=>{
       if(!r.rounds) return {t:"", k:""};
       if(!r.rounds.length) return {t:r.miss||"No playoffs", k:"miss"};
+      if(r.rounds.every(s=>!s.games || !s.games.length)){
+        const t=r.rounds[r.rounds.length-1].round||"";
+        const champ=/champion/i.test(t);
+        return {t, k:champ?"champ":(/lost|eliminated/i.test(t)?"lost":"won")};
+      }
       const last=r.rounds[r.rounds.length-1];
       const sw=last.games.filter(g=>g.win).length, sl=last.games.length-sw, won=sw>sl;
       const champ=won && /super bowl|world series|nba finals|final four|national championship|championship game/i.test(last.round) && !/first|wild|divisional|semi|sweet|elite|region/i.test(last.round);
@@ -7736,6 +7767,7 @@ async function fillTeamHistory(kind, tid){
     const postBox=r=>{
       if(!r.rounds || !r.rounds.length) return "";
       const blocks=r.rounds.map(s=>{
+        if(!s.games || !s.games.length) return `<div class="hseries one"><div class="shead"><b>${esc(s.round)}</b></div></div>`;
         const sw=s.games.filter(g=>g.win).length, sl=s.games.length-sw, won=sw>sl;
         if(s.games.length===1){
           const g=s.games[0];
@@ -7828,7 +7860,33 @@ async function fillTeamHistory(kind, tid){
     }
   }
   await Promise.all(Array.from({length:8}, worker));
+  if((kind==="cbb"||kind==="wcbb") && gen===HIST_GEN) await mergeHoopArchive(kind, tid, rows, gen, paint);
   if(gen===HIST_GEN && !rows.length) host.innerHTML="<p class='hint'>No season history posted.</p>";
+}
+async function mergeHoopArchive(kind, tid, rows, gen, paint){
+  if(!window.HOOP_HIST){
+    try{
+      const r=await fetch("/data/cbb-history.json",{cache:"no-store"});
+      if(r.ok) window.HOOP_HIST=await r.json();
+    }catch(e){}
+  }
+  const side=kind==="wcbb"?"women":"men";
+  const bag=((window.HOOP_HIST||{})[side]||{})[String(tid)]||[];
+  const have=new Set(rows.map(r=>r.year));
+  bag.forEach(s=>{
+    const year=s[0], label=s[1], w=s[2], l=s[3], conf=s[4], post=s[5];
+    const existing=rows.find(r=>r.year===year);
+    if(existing){
+      if(post && (!existing.rounds || !existing.rounds.length)){
+        existing.rounds=[{round:post, key:post, games:[]}];
+        existing.miss="";
+      }
+      return;
+    }
+    if(year<2002 || have.has(year) || !((Number(w)||0)+(Number(l)||0))) return;
+    rows.push({year, label:label||String(year), w:Number(w)||0, l:Number(l)||0, t:0, conf:conf?("Conf "+conf):"", rounds:post?[{round:post, key:post, games:[]}]:[], miss:post?"":"No postseason"});
+  });
+  if(gen===HIST_GEN) paint();
 }
 async function openMlbStandings(){
   const host=$("boardPanel");
@@ -8045,7 +8103,7 @@ async function openLeagueTeam(tid, name, sport){
         ${tableHtml}
         <h3 class="kicker" style="margin-top:18px">Last 5 · Next 5</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
-        ${sport==="mlb"?`<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading every season…</p></div>`:""}
+        ${sport==="mlb"?`<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`:""}
       </div>`;
     if(sport==="mlb") fillTeamHistory("mlb", tid);
   }catch(e){
@@ -8285,7 +8343,7 @@ async function openTeam(tid, name, sport){
         <h3 class="kicker">Schedule</h3>
         ${games||"<p class='hint'>No schedule.</p>"}
         <h3 class="kicker">Season history</h3>
-        <div id="teamHist"><p class="hint">Loading every season…</p></div>
+        <div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>
       </div>`;
     $("playerRoom").querySelectorAll("[data-gid]").forEach(b=>b.onclick=ev=>{
       ev.stopPropagation();
@@ -8584,10 +8642,76 @@ async function openHoopTeam(lg, tid, name){
   const base="https://site.web.api.espn.com/apis/site/v2/sports/basketball/"+meta.slug+"/teams/"+tid;
   try{
     const pull=async url=>{ try{ const res=await fetch(url,{cache:"no-store"}); if(!res.ok) return {}; return await res.json(); }catch(e){ return {}; } };
-    const sched=await pull(base+"/schedule?season="+meta.sched+"&seasontype=2");
+    const [sched, rost, stat, plstat]=await Promise.all([
+      pull(base+"/schedule?season="+meta.sched+"&seasontype=2"),
+      pull(base+"/roster"),
+      pull(base+"/statistics"),
+      pull(base+"/athletes/statistics")
+    ]);
     if(LEAGUE!==lg || !window.TEAM_CTX || String(window.TEAM_CTX.id)!==String(tid)) return;
-    const tm=sched.team||{};
+    const tm=Object.assign({}, (rost&&rost.team)||{}, (stat&&stat.team)||{}, sched.team||{});
     const rec=((tm.record&&tm.record.items)||[]).find(x=>x.type==="total")||{};
+    const cats=((((stat.results||{}).stats)||{}).categories)||[];
+    const grab=(names)=>{
+      for(const n of names){
+        for(const c of cats){
+          const s=(c.stats||[]).find(x=>x.name===n);
+          if(s && s.displayValue!=null && s.displayValue!=="") return s.displayValue;
+        }
+      }
+      return "";
+    };
+    let oa=0, on=0;
+    (sched.events||[]).forEach(ev=>{
+      const c=(ev.competitions||[])[0]||{};
+      const st=((c.status||{}).type)||{};
+      if(!(st.completed||st.state==="post")) return;
+      const comps=c.competitors||[];
+      const me=comps.find(x=>String((x.team&&x.team.id)||x.id)===String(tid));
+      const opp=comps.find(x=>x!==me)||{};
+      const raw=(opp.score&&(opp.score.value!=null?opp.score.value:opp.score.displayValue))||opp.score;
+      const n=Number(raw);
+      if(Number.isFinite(n)){ oa+=n; on++; }
+    });
+    const oppAvg=on?(oa/on).toFixed(1):"";
+    const tiles=[["PPG","avgPoints"],["OPP","avgPointsAgainst","avgDefensivePoints"],["RPG","avgRebounds"],["APG","avgAssists"],["FG%","fieldGoalPct"],["3P%","threePointFieldGoalPct"]].map(([lab,...names])=>{
+      let v=grab(names);
+      if(lab==="OPP" && !v) v=oppAvg;
+      return v?`<div><i>${lab}</i><b>${v}</b></div>`:"";
+    }).join("");
+    const flat=[];
+    (rost.athletes||[]).forEach(a=>{
+      if(a && Array.isArray(a.items)) a.items.forEach(p=>flat.push(p));
+      else if(a && (a.displayName||a.fullName)) flat.push(a);
+    });
+    const book={};
+    const grabP=(groups, gname, names)=>{
+      const g=(groups||[]).find(x=>x.name===gname)||{};
+      for(const n of names){
+        const s=(g.stats||[]).find(x=>x.name===n);
+        if(s && s.displayValue!=null && s.displayValue!=="") return String(s.displayValue);
+      }
+      return "";
+    };
+    (((plstat.results||[])[0]||{}).leaders||[]).forEach(L=>{
+      const a=L.athlete||{};
+      if(!a.id) return;
+      book[String(a.id)]={
+        gp:grabP(L.statistics,"general",["gamesPlayed"]),
+        ppg:grabP(L.statistics,"offensive",["avgPoints"])||String(L.displayValue||""),
+        rpg:grabP(L.statistics,"general",["avgRebounds"]),
+        apg:grabP(L.statistics,"offensive",["avgAssists"]),
+        fg:grabP(L.statistics,"offensive",["fieldGoalPct"])
+      };
+    });
+    const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
+    flat.sort((a,b)=>num((book[String(b.id)]||{}).ppg)-num((book[String(a.id)]||{}).ppg) || String(a.displayName||"").localeCompare(String(b.displayName||"")));
+    const squad=flat.length?`<div class="sgrp"><div style="overflow:auto"><table class="ptable"><thead><tr><th>Player</th><th>GP</th><th>PPG</th><th>RPG</th><th>APG</th><th>FG%</th></tr></thead><tbody>${flat.map(a=>{
+      const st=book[String(a.id)]||{};
+      const pos=(a.position&&a.position.abbreviation)||"";
+      const sub=[a.jersey?("#"+a.jersey):"", pos].filter(Boolean).join(" · ");
+      return `<tr class="prow" data-pid="${esc(a.id||"")}" data-pname="${esc(a.displayName||"")}"><td><span class="nm"><b>${esc(a.displayName||"")}</b><em>${esc(sub)}</em></span></td><td>${esc(st.gp||"—")}</td><td>${esc(st.ppg||"—")}</td><td>${esc(st.rpg||"—")}</td><td>${esc(st.apg||"—")}</td><td>${esc(st.fg||"—")}</td></tr>`;
+    }).join("")}</tbody></table></div></div>`:"<p class='hint'>Roster not posted.</p>";
     const gameLine=ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8608,7 +8732,7 @@ async function openHoopTeam(lg, tid, name){
     const past=all.filter(ev=>new Date(ev.date||0).getTime()<now).slice(-5);
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div><h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading every season…</p></div></div>`;
+    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div>${tiles?`<div class="tsk">${tiles}</div>`:""}<h3 class="kicker">Roster</h3>${squad||"<p class='hint'>Roster not posted.</p>"}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
     fillTeamHistory(lg, tid);
   }catch(e){
@@ -8779,7 +8903,7 @@ async function openNbaTeam(tid, name){
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
     const games=past.concat(upcoming).map(gameLine).join("");
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading every season…</p></div></div>`;
+    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
     fillTeamHistory("nba", tid);
   }catch(e){
@@ -9170,10 +9294,10 @@ function nhlTab(which){
   if(!window.JUST_BACK && which==="stand") openMlbStandings();
   if(!window.JUST_BACK && which==="lead") openMlbLeaders();
 }
-$("tabTnPick") && ($("tabTnPick").onclick=()=>tssaaTab("pick"));
-$("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
-$("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
-$("tabTnBrack") && ($("tabTnBrack").onclick=()=>tssaaTab("brack"));
+$("tabTnPick") && ($("tabTnPick").onclick=()=>{ if(window.TN_TAB!=="pick") tnPush(); tssaaTab("pick"); window.scrollTo(0,0); });
+$("tabTnFb") && ($("tabTnFb").onclick=()=>{ if(window.TN_TAB!=="fb") tnPush(); tssaaTab("fb"); });
+$("tabTnStand") && ($("tabTnStand").onclick=()=>{ if(window.TN_TAB!=="stand") tnPush(); tssaaTab("stand"); });
+$("tabTnBrack") && ($("tabTnBrack").onclick=()=>{ if(window.TN_TAB!=="brack") tnPush(); tssaaTab("brack"); });
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
  runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls();
@@ -9282,6 +9406,7 @@ $("toHome").onclick = ()=>{
 $("navBack") && ($("navBack").onclick=()=>{
   const v=window.VIEW_NOW;
   if(v==="home"){ if(history.length>1) history.back(); return; }
+  if(v==="live" && LEAGUE==="tssaa" && window.TN_STACK && window.TN_STACK.length){ tnBack(); return; }
   if(v==="live" && LEAGUE==="ufc" && window.UFC_OPEN){ window.UFC_OPEN=null; paintUfcSchedule(); return; }
   if(v==="game" && $("toSlate")) $("toSlate").click();
   else if(v==="player" && $("toGame")) $("toGame").click();
@@ -9304,7 +9429,7 @@ $("toSlate").onclick = ()=>{
   show("live", {back:true});
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>{
-  if(b.dataset.lg==="tssaa") window.TN_TAB="pick";
+  if(b.dataset.lg==="tssaa"){ window.TN_STACK=[]; window.TN_TAB="pick"; }
   loadLeague(b.dataset.lg);
 });
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home", {back:true}));
