@@ -174,6 +174,10 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ychips i{display:block;margin-top:3px;font-style:normal;font-size:9px;letter-spacing:.12em;font-weight:800;color:#9b9288}
 .ystat.live .ychips div{background:#102018}
 .ystat.live .ychips b{color:#e9fff5}
+.tnpick{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.tnpick button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;background:#12141a;border:1px solid #2a241c;border-radius:16px;color:#fff;padding:18px 16px 16px;cursor:pointer;box-shadow:inset 4px 0 0 var(--bar,#ff7a18)}
+.tnpick b{font-family:"Bebas Neue",sans-serif;font-size:34px;font-weight:400;letter-spacing:.04em;line-height:.9}
+.tnpick span{color:#c9c2b8;font-size:13px}
 .bbback{border:0;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;padding:4px 0 8px;cursor:pointer}
 .bbschool{margin:0 0 8px;font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.03em;font-weight:400}
 .bbrow{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:4px 8px;align-items:baseline;padding:8px 0;border-bottom:1px solid #241e18}
@@ -1231,10 +1235,10 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <button type="button" class="tabbtn" id="tabUfcRank">Rankings</button>
     </span>
     <span class="tabs" id="tssaaTabs" hidden>
+      <button type="button" class="tabbtn" id="tabTnPick">Sports</button>
       <button type="button" class="tabbtn on" id="tabTnFb">Football</button>
       <button type="button" class="tabbtn" id="tabTnStand">Standings</button>
       <button type="button" class="tabbtn" id="tabTnBrack">Playoff Bracket</button>
-      <button type="button" class="tabbtn" id="tabTnBb">Boys Basketball</button>
     </span>
   </div>
   <div id="cfbPills" class="pills" hidden></div>
@@ -2384,7 +2388,7 @@ async function refreshTnFromSource(why){
           const n=applyTnScores(rows, day);
           window.TN_WEEK=day;
           if(typeof stampTnPins==="function") stampTnPins();
-          if(LEAGUE==="tssaa") paintTnSlate();
+          if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
           else if(window.VIEW_NOW==="home" && typeof paintYours==="function") paintYours(true);
           const line=$("liveMeta");
           if(line && LEAGUE==="tssaa") line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
@@ -2409,14 +2413,14 @@ async function refreshTnFromSource(why){
       if(!rows.length) continue;
       const n=applyTnScores(rows, day);
       window.TN_WEEK=day;
-      if(LEAGUE==="tssaa") paintTnSlate();
+      if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
       const line=$("liveMeta");
       if(line) line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
       return;
     }catch(e){}
     finally{ clearTimeout(timer); }
   }
-  if(LEAGUE==="tssaa") paintTnSlate();
+  if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
 }
 function msToNextFriNightPull(){
   const now=new Date();
@@ -2809,19 +2813,37 @@ async function openTnBrackets(){
   const ok=await refreshTnBracket(id);
   if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
 }
-function paintTnBoys(){
+function paintTnPick(){
   const host=$("liveList");
   if(!host) return;
-  const pack=window.TNBB||{};
+  if($("liveMeta")) $("liveMeta").textContent="TSSAA";
+  host.innerHTML=`<div class="tnpick">
+    <button type="button" data-tnpick="fb" style="--bar:#ff7a18"><b>Football</b><span>Scores, standings, and the playoff bracket</span></button>
+    <button type="button" data-tnpick="bb" style="--bar:#1a4fff"><b>Boys Basketball</b><span>Schedules and rosters</span></button>
+    <button type="button" data-tnpick="gb" style="--bar:#9b6dff"><b>Girls Basketball</b><span>Schedules and rosters</span></button>
+  </div>`;
+  host.querySelectorAll("[data-tnpick]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.tnpick==="fb"){ window.TN_BRACK="20260101"; tssaaTab("brack"); }
+    else tssaaTab(b.dataset.tnpick);
+  });
+}
+function paintTnHoop(kind){
+  const host=$("liveList");
+  if(!host) return;
+  const girls=kind==="gb";
+  const pack=girls?(window.TNGB||{}):(window.TNBB||{});
   const schools=pack.schools||[];
-  $("liveMeta").textContent = schools.length ? ("TSSAA · Boys basketball · "+schools.length+" schools") : "TSSAA · Boys basketball";
+  const label=girls?"Girls basketball":"Boys basketball";
+  if($("liveMeta")) $("liveMeta").textContent = schools.length ? ("TSSAA · "+label+" · "+schools.length+" schools") : ("TSSAA · "+label);
   if(!schools.length){
-    host.innerHTML="<p class='hint' style='padding:14px'>Loading boys basketball schedules…</p>";
+    host.innerHTML="<p class='hint' style='padding:14px'>Loading "+label.toLowerCase()+" schedules…</p>";
     return;
   }
-  const raw=String(window.TN_BB_Q||"");
+  const qKey=girls?"TN_GB_Q":"TN_BB_Q";
+  const idKey=girls?"TN_GB_ID":"TN_BB_ID";
+  const raw=String(window[qKey]||"");
   const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
-  const open=schools.find(s=>String(s.id)===String(window.TN_BB_ID||""));
+  const open=schools.find(s=>String(s.id)===String(window[idKey]||""));
   if(open){
     const games=open.games||[];
     const roster=open.roster||[];
@@ -2837,7 +2859,7 @@ function paintTnBoys(){
     }).join("") || "<p class='hint'>Roster not posted.</p>";
     host.innerHTML=`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div><p class="hint">* region or district game</p>`;
     const back=$("bbBack");
-    if(back) back.onclick=()=>{ window.TN_BB_ID=""; paintTnBoys(); };
+    if(back) back.onclick=()=>{ window[idKey]=""; paintTnHoop(kind); };
     return;
   }
   const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
@@ -2847,26 +2869,34 @@ function paintTnBoys(){
     box.focus();
     const end=box.value.length;
     try{ box.setSelectionRange(end,end); }catch(e){}
-    box.oninput=()=>{ window.TN_BB_Q=box.value; paintTnBoys(); };
+    box.oninput=()=>{ window[qKey]=box.value; paintTnHoop(kind); };
   }
-  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window.TN_BB_ID=b.dataset.bb; paintTnBoys(); });
+  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window[idKey]=b.dataset.bb; paintTnHoop(kind); });
 }
 function tssaaTab(which){
   window.TN_TAB=which;
   if(!(window.TNFB&&window.TNFB.games&&window.TNFB.games.length)){
-    loadTnPack().then(()=>{ if(which==="stand") paintTnStand(); else if(which!=="brack") paintTnSlate(); });
+    loadTnPack().then(()=>{ if(which==="stand") paintTnStand(); else if(which==="fb") paintTnSlate(); else if(which==="bb"||which==="gb") paintTnHoop(which); });
   }
   if($("tabEatAny")) $("tabEatAny").hidden=true;
   markEatBack();
   if($("eatPanel")) $("eatPanel").hidden=true;
+  const football=which==="fb"||which==="stand"||which==="brack";
+  ["tabTnFb","tabTnStand","tabTnBrack"].forEach(id=>{ const b=$(id); if(b) b.hidden=!football; });
+  if($("tabTnPick")){ $("tabTnPick").hidden=which==="pick"; $("tabTnPick").classList.remove("on"); }
   if($("tabTnFb")) $("tabTnFb").classList.toggle("on", which==="fb");
   if($("tabTnStand")) $("tabTnStand").classList.toggle("on", which==="stand");
   if($("tabTnBrack")) $("tabTnBrack").classList.toggle("on", which==="brack");
-  if($("tabTnBb")) $("tabTnBb").classList.toggle("on", which==="bb");
-  if(which==="bb"){
+  if(which==="pick"){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
-    if(!window.JUST_BACK) paintTnBoys();
+    if(!window.JUST_BACK) paintTnPick();
+    return;
+  }
+  if(which==="bb"||which==="gb"){
+    if($("boardPanel")) $("boardPanel").hidden=true;
+    if($("liveList")) $("liveList").hidden=false;
+    if(!window.JUST_BACK) paintTnHoop(which);
     return;
   }
   if(which==="stand"){
@@ -2901,18 +2931,18 @@ async function loadLeague(lg){
     if($("cfbPills")) $("cfbPills").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     if($("newsClick")) $("newsClick").hidden=true;
-    $("liveMeta").textContent = "TSSAA · Football";
+    $("liveMeta").textContent = "TSSAA";
     if(typeof keepTnLive==="function") window.TNFB=keepTnLive(window.TNFB||{games:[]});
     const today=fridaySelDate();
     if(((window.TNFB&&window.TNFB.games)||[]).some(g=>g.date===today)) window.TN_WEEK=today;
     if(!window.TN_BRACK) window.TN_BRACK="20260101";
-    tssaaTab(window.TN_TAB||"brack");
+    tssaaTab(window.TN_TAB||"pick");
     const packer = typeof loadTnPack==="function" ? loadTnPack() : Promise.resolve();
     packer.then(()=>{
       const day=fridaySelDate();
       if(((window.TNFB||{}).games||[]).some(g=>g.date===day)) window.TN_WEEK=day;
       return refreshTnFromSource("open");
-    }).catch(()=>{ if(LEAGUE==="tssaa") paintTnSlate(); });
+    }).catch(()=>{ if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate(); });
     return;
   }
   try{
@@ -4970,8 +5000,8 @@ function toggleFav(id, name){
   }
   saveFav();
   if(typeof syncPinsFromFav==="function") syncPinsFromFav(true);
-  if(LEAGUE==="tssaa") paintTnSlate();
-  else paint(window.LIVE_GAMES||GAMES||[]);
+  if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
+  else if(LEAGUE!=="tssaa") paint(window.LIVE_GAMES||GAMES||[]);
 }
 function starBtn(id, name){
   return `<button type="button" class="star${isFav(id)?" on":""}" data-fav="${id||""}" data-fname="${String(name||"").replace(/"/g,"")}">${isFav(id)?"★":"☆"}</button>`;
@@ -9140,10 +9170,10 @@ function nhlTab(which){
   if(!window.JUST_BACK && which==="stand") openMlbStandings();
   if(!window.JUST_BACK && which==="lead") openMlbLeaders();
 }
+$("tabTnPick") && ($("tabTnPick").onclick=()=>tssaaTab("pick"));
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
 $("tabTnBrack") && ($("tabTnBrack").onclick=()=>tssaaTab("brack"));
-$("tabTnBb") && ($("tabTnBb").onclick=()=>tssaaTab("bb"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
  runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls();
@@ -9274,7 +9304,7 @@ $("toSlate").onclick = ()=>{
   show("live", {back:true});
 };
 document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>{
-  if(b.dataset.lg==="tssaa"){ window.TN_TAB="brack"; window.TN_BRACK="20260101"; }
+  if(b.dataset.lg==="tssaa") window.TN_TAB="pick";
   loadLeague(b.dataset.lg);
 });
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home", {back:true}));
@@ -9475,7 +9505,11 @@ async function loadTnPack(){
   if(window.VIEW_NOW==="home" && typeof paintYours==="function" && typeof PINS!=="undefined" && PINS.some(p=>p.lg==="tssaa")) paintYours(true);
   try{
     const r=await fetch("/data/tssaa-bball.json",{cache:"no-store"});
-    if(r.ok){ const d=await r.json(); if(d){ window.TNBB=d; if(window.TN_TAB==="bb" && typeof paintTnBoys==="function") paintTnBoys(); } }
+    if(r.ok){ const d=await r.json(); if(d){ window.TNBB=d; if(window.TN_TAB==="bb" && typeof paintTnHoop==="function") paintTnHoop("bb"); } }
+  }catch(e){}
+  try{
+    const r=await fetch("/data/tssaa-gbball.json",{cache:"no-store"});
+    if(r.ok){ const d=await r.json(); if(d){ window.TNGB=d; if(window.TN_TAB==="gb" && typeof paintTnHoop==="function") paintTnHoop("gb"); } }
   }catch(e){}
 }
 loadTnPack();
