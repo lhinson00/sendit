@@ -74,23 +74,11 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .yliveboard{padding:12px var(--pad) 0}
 .yliveboard .ylink{margin-top:0}
 .yliveboard .ylink+.ylink{margin-top:10px}
-.ytoday{padding:12px 0 2px}
-.ytoday .ykick{padding:0 var(--pad)}
-.ytodayrow{display:flex;gap:8px;overflow:auto;padding:8px var(--pad) 2px;scrollbar-width:none}
-.ytile{flex:none;width:150px;text-align:left;border:1px solid #2a241c;background:#101218;color:#fff;border-radius:14px;padding:10px 10px 8px;font:inherit;cursor:pointer}
-.ytile.live{border-color:#3ee0a0;box-shadow:inset 3px 0 0 #3ee0a0}
-.ytiletop{display:flex;align-items:center;gap:6px;min-width:0}
-.ytile img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:5px;padding:1px;flex:none}
-.ytile b{font-family:"Bebas Neue",sans-serif;font-size:18px;font-weight:400;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ytile em{margin-left:auto;font-style:normal;font-size:9px;letter-spacing:.08em;font-weight:800;color:#ff7a18;text-transform:uppercase;flex:none}
-.ytile.live em{color:#3ee0a0}
-.ytile strong{display:block;margin-top:8px;font-family:"Bebas Neue",sans-serif;font-size:28px;font-weight:400;line-height:.9}
-.ytileopp{display:block;margin-top:3px;color:#c9c2b8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px var(--pad) 14px;border-bottom:1px solid #1c1814}
+.hub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px var(--pad) 16px;border-bottom:1px solid #1c1814}
 .hubk{grid-column:1/-1;margin:2px 0 0}
-.hubcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:62px;padding:8px 2px;border-radius:14px;border:1px solid #2a241c;background:#101218;color:#fff}
-.hubcard img{width:22px;height:22px;object-fit:contain;margin:0;flex:none}
-.hubcard b{font-family:"Bebas Neue",sans-serif;font-size:13px;letter-spacing:.04em;font-weight:400;white-space:nowrap}
+.hubcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:72px;padding:10px 4px;border-radius:16px;border:1px solid #262119;background:#12141a;color:#fff}
+.hubcard img{width:26px;height:26px;object-fit:contain;margin:0;flex:none}
+.hubcard b{font-family:"Bebas Neue",sans-serif;font-size:15px;letter-spacing:.06em;font-weight:400;white-space:nowrap}
 .hubcard span{display:none}
 .hubcard .duo{display:inline-flex;align-items:center;gap:2px;flex:none}
 .hubcard .duo img{width:16px;height:16px}
@@ -114,23 +102,25 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ycard.ysort .ymove{display:flex;gap:8px;margin-left:auto;flex:none}
 .ycard.ysort .ymove button{width:52px;height:52px;border:0;border-radius:14px;background:#24180f;color:#ffc46b;font:800 22px Manrope,sans-serif;padding:0}
 .ycard.ysort .ymove button:disabled{opacity:.28}
-.yday{margin:3px 0 0;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
+.yday{margin:4px 0 0;color:#c9c2b8;font-size:13px;letter-spacing:.01em;font-weight:600}
 .ylede{margin:8px 0 0;color:var(--muted);font-size:13px}
-.ycard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:12px;cursor:pointer;position:relative}
-.ycard.now{border-color:var(--orange);background:linear-gradient(180deg,#1c120c,#120e0c 46%)}
-.ycard.live{border-color:#3ee0a0;background:linear-gradient(180deg,#0e1a14,#120e0c 46%);box-shadow:inset 3px 0 0 #3ee0a0}
+.ycard{display:block;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:18px;padding:14px 14px 12px;cursor:pointer;position:relative}
+.ycard.now{border-color:var(--orange);background:linear-gradient(180deg,#1c120c,#101218 42%)}
+.ycard.live{border-color:#3ee0a0;background:linear-gradient(180deg,#0e1a14,#101218 48%);box-shadow:inset 3px 0 0 #3ee0a0}
 .ycard.final .ywhen em{color:#f4efe6}
-.yrow{display:flex;gap:10px;align-items:center}
-.ylogo{width:48px;height:48px;object-fit:contain;background:#fff;border-radius:10px;padding:4px;flex:none}
+.yrow{display:flex;gap:12px;align-items:center;padding-right:22px}
+.ylogo{width:52px;height:52px;object-fit:contain;background:#fff;border-radius:12px;padding:5px;flex:none}
 .ycard.player .ylogo{object-fit:cover;border-radius:50%;background:#1a120c;padding:0}
 .ywho{flex:1;min-width:0}
-.ywho b{display:block;font-family:"Bebas Neue",sans-serif;font-size:clamp(22px,6.2vw,30px);letter-spacing:.03em;line-height:.88;white-space:normal}
-.ywho span{display:block;margin-top:3px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ywho b{display:block;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ywho span{display:block;margin-top:4px;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ywhen{text-align:right;flex:none}
-.ywhen em{display:block;font-style:normal;font-size:10px;letter-spacing:.16em;font-weight:800;color:var(--orange);text-transform:uppercase}
+.ywhen em{display:block;font-style:normal;font-size:10px;letter-spacing:.14em;font-weight:800;color:var(--orange);text-transform:uppercase}
 .ycard.live .ywhen em{color:#3ee0a0}
-.ywhen strong{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;letter-spacing:.03em;line-height:.9;margin-top:2px}
-.ycard .yremove{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid #3a3228;background:#1a140f;color:#c9c2b8;font-size:18px;line-height:1;cursor:pointer}
+.ywhen strong{display:block;font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.02em;line-height:.85;margin-top:2px;color:#fff}
+.ycard.live .ywhen strong{color:#e9fff5}
+.ycard .yremove{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;border:0;background:transparent;color:#8d867c;font-size:16px;line-height:1;cursor:pointer;padding:0}
+.ycard.ysort .yremove{position:static;width:36px;height:36px;border:1px solid #3a3228;background:#1a140f;color:#c9c2b8;font-size:18px}
 .ysit{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid #1e4a36}
 .ydiamond{position:relative;width:72px;height:68px}
 .ybase{position:absolute;width:14px;height:14px;transform:rotate(45deg);border:2px solid #5d6b62;border-radius:2px;background:transparent}
@@ -144,11 +134,11 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ypab span{display:flex;gap:8px;align-items:baseline;min-width:0}
 .ypab em{flex:none;font-style:normal;font-size:10px;font-weight:800;letter-spacing:.12em;color:#9b9288}
 .ypab b{font-size:15px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ymatch{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #2a241c}
-.ymatch img{width:22px;height:22px;object-fit:contain}
-.ymatch b{font-size:14px}
-.ymatch span{margin-left:auto;color:var(--ember);font-size:12px;font-weight:700;text-align:right;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ylast{margin:8px 0 0;color:#c9c2b8;font-size:12px}
+.ymatch{display:flex;align-items:center;gap:8px;margin-top:12px;padding:8px 10px;background:#0b0c10;border-radius:12px}
+.ymatch img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:5px;padding:1px;flex:none}
+.ymatch b{font-size:14px;font-weight:700}
+.ymatch span{margin-left:auto;color:#c9c2b8;font-size:11px;font-weight:700;text-align:right;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ylast{margin:8px 2px 0;color:#9b9288;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ystat{margin-top:10px;padding-top:10px;border-top:1px solid #2a241c}
 .ystat-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
 .ystat-top em{font-style:normal;font-size:10px;letter-spacing:.16em;font-weight:800;color:var(--orange);text-transform:uppercase}
@@ -1101,7 +1091,6 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
 <button type="button" class="navback" id="navBack">Back</button>
 <section id="viewHome">
   <div id="yLive" class="yliveboard" hidden></div>
-  <div id="yToday" class="ytoday" hidden></div>
   <div class="hub">
     <h3 class="hubk">All boards</h3>
     <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
@@ -5642,64 +5631,7 @@ function paintYours(quiet){
     }).join("");
   }
   if(!quiet) fillPinLines();
-  paintToday();
   settleScroll(holdY);
-}
-function paintToday(){
-  const host=$("yToday");
-  if(!host) return;
-  if(YSTATE.order || !PINS.length){ host.hidden=true; host.innerHTML=""; return; }
-  const today=chiKey(new Date());
-  const seen={};
-  const take=(p,i,b)=>{
-    if(!b || !b.oppName) return null;
-    const key=b.eventId?("e"+b.eventId):((p.lg||"")+"|"+b.oppName+"|"+(b.t||""));
-    if(seen[key]) return null;
-    seen[key]=1;
-    return {i, p, b};
-  };
-  let rows=[];
-  PINS.forEach((p,i)=>{
-    const b=p._book||{};
-    const day=b.t?chiKey(new Date(b.t)):"";
-    if(!(b.live || b.final || b.soon || day===today)) return;
-    const row=take(p,i,b);
-    if(row) rows.push(row);
-  });
-  let kicker="Today";
-  if(!rows.length){
-    kicker="Coming up";
-    PINS.forEach((p,i)=>{
-      const b=p._book||{};
-      if(b.live || b.final) return;
-      if(b.t && b.t<Date.now()-60*60*1000) return;
-      const row=take(p,i,b);
-      if(row) rows.push(row);
-    });
-    rows.sort((a,b)=>(a.b.t||9e15)-(b.b.t||9e15));
-    rows=rows.slice(0,6);
-  } else {
-    rows.sort((a,b)=>(a.b.live?0:a.b.final?2:1)-(b.b.live?0:b.b.final?2:1) || (a.b.t||0)-(b.b.t||0));
-  }
-  if(!rows.length){ host.hidden=true; host.innerHTML=""; return; }
-  if(rows.some(r=>r.b.live)) kicker="On now";
-  host.hidden=false;
-  host.innerHTML=`<p class="ykick">${kicker}</p><div class="ytodayrow">`+rows.map(r=>{
-    const b=r.b;
-    const who=r.p.abbr||b.abbr||r.p.name||"";
-    const logo=b.logo||(r.p.kind==="player"?"":(r.p.logo||teamLogo(r.p)||""));
-    const opp=/^Home/.test(b.where||"")?("vs "+b.oppName):(/^at /.test(b.where||"")?("@ "+b.oppName):b.oppName);
-    const state=b.live?" live":(b.final?" final":"");
-    return `<button type="button" class="ytile${state}" data-ytoday="${r.i}"><span class="ytiletop">${logo?`<img alt="" src="${esc(logo)}"/>`:""}<b>${esc(who)}</b><em>${esc(b.label||"")}</em></span><strong>${esc(b.big||"—")}</strong><span class="ytileopp">${esc(opp||"")}</span></button>`;
-  }).join("")+`</div>`;
-  if(!host.dataset.bound){
-    host.dataset.bound="1";
-    host.onclick=e=>{
-      const b=e.target.closest("[data-ytoday]");
-      if(!b) return;
-      openPin(PINS[+b.dataset.ytoday]);
-    };
-  }
 }
 async function runYSearch(){
   const seq=++YSEQ;
