@@ -1197,6 +1197,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     </span>
   </div>
   <div id="cfbPills" class="pills" hidden></div>
+  <div id="cbbPills" class="pills" hidden></div>
   <div id="dayTabs" class="pills" hidden></div>
   <div id="newsClick" class="newstick" hidden></div>
   <div id="liveList" class="list"></div>
@@ -1631,6 +1632,15 @@ const CONF = [
   ["all","All"],["top25","Top 25"],["8","SEC"],["5","Big Ten"],["1","ACC"],["4","Big 12"],["9","Pac-12"],["151","American"],["17","MWC"],["15","MAC"],["12","C-USA"],["37","Sun Belt"],["18","Ind."]
 ];
 let CFB_FILT = "all";
+const CBB_CONF = [
+  ["all","All"],["top25","Top 25"],
+  ["23","SEC"],["7","Big Ten"],["8","Big 12"],["2","ACC"],["4","Big East"],
+  ["62","American"],["3","A-10"],["1","Am. East"],["46","ASUN"],["5","Big Sky"],["6","Big South"],["9","Big West"],
+  ["10","CAA"],["11","CUSA"],["45","Horizon"],["12","Ivy"],["14","MAC"],["13","MAAC"],["16","MEAC"],["44","MW"],
+  ["18","MVC"],["19","NEC"],["20","OVC"],["21","Pac-12"],["22","Patriot"],["24","SoCon"],["25","Southland"],
+  ["49","Summit"],["27","Sun Belt"],["26","SWAC"],["30","UAC"],["29","WCC"]
+];
+let CBB_FILT = "all";
 function rankChip(r){
   r=Number(r);
   return (r>0 && r<=25) ? `<span class="rknum">#${r}</span>` : "";
@@ -1641,6 +1651,21 @@ function filterCfb(games){
     return games.filter(g=>g.awayRank<=25||g.homeRank<=25).slice().sort((a,b)=>Math.min(a.awayRank,a.homeRank)-Math.min(b.awayRank,b.homeRank));
   }
   return games.filter(g=>g.awayConf===CFB_FILT||g.homeConf===CFB_FILT);
+}
+function filterCbb(games){
+  if(LEAGUE!=="cbb" || CBB_FILT==="all") return games;
+  if(CBB_FILT==="top25"){
+    return games.filter(g=>g.awayRank<=25||g.homeRank<=25).slice().sort((a,b)=>Math.min(a.awayRank,a.homeRank)-Math.min(b.awayRank,b.homeRank));
+  }
+  return games.filter(g=>g.awayConf===CBB_FILT||g.homeConf===CBB_FILT);
+}
+function paintCbbPills(){
+  const host=$("cbbPills");
+  if(!host) return;
+  host.hidden = LEAGUE!=="cbb" || (window.BOARD && window.BOARD!=="slate") || ($("eatPanel") && !$("eatPanel").hidden);
+  if(LEAGUE!=="cbb") return;
+  host.innerHTML = CBB_CONF.map(([id,lab])=>`<button type="button" data-cbb="${id}" class="${CBB_FILT===id?"on":""}">${lab}</button>`).join("");
+  host.querySelectorAll("[data-cbb]").forEach(b=>b.onclick=()=>{ CBB_FILT=b.dataset.cbb; paint(GAMES); });
 }
 function paintCfbPills(){
   const host=$("cfbPills");
@@ -1837,7 +1862,7 @@ function paint(games){
   window.LIVE_GAMES = games;
   watchGames(games);
   const host=$("liveList");
-  let shown = filterCfb(games).slice().sort((a,b)=>{
+  let shown = (LEAGUE==="cbb"?filterCbb(games):filterCfb(games)).slice().sort((a,b)=>{
     const af=isFav(a.awayId)||isFav(a.homeId);
     const bf=isFav(b.awayId)||isFav(b.homeId);
     if(af!==bf) return af?-1:1;
@@ -1845,8 +1870,9 @@ function paint(games){
     if(al!==bl) return al?-1:1;
     return 0;
   });
-  $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+shown.length+(LEAGUE==="cfb"&&CFB_FILT!=="all"?" · "+(CONF.find(x=>x[0]===CFB_FILT)||[])[1]:"");
+  $("liveMeta").textContent = LEAGUE.toUpperCase()+" · "+shown.length+(LEAGUE==="cfb"&&CFB_FILT!=="all"?" · "+(CONF.find(x=>x[0]===CFB_FILT)||[])[1]:"")+(LEAGUE==="cbb"&&CBB_FILT!=="all"?" · "+(CBB_CONF.find(x=>x[0]===CBB_FILT)||[])[1]:"");
   paintCfbPills();
+  paintCbbPills();
   if(LEAGUE==="mlb" && !Number(slateOff("mlb"))){
     const today=new Date().toLocaleString("en-CA",{timeZone:"America/Chicago"}).slice(0,10);
     const todays=shown.filter(g=>g.state==="in" || chiDay(g.start||"")===today);
@@ -2771,6 +2797,8 @@ async function loadLeague(lg){
     if($("kitPanel")) $("kitPanel").hidden=true;
     if($("eatPanel")) $("eatPanel").hidden=true;
     if($("boardPanel")) $("boardPanel").hidden=true;
+    if($("cbbPills")) $("cbbPills").hidden=true;
+    if($("cfbPills")) $("cfbPills").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     if($("newsClick")) $("newsClick").hidden=true;
     $("liveMeta").textContent = "TSSAA · Football";
@@ -5994,6 +6022,7 @@ function showEat(opts){
   if($("boardPanel")) $("boardPanel").hidden=true;
   if($("kitPanel")) $("kitPanel").hidden=true;
   if($("cfbPills")) $("cfbPills").hidden=true;
+  if($("cbbPills")) $("cbbPills").hidden=true;
   if($("eatPanel")) $("eatPanel").hidden=false;
   if($("tabEat")) $("tabEat").classList.toggle("on", LEAGUE==="nfl");
   if($("tabEatC")) $("tabEatC").classList.toggle("on", LEAGUE==="cfb");
@@ -8242,6 +8271,7 @@ function hoopTab(lg, which){
   if($("liveList")) $("liveList").hidden=which!=="slate";
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   if($("dayTabs")) $("dayTabs").hidden=which!=="slate";
+  if($("cbbPills")) $("cbbPills").hidden = !(lg==="cbb" && which==="slate");
   const ids=lg==="wcbb"?["tabWcbbSlate","tabWcbbStand","tabWcbbLead"]:["tabCbbSlate","tabCbbStand","tabCbbLead"];
   ids.forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id.endsWith("Slate")&&which==="slate")||(id.endsWith("Stand")&&which==="stand")||(id.endsWith("Lead")&&which==="lead")); });
   if(!window.JUST_BACK && which==="stand") openHoopStandings(lg);
