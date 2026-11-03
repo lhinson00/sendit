@@ -174,7 +174,19 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ychips i{display:block;margin-top:3px;font-style:normal;font-size:9px;letter-spacing:.12em;font-weight:800;color:#9b9288}
 .ystat.live .ychips div{background:#102018}
 .ystat.live .ychips b{color:#e9fff5}
-.yempty{margin-top:12px;padding:16px;border:1px dashed #3a3228;border-radius:14px;color:#c9c2b8;font-size:14px;line-height:1.45}
+.bbback{border:0;background:transparent;color:#ffc46b;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:12px;padding:4px 0 8px;cursor:pointer}
+.bbschool{margin:0 0 8px;font-family:"Bebas Neue",sans-serif;font-size:32px;letter-spacing:.03em;font-weight:400}
+.bbrow{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:4px 8px;align-items:baseline;padding:8px 0;border-bottom:1px solid #241e18}
+.bbrow b{font-size:12px;font-weight:700}
+.bbrow span{font-size:14px;font-weight:700}
+.bbrow em{font-style:normal;color:#ffc46b;font-weight:800;font-size:12px}
+.bbrow small{grid-column:2 / -1;color:#9b9288;font-size:11px}
+.bbhit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#101218;border:1px solid #2a241c;color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
+.bbhit em{font-style:normal;color:#9b9288;font-size:12px}
+.bbroster{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bbplayer{background:#101218;border:1px solid #241e18;border-radius:10px;padding:8px 10px}
+.bbplayer b{display:block;font-size:14px}
+.bbplayer span{color:#9b9288;font-size:11px}
 .ygrid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px}
 .ylinks{margin-top:8px;padding-top:16px;border-top:1px solid #1c1814}
 .ylink{display:flex;align-items:center;gap:10px;margin-top:8px;padding:10px 12px;background:#0c0d12;border:1px solid #241e18;border-radius:12px;text-decoration:none;color:inherit}
@@ -1222,7 +1234,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
       <button type="button" class="tabbtn on" id="tabTnFb">Football</button>
       <button type="button" class="tabbtn" id="tabTnStand">Standings</button>
       <button type="button" class="tabbtn" id="tabTnBrack">Playoff Bracket</button>
-      <button type="button" class="tabbtn" id="tabTnBb" disabled title="Closer to November 1">Basketball</button>
+      <button type="button" class="tabbtn" id="tabTnBb">Boys Basketball</button>
     </span>
   </div>
   <div id="cfbPills" class="pills" hidden></div>
@@ -2797,6 +2809,48 @@ async function openTnBrackets(){
   const ok=await refreshTnBracket(id);
   if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
 }
+function paintTnBoys(){
+  const host=$("liveList");
+  if(!host) return;
+  const pack=window.TNBB||{};
+  const schools=pack.schools||[];
+  $("liveMeta").textContent = schools.length ? ("TSSAA · Boys basketball · "+schools.length+" schools") : "TSSAA · Boys basketball";
+  if(!schools.length){
+    host.innerHTML="<p class='hint' style='padding:14px'>Loading boys basketball schedules…</p>";
+    return;
+  }
+  const raw=String(window.TN_BB_Q||"");
+  const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
+  const open=schools.find(s=>String(s.id)===String(window.TN_BB_ID||""));
+  if(open){
+    const games=open.games||[];
+    const roster=open.roster||[];
+    const rows=games.map(g=>{
+      const side=g.away?"at":"vs";
+      const mark=g.region?" *":"";
+      const note=g.note?` · ${esc(g.note)}`:"";
+      return `<div class="bbrow"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA")+mark)}</span><em>${esc(g.result||"")}</em>${note?`<small>${note}</small>`:""}</div>`;
+    }).join("") || "<p class='hint'>No games posted.</p>";
+    const players=roster.map(p=>{
+      const bits=[p.c,p.p,p.h].filter(Boolean).join(" · ");
+      return `<div class="bbplayer"><b>${esc(p.n||"")}</b>${bits?`<span>${esc(bits)}</span>`:""}</div>`;
+    }).join("") || "<p class='hint'>Roster not posted.</p>";
+    host.innerHTML=`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div><p class="hint">* region or district game</p>`;
+    const back=$("bbBack");
+    if(back) back.onclick=()=>{ window.TN_BB_ID=""; paintTnBoys(); };
+    return;
+  }
+  const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
+  host.innerHTML=`<input class="yq" id="bbq" placeholder="School — Summertown, Lawrence, Lewis County" value="${esc(raw)}" autocomplete="off"/>`+(q.length<2?"<p class='hint' style='padding:8px 0'>Type a school. Summertown, Lawrence County, Lewis County.</p>":(hits.length?hits.map(s=>`<button type="button" class="bbhit" data-bb="${esc(s.id)}"><b>${esc(s.name)}</b><em>${(s.games||[]).length} games · ${(s.roster||[]).length} players</em></button>`).join(""):"<p class='hint'>No school matched.</p>"));
+  const box=$("bbq");
+  if(box){
+    box.focus();
+    const end=box.value.length;
+    try{ box.setSelectionRange(end,end); }catch(e){}
+    box.oninput=()=>{ window.TN_BB_Q=box.value; paintTnBoys(); };
+  }
+  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window.TN_BB_ID=b.dataset.bb; paintTnBoys(); });
+}
 function tssaaTab(which){
   window.TN_TAB=which;
   if(!(window.TNFB&&window.TNFB.games&&window.TNFB.games.length)){
@@ -2808,6 +2862,13 @@ function tssaaTab(which){
   if($("tabTnFb")) $("tabTnFb").classList.toggle("on", which==="fb");
   if($("tabTnStand")) $("tabTnStand").classList.toggle("on", which==="stand");
   if($("tabTnBrack")) $("tabTnBrack").classList.toggle("on", which==="brack");
+  if($("tabTnBb")) $("tabTnBb").classList.toggle("on", which==="bb");
+  if(which==="bb"){
+    if($("boardPanel")) $("boardPanel").hidden=true;
+    if($("liveList")) $("liveList").hidden=false;
+    if(!window.JUST_BACK) paintTnBoys();
+    return;
+  }
   if(which==="stand"){
     if(!window.JUST_BACK) paintTnStand();
   } else if(which==="brack"){
@@ -9082,6 +9143,7 @@ function nhlTab(which){
 $("tabTnFb") && ($("tabTnFb").onclick=()=>tssaaTab("fb"));
 $("tabTnStand") && ($("tabTnStand").onclick=()=>tssaaTab("stand"));
 $("tabTnBrack") && ($("tabTnBrack").onclick=()=>tssaaTab("brack"));
+$("tabTnBb") && ($("tabTnBb").onclick=()=>tssaaTab("bb"));
 $("kPos") && ($("kPos").onchange=e=>{ FILT.pos=e.target.value; fillKitControls();
  runKitchen(); });
 $("kStat") && ($("kStat").onchange=e=>{ FILT.stat=e.target.value; fillKitControls();
@@ -9413,7 +9475,7 @@ async function loadTnPack(){
   if(window.VIEW_NOW==="home" && typeof paintYours==="function" && typeof PINS!=="undefined" && PINS.some(p=>p.lg==="tssaa")) paintYours(true);
   try{
     const r=await fetch("/data/tssaa-bball.json",{cache:"no-store"});
-    if(r.ok){ const d=await r.json(); if(d) window.TNBB=d; }
+    if(r.ok){ const d=await r.json(); if(d){ window.TNBB=d; if(window.TN_TAB==="bb" && typeof paintTnBoys==="function") paintTnBoys(); } }
   }catch(e){}
 }
 loadTnPack();
