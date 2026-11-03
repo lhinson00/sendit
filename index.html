@@ -74,6 +74,18 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .yliveboard{padding:12px var(--pad) 0}
 .yliveboard .ylink{margin-top:0}
 .yliveboard .ylink+.ylink{margin-top:10px}
+.ytoday{padding:12px 0 2px}
+.ytoday .ykick{padding:0 var(--pad)}
+.ytodayrow{display:flex;gap:8px;overflow:auto;padding:8px var(--pad) 2px;scrollbar-width:none}
+.ytile{flex:none;width:150px;text-align:left;border:1px solid #2a241c;background:#101218;color:#fff;border-radius:14px;padding:10px 10px 8px;font:inherit;cursor:pointer}
+.ytile.live{border-color:#3ee0a0;box-shadow:inset 3px 0 0 #3ee0a0}
+.ytiletop{display:flex;align-items:center;gap:6px;min-width:0}
+.ytile img{width:22px;height:22px;object-fit:contain;background:#fff;border-radius:5px;padding:1px;flex:none}
+.ytile b{font-family:"Bebas Neue",sans-serif;font-size:18px;font-weight:400;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ytile em{margin-left:auto;font-style:normal;font-size:9px;letter-spacing:.08em;font-weight:800;color:#ff7a18;text-transform:uppercase;flex:none}
+.ytile.live em{color:#3ee0a0}
+.ytile strong{display:block;margin-top:8px;font-family:"Bebas Neue",sans-serif;font-size:28px;font-weight:400;line-height:.9}
+.ytileopp{display:block;margin-top:3px;color:#c9c2b8;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hub{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:10px var(--pad) 14px;border-bottom:1px solid #1c1814}
 .hubk{grid-column:1/-1;margin:2px 0 0}
 .hubcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:62px;padding:8px 2px;border-radius:14px;border:1px solid #2a241c;background:#101218;color:#fff}
@@ -1089,6 +1101,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
 <button type="button" class="navback" id="navBack">Back</button>
 <section id="viewHome">
   <div id="yLive" class="yliveboard" hidden></div>
+  <div id="yToday" class="ytoday" hidden></div>
   <div class="hub">
     <h3 class="hubk">All boards</h3>
     <button class="hubcard" data-lg="nfl"><img alt="" src="https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"/><b>NFL</b><span>Sunday slate</span></button>
@@ -5629,7 +5642,64 @@ function paintYours(quiet){
     }).join("");
   }
   if(!quiet) fillPinLines();
+  paintToday();
   settleScroll(holdY);
+}
+function paintToday(){
+  const host=$("yToday");
+  if(!host) return;
+  if(YSTATE.order || !PINS.length){ host.hidden=true; host.innerHTML=""; return; }
+  const today=chiKey(new Date());
+  const seen={};
+  const take=(p,i,b)=>{
+    if(!b || !b.oppName) return null;
+    const key=b.eventId?("e"+b.eventId):((p.lg||"")+"|"+b.oppName+"|"+(b.t||""));
+    if(seen[key]) return null;
+    seen[key]=1;
+    return {i, p, b};
+  };
+  let rows=[];
+  PINS.forEach((p,i)=>{
+    const b=p._book||{};
+    const day=b.t?chiKey(new Date(b.t)):"";
+    if(!(b.live || b.final || b.soon || day===today)) return;
+    const row=take(p,i,b);
+    if(row) rows.push(row);
+  });
+  let kicker="Today";
+  if(!rows.length){
+    kicker="Coming up";
+    PINS.forEach((p,i)=>{
+      const b=p._book||{};
+      if(b.live || b.final) return;
+      if(b.t && b.t<Date.now()-60*60*1000) return;
+      const row=take(p,i,b);
+      if(row) rows.push(row);
+    });
+    rows.sort((a,b)=>(a.b.t||9e15)-(b.b.t||9e15));
+    rows=rows.slice(0,6);
+  } else {
+    rows.sort((a,b)=>(a.b.live?0:a.b.final?2:1)-(b.b.live?0:b.b.final?2:1) || (a.b.t||0)-(b.b.t||0));
+  }
+  if(!rows.length){ host.hidden=true; host.innerHTML=""; return; }
+  if(rows.some(r=>r.b.live)) kicker="On now";
+  host.hidden=false;
+  host.innerHTML=`<p class="ykick">${kicker}</p><div class="ytodayrow">`+rows.map(r=>{
+    const b=r.b;
+    const who=r.p.abbr||b.abbr||r.p.name||"";
+    const logo=b.logo||(r.p.kind==="player"?"":(r.p.logo||teamLogo(r.p)||""));
+    const opp=/^Home/.test(b.where||"")?("vs "+b.oppName):(/^at /.test(b.where||"")?("@ "+b.oppName):b.oppName);
+    const state=b.live?" live":(b.final?" final":"");
+    return `<button type="button" class="ytile${state}" data-ytoday="${r.i}"><span class="ytiletop">${logo?`<img alt="" src="${esc(logo)}"/>`:""}<b>${esc(who)}</b><em>${esc(b.label||"")}</em></span><strong>${esc(b.big||"—")}</strong><span class="ytileopp">${esc(opp||"")}</span></button>`;
+  }).join("")+`</div>`;
+  if(!host.dataset.bound){
+    host.dataset.bound="1";
+    host.onclick=e=>{
+      const b=e.target.closest("[data-ytoday]");
+      if(!b) return;
+      openPin(PINS[+b.dataset.ytoday]);
+    };
+  }
 }
 async function runYSearch(){
   const seq=++YSEQ;
