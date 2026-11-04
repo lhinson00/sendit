@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- cbb-rows statbox -->
+<!-- cbb-rows spick -->
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#05060a"/>
@@ -971,6 +971,26 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .sline .slead{text-align:right}
 .sline .slead b{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;line-height:.9;color:var(--orange)}
 .sline .slead i{font-style:normal;font-size:9px;letter-spacing:.12em;font-weight:800;color:var(--muted)}
+.spick{margin:4px 12px 18px}
+.spick-lab{display:flex;align-items:center;gap:12px;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:10px 12px}
+.spick-lab span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#9b9288;font-weight:800}
+.spick-lab select{flex:1;min-width:0;appearance:none;background:#1a140f url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23ff7a18' d='M1 1l5 5 5-5'/></svg>") no-repeat right 12px center;color:#fff;border:0;border-radius:12px;font:inherit;font-weight:750;font-size:16px;padding:12px 34px 12px 12px}
+.steam{display:flex;align-items:flex-end;justify-content:space-between;padding:16px 4px 10px}
+.steam i{display:block;font-style:normal;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#9b9288;font-weight:800}
+.steam b{display:block;font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.85;color:var(--orange);font-weight:400}
+.steam em{font-style:normal;font-size:13px;color:#c9c2b8;font-weight:700;padding-bottom:6px}
+.srank{display:flex;flex-direction:column;gap:8px}
+.srow{display:grid;grid-template-columns:26px 46px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:10px 12px;cursor:pointer}
+.srow .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#6f675e}
+.srow.top .rk{color:var(--orange)}
+.srow img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#1a120c}
+.srow img.miss{visibility:hidden}
+.srow .who{min-width:0}
+.srow .who b{display:block;font-size:16px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .who em{display:block;margin-top:1px;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9b9288;font-weight:800}
+.srow .sbar{display:block;height:4px;margin-top:7px;background:#2a241c;border-radius:99px;overflow:hidden}
+.srow .sbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a18,#ffb15a);border-radius:99px}
+.srow .sn{font-family:"Bebas Neue",sans-serif;font-size:30px;line-height:1;color:#fff}
 .sbox{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 12px 18px;border:1px solid #2a241c;border-radius:8px}
 .sbox table{border-collapse:collapse;width:100%;min-width:680px}
 .sbox table.tight{min-width:0}
@@ -5009,8 +5029,13 @@ function bindPlayerTabs(){
       root.querySelectorAll(".ppane").forEach(p=>{ p.hidden = p.dataset.ppane!==btn.dataset.psec; });
     };
   });
-  root.querySelectorAll(".sbox thead th[data-k]").forEach(th=>{
-    th.onclick=ev=>{ ev.stopPropagation(); sortStatBox(th.closest("table"), th.dataset.k); };
+  root.querySelectorAll(".spick select").forEach(sel=>{
+    sel.onchange=()=>{
+      const box=sel.closest(".spick");
+      const raw=box&&box.querySelector(".spick-data");
+      if(!raw) return;
+      try{ box.querySelector(".spick-body").innerHTML=statPickBody(JSON.parse(raw.textContent), sel.value); }catch(e){}
+    };
   });
   root.querySelectorAll(".rslt[data-gid]").forEach(b=>{
     if(b.dataset.bound) return;
@@ -7478,7 +7503,7 @@ function readStat(map, names){
   for(const n of names){ if(map && map[n]) return map[n]; }
   return "";
 }
-const HOOP_COLS=[["gp","GP"],["min","MIN"],["pts","PTS"],["reb","REB"],["ast","AST"],["stl","STL"],["blk","BLK"],["to","TO"],["fg","FG%"],["tp","3P%"],["ft","FT%"]];
+const HOOP_COLS=[["pts","PTS","Points per game"],["reb","REB","Rebounds per game"],["ast","AST","Assists per game"],["stl","STL","Steals per game"],["blk","BLK","Blocks per game"],["fg","FG%","Field goal %"],["tp","3P%","Three-point %"],["ft","FT%","Free throw %"],["min","MIN","Minutes per game"],["to","TO","Turnovers per game"],["gp","GP","Games played"]];
 function hoopLine(map){
   const min=readStat(map,["avgMinutes"]);
   return {
@@ -7499,24 +7524,36 @@ function statNum(v){
   const n=parseFloat(String(v==null?"":v).replace(/[^\d.\-]/g,""));
   return Number.isFinite(n)?n:null;
 }
-function statBox(title, cols, rows, team, sortKey){
-  const key=sortKey||(cols[0]?cols[0][0]:"");
-  const list=(rows||[]).slice().sort((a,b)=>{
-    const av=statNum((a.vals||{})[key]), bv=statNum((b.vals||{})[key]);
+function statPickBody(data, key){
+  const col=(data.cols||[]).find(c=>c[0]===key)||(data.cols||[])[0]||["","Stat"];
+  const k=col[0], short=col[1]||"", long=col[2]||short;
+  const rows=(data.rows||[]).slice().sort((a,b)=>{
+    const av=statNum((a.vals||{})[k]), bv=statNum((b.vals||{})[k]);
     if(av==null && bv==null) return String(a.name||"").localeCompare(String(b.name||""));
     if(av==null) return 1;
     if(bv==null) return -1;
     return bv-av;
   });
-  const cell=(vals,k)=>{
-    const v=(vals||{})[k];
+  const nums=rows.map(r=>statNum((r.vals||{})[k])).filter(n=>n!=null);
+  const max=Math.max(0.0001, ...nums.map(n=>Math.abs(n)));
+  const tv=data.team?data.team[k]:"";
+  const side=k==="pts" && data.team && data.team.opp ? `OPP ${data.team.opp}` : long;
+  const team=(tv!=null && String(tv)!=="")?`<div class="steam"><div><i>Team ${esc(short)}</i><b>${esc(tv)}</b></div><em>${esc(side)}</em></div>`:"";
+  const list=rows.map((r,i)=>{
+    const v=(r.vals||{})[k];
     const n=statNum(v);
-    return `<td data-n="${n==null?"":n}">${esc(v==null||v===""?"—":v)}</td>`;
-  };
-  const head=`<th data-k="name">Player</th>`+cols.map(([k,lab])=>`<th data-k="${esc(k)}" class="${k===key?"on":""}">${esc(lab)}</th>`).join("");
-  const body=list.map(r=>`<tr class="prow" data-pid="${esc(r.id||"")}" data-pname="${esc(r.name||"")}" data-name="${esc(r.name||"")}"><th>${esc(r.name||"")}${r.pos?`<em>${esc(r.pos)}</em>`:""}</th>${cols.map(([k])=>cell(r.vals,k)).join("")}</tr>`).join("");
-  const foot=team?`<tfoot><tr><th>Team</th>${cols.map(([k])=>cell(team,k)).join("")}</tr></tfoot>`:"";
-  return `${title?`<h3 class="kicker">${esc(title)}</h3>`:""}<div class="sbox"><table data-sort="${esc(key)}" data-dir="desc"><thead><tr>${head}</tr></thead><tbody>${body||""}</tbody>${foot}</table></div>`;
+    const w=n==null?0:Math.max(6, Math.round(Math.abs(n)/max*100));
+    const shot=r.shot?`<img alt="" src="${esc(r.shot)}" onerror="this.classList.add('miss')"/>`:`<img alt="" class="miss"/>`;
+    return `<button type="button" class="srow prow${i<3?" top":""}" data-pid="${esc(r.id||"")}" data-pname="${esc(r.name||"")}"><span class="rk">${i+1}</span>${shot}<span class="who"><b>${esc(r.name||"")}</b><em>${esc(r.pos||"")}</em><span class="sbar"><i style="width:${w}%"></i></span></span><span class="sn">${esc(v==null||v===""?"—":v)}</span></button>`;
+  }).join("");
+  return team+`<div class="srank">${list||"<p class='hint'>No stats posted.</p>"}</div>`;
+}
+function statBox(title, cols, rows, team, sortKey){
+  const key=sortKey||(cols[0]?cols[0][0]:"");
+  const data={cols:cols||[], rows:(rows||[]).map(r=>({id:r.id||"", name:r.name||"", pos:r.pos||"", shot:r.shot||"", vals:r.vals||{}})), team:team||null};
+  const json=JSON.stringify(data).replace(/</g,"\\u003c");
+  const opts=(cols||[]).map(c=>`<option value="${esc(c[0])}"${c[0]===key?" selected":""}>${esc(c[2]||c[1])}</option>`).join("");
+  return `${title?`<h3 class="kicker">${esc(title)}</h3>`:""}<div class="spick"><label class="spick-lab"><span>Stat</span><select>${opts}</select></label><div class="spick-body">${statPickBody(data, key)}</div><script type="application/json" class="spick-data">${json}<\/script></div>`;
 }
 function meterBox(title, people){
   const cols=[];
@@ -8981,9 +9018,9 @@ async function openHoopTeam(lg, tid, name){
     const squad=playerDeck(hoopPeople);
     const teamLine=hoopLine(catMap(cats));
     const opp=grab(["avgPointsAgainst","avgDefensivePoints"])||oppAvg;
-    const note=[teamLine.pts?teamLine.pts+" PPG":"", opp?"OPP "+opp:""].filter(Boolean).join(" · ");
-    const boxRows=hoopPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
-    const statsHtml=(note?`<p class="hint">${esc(note)}</p>`:"")+statBox("", HOOP_COLS, boxRows, teamLine, "pts");
+    if(opp) teamLine.opp=opp;
+    const boxRows=hoopPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], shot:p.shot||"", vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
+    const statsHtml=statBox("", HOOP_COLS, boxRows, teamLine, "pts");
     const schedHtml=resultBoard(sched.events||[], tid, team=>nbaLogo(team||{}));
     $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div>${teamTabs([
       {id:"roster",label:"Roster",html:squad},
@@ -9183,9 +9220,9 @@ async function openNbaTeam(tid, name){
     const squad=playerDeck(nbaPeople);
     const teamLine=hoopLine(catMap(cats));
     const opp=grab("defensive",["avgPointsAgainst"]);
-    const note=[teamLine.pts?teamLine.pts+" PPG":"", opp&&opp!=="—"?"OPP "+opp:""].filter(Boolean).join(" · ");
-    const boxRows=nbaPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
-    const statsHtml=(note?`<p class="hint">${esc(note)}</p>`:"")+statBox("", HOOP_COLS, boxRows, teamLine, "pts");
+    if(opp && opp!=="—") teamLine.opp=opp;
+    const boxRows=nbaPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], shot:p.shot||"", vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
+    const statsHtml=statBox("", HOOP_COLS, boxRows, teamLine, "pts");
     const schedHtml=resultBoard(sched.events||[], tid, team=>nbaLogo(team||{}));
     $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${teamTabs([
       {id:"roster",label:"Roster",html:squad},
