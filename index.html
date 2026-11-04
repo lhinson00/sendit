@@ -507,6 +507,22 @@ button.srow{width:100%;border:0;background:transparent;color:inherit;font:inheri
 .pollrow .pollwho b{display:block;font-size:15px;font-weight:750;line-height:1.2}
 .pollrow .pollwho em{display:block;margin-top:2px;font-style:normal;color:var(--muted);font-size:11px}
 .pollrow > em{font-style:normal;color:#c9c2b8;font-size:13px;font-weight:700}
+.cfp{padding:8px 12px 28px}
+.cfp h3{margin:16px 0 8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18}
+.cfp-byes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cfp-side{display:grid;grid-template-columns:28px 36px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:14px;padding:10px;cursor:pointer}
+.cfp-side img{width:36px;height:36px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
+.cfp-side .seed{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#ff7a18}
+.cfp-side b{display:block;font-size:14px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cfp-side em{display:block;margin-top:2px;font-style:normal;font-size:11px;color:#9b9288}
+.cfp-side > i{font-style:normal;font-size:10px;letter-spacing:.12em;font-weight:800;color:#3ee0a0}
+.cfp-game{background:#101218;border:1px solid #2a241c;border-radius:16px;overflow:hidden;margin-bottom:8px}
+.cfp-game .cfp-side{border:0;border-radius:0;background:transparent}
+.cfp-game .cfp-side.host{border-top:1px solid #2a241c;background:#16120e}
+.cfp-tag{font-size:10px;letter-spacing:.1em;font-weight:800}
+.cfp-tag.bye{color:#ff7a18}
+.cfp-tag.in{color:#3ee0a0}
+.cfp-tag.out{color:#ff8b7a}
 .ldhead{display:flex;gap:6px;padding:8px var(--pad);overflow:auto}
 .ldhead button{flex:none;border:1px solid #2a241c;background:#101218;color:#cfc6b8;padding:8px 12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800}
 .ldhead button.on{background:var(--orange);color:#140800;border-color:var(--orange)}
@@ -1261,6 +1277,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <span class="tabs" id="cfbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabSlate">Slate</button>
       <button type="button" class="tabbtn" id="tabPolls">Rankings</button>
+      <button type="button" class="tabbtn" id="tabCfp">Playoff</button>
       <button type="button" class="tabbtn" id="tabLeadC">Leaders</button>
       <button type="button" class="tabbtn" id="tabCfbKit">Trends</button>
       <button type="button" class="tabbtn" id="tabEatC">Tracker</button>
@@ -7839,14 +7856,16 @@ function cfbTab(which){
   if($("tabEatC")) $("tabEatC").classList.remove("on");
   markEatBack();
   if($("liveList")) $("liveList").hidden=!slate;
-  if($("boardPanel")) $("boardPanel").hidden=!(which==="polls"||which==="lead");
+  if($("boardPanel")) $("boardPanel").hidden=!(which==="polls"||which==="lead"||which==="cfp");
   if($("cfbPills")) $("cfbPills").hidden=!slate;
   if($("tabSlate")) $("tabSlate").classList.toggle("on", slate);
   if($("tabPolls")) $("tabPolls").classList.toggle("on", which==="polls");
+  if($("tabCfp")) $("tabCfp").classList.toggle("on", which==="cfp");
   if($("tabLeadC")) $("tabLeadC").classList.toggle("on", which==="lead");
   if($("tabCfbKit")) $("tabCfbKit").classList.toggle("on", kit);
   if(!window.JUST_BACK && kit) runKitchen();
   if(!window.JUST_BACK && which==="polls") openPolls();
+  if(!window.JUST_BACK && which==="cfp") openCfp();
   if(!window.JUST_BACK && which==="lead") openLeaders("cfb");
 }
 
@@ -8494,6 +8513,67 @@ async function openPolls(){
     host.innerHTML="<p class='hint'>Could not load polls. "+(e.message||"")+"</p>";
   }
 }
+async function openCfp(){
+  const host=$("boardPanel");
+  host.hidden=false;
+  host.innerHTML="<p class='hint'>Loading the playoff picture…</p>";
+  try{
+    const res=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/rankings",{cache:"no-store"});
+    const d=res.ok?await res.json():{rankings:[]};
+    const polls=d.rankings||[];
+    let board=polls.find(p=>p.type==="cfp" || /playoff committee|cfp ranking/i.test((p.name||"")+" "+(p.shortName||"")));
+    let source="Committee";
+    if(!board || !(board.ranks||[]).length){
+      board=polls.find(p=>/ap top|ap poll/i.test((p.name||"")+" "+(p.shortName||"")));
+      source="AP";
+    }
+    const ranks=(board&&board.ranks||[]).slice().sort((a,b)=>Number(a.current||99)-Number(b.current||99));
+    if(!ranks.length) throw new Error("No ranking posted");
+    const g6=/american|conference usa|mid-american|\bmac\b|mountain west|pac-12|pac 12|sun belt/i;
+    const bestG6=ranks.find(r=>g6.test(r.conference||""));
+    let field=ranks.slice(0,12);
+    let bumped=null;
+    if(bestG6 && !field.some(r=>String((r.team||{}).id)===String((bestG6.team||{}).id))){
+      bumped=field[11];
+      field=field.slice(0,11).concat([bestG6]);
+    }
+    const when=(()=>{ const t=Date.parse(board.date||""); return isFinite(t)?new Date(t).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):""; })();
+    const nameOf=t=>t.displayName||[t.location,t.name].filter(Boolean).join(" ")||t.abbreviation||"";
+    const logoOf=t=>(t.logos&&t.logos[0]&&(t.logos[0].href||t.logos[0]))||(t.id?("https://a.espncdn.com/i/teamlogos/ncaa/500/"+t.id+".png"):"");
+    const side=(r,seed,hostSeed)=>{
+      const t=r.team||{};
+      const name=nameOf(t);
+      return `<button type="button" class="cfp-side${hostSeed?" host":""}" data-tid="${esc(t.id||"")}" data-tname="${esc(name)}"><b class="seed">${seed}</b><img alt="" src="${esc(logoOf(t))}"/><span><b>${esc(name)}</b><em>${esc(r.conference||"")} · ${esc(r.recordSummary||"")}</em></span>${hostSeed?"<i>Host</i>":""}</button>`;
+    };
+    const byes=field.slice(0,4).map((r,i)=>side(r,i+1,false)).join("");
+    const games=[[5,12],[6,11],[7,10],[8,9]].map(([home,away])=>`<div class="cfp-game">${side(field[away-1],away,false)}${side(field[home-1],home,true)}</div>`).join("");
+    const tag=r=>{
+      const id=String((r.team||{}).id||"");
+      const at=field.findIndex(x=>String((x.team||{}).id||"")===id);
+      if(at>=0 && at<4) return `<em class="cfp-tag bye">BYE</em>`;
+      if(at>=0) return `<em class="cfp-tag in">IN</em>`;
+      if(bumped && String((bumped.team||{}).id||"")===id) return `<em class="cfp-tag out">1ST OUT</em>`;
+      return "";
+    };
+    const list=ranks.map(r=>{
+      const t=r.team||{};
+      const name=nameOf(t);
+      return `<div class="pollrow" data-tid="${esc(t.id||"")}" data-tname="${esc(name)}"><b class="rk">${r.current||""}</b><img alt="" src="${esc(logoOf(t))}"/><div class="pollwho"><b>${esc(name)}</b><em>${esc([r.conference,r.recordSummary].filter(Boolean).join(" · "))}</em></div>${tag(r)}</div>`;
+    }).join("");
+    host.innerHTML=`<div class="cfp">
+      <p class="hint">${esc(source)} ranking${when?" · "+esc(when):""}. Projected 12-team field. 1–4 get a bye. Highest Group of Six team is in.</p>
+      <h3>Byes</h3>
+      <div class="cfp-byes">${byes}</div>
+      <h3>First round</h3>
+      ${games}
+      <h3>Top 25</h3>
+      ${list}
+    </div>`;
+    host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openTeam(b.dataset.tid, b.dataset.tname||"Team", "cfb"));
+  }catch(e){
+    host.innerHTML="<p class='hint'>Playoff picture did not load. "+(e.message||"")+"</p>";
+  }
+}
 function pickStat(cats, cat, name){
   const c=(cats||[]).find(x=>x.name===cat);
   const s=((c&&c.stats)||[]).find(x=>x.name===name);
@@ -8510,7 +8590,7 @@ async function openTeam(tid, name, sport){
   window.TEAM_CTX = {id:tid, name:name||"Team"};
   armPin({kind:"team", lg:isNfl?"nfl":"cfb", id:String(tid), name:name||"Team"});
   window.FROM_TEAM_PLAYER = false;
-  if($("toGame")) $("toGame").textContent = isNfl ? "← Standings" : "← Rankings";
+  if($("toGame")) $("toGame").textContent = isNfl ? "← Standings" : (window.BOARD==="cfp" ? "← Playoff" : "← Rankings");
   show("player");
   $("playerRoom").innerHTML = "<p class='hint'>Opening "+name+"…</p>";
   const base="https://site.web.api.espn.com/apis/site/v2/sports/football/"+(isNfl?"nfl":"college-football")+"/teams/"+tid;
@@ -8815,6 +8895,7 @@ $("tabLeadN") && ($("tabLeadN").onclick=()=>nflTab("lead"));
 $("tabStandN") && ($("tabStandN").onclick=()=>nflTab("stand"));
 $("tabSlate") && ($("tabSlate").onclick=()=>cfbTab("slate"));
 $("tabPolls") && ($("tabPolls").onclick=()=>cfbTab("polls"));
+$("tabCfp") && ($("tabCfp").onclick=()=>cfbTab("cfp"));
 $("tabLeadC") && ($("tabLeadC").onclick=()=>cfbTab("lead"));
 $("tabCfbKit") && ($("tabCfbKit").onclick=()=>cfbTab("kit"));
 $("tabEatC") && ($("tabEatC").onclick=()=>showEat());
@@ -9716,7 +9797,7 @@ $("toGame") && ($("toGame").onclick = ()=>{
     else if(window.FROMMLB){ window.FROMMLB=false; mlbTab("stand"); }
     else if(window.FROMNFL){ window.FROMNFL=false; nflTab("stand"); }
     else if(window.FROMTN){ window.FROMTN=false; tssaaTab(window.FROMTN_TAB||"fb"); }
-    else cfbTab("polls");
+    else cfbTab(window.BOARD==="cfp"?"cfp":"polls");
     return;
   }
   if(window.FROMKIT){ show("live", {back:true}); nflTab("kit"); }
