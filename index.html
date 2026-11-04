@@ -5886,8 +5886,8 @@ function ytChannel(raw){
 }
 function ytLiveUrl(raw){
   const info=ytChannel(raw);
-  if(info.handle) return "https://www.youtube.com/@"+info.handle+"/live";
-  if(info.cid) return "https://www.youtube.com/channel/"+info.cid+"/live";
+  if(info.handle) return "https://www.youtube.com/@"+info.handle;
+  if(info.cid) return "https://www.youtube.com/channel/"+info.cid;
   if(info.watch) return "https://www.youtube.com/watch?v="+info.watch;
   return String(raw||"");
 }
@@ -5919,14 +5919,49 @@ async function resolveChannel(l){
   saveLinks();
   return l.cid;
 }
+function vidOf(v){
+  const m=String(v&&v.url||"").match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  return m?m[1]:"";
+}
+function isOnAir(v){
+  if(!v || Number(v.duration)!==-1) return false;
+  const when=v.uploadedDate==null?"":String(v.uploadedDate).trim();
+  if(when && !/watching/i.test(when)) return false;
+  if(v.uploaded!=null && Number(v.uploaded)!==-1) return false;
+  return !!vidOf(v);
+}
+function liveFrom(v){
+  const vid=vidOf(v);
+  return vid?{live:true, vid, title:v.title||""}:null;
+}
+async function videoById(id){
+  const d=await piped("/search?q="+encodeURIComponent(id)+"&filter=videos");
+  if(!d) return undefined;
+  return ((d.items)||[]).find(x=>String(x.url||"").indexOf(id)>=0) || null;
+}
+async function rssVideoIds(cid){
+  const rss="https://www.youtube.com/feeds/videos.xml?channel_id="+encodeURIComponent(cid);
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(), 8000);
+  try{
+    const r=await fetch("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(rss),{cache:"no-store",signal:ctl.signal});
+    if(!r.ok) return [];
+    const d=await r.json();
+    return ((d&&d.items)||[]).map(it=>{
+      const g=String(it.guid||it.link||"");
+      const m=g.match(/(?:yt:video:|[?&]v=)([A-Za-z0-9_-]{11})/);
+      return m?m[1]:"";
+    }).filter(Boolean).slice(0,2);
+  }catch(e){ return []; }
+  finally{ clearTimeout(timer); }
+}
 async function channelLive(l){
   const info=ytChannel(l.url);
   if(info.watch){
-    const d=await piped("/search?q="+encodeURIComponent(info.watch)+"&filter=videos");
-    const hit=((d&&d.items)||[]).find(x=>String(x.url||"").indexOf(info.watch)>=0);
-    if(!d) return null;
-    if(hit && hit.duration===-1) return {live:true, vid:info.watch, title:hit.title||""};
-    return {live:false};
+    const hit=await videoById(info.watch);
+    if(hit===undefined) return null;
+    const on=hit && isOnAir(hit)?liveFrom(hit):null;
+    return on || {live:false};
   }
   const cid=await resolveChannel(l);
   if(!cid) return info.handle||info.cid?null:{live:false};
@@ -5934,14 +5969,29 @@ async function channelLive(l){
     const ch=await piped("/channel/"+encodeURIComponent(cid));
     if(ch&&ch.name){ l.cname=ch.name; saveLinks(); }
   }
-  if(!l.cname) return null;
-  const d=await piped("/search?q="+encodeURIComponent(l.cname)+"&filter=videos");
-  if(!d) return null;
+  const queries=[];
+  if(l.cname) queries.push(l.cname);
+  if(info.handle && queries.indexOf("@"+info.handle)<0) queries.push("@"+info.handle);
+  let searched=false;
   const want="/channel/"+cid;
-  const hit=((d.items)||[]).find(x=>x && String(x.uploaderUrl||"").indexOf(want)>=0 && x.duration===-1 && /v=([A-Za-z0-9_-]{11})/.test(String(x.url||"")));
-  if(!hit) return {live:false};
-  const vid=(String(hit.url).match(/v=([A-Za-z0-9_-]{11})/)||[])[1]||"";
-  return vid?{live:true, vid, title:hit.title||""}:{live:false};
+  for(const q of queries){
+    const d=await piped("/search?q="+encodeURIComponent(q)+"&filter=videos");
+    if(!d) continue;
+    searched=true;
+    const hit=((d.items)||[]).find(x=>x && String(x.uploaderUrl||"").indexOf(want)>=0 && isOnAir(x));
+    if(hit) return liveFrom(hit);
+  }
+  const ids=await rssVideoIds(cid);
+  let confirmed=false;
+  for(const id of ids){
+    const hit=await videoById(id);
+    if(hit===undefined) continue;
+    confirmed=true;
+    if(hit && isOnAir(hit) && String(hit.uploaderUrl||"").indexOf(want)>=0) return liveFrom(hit);
+    if(hit) break;
+  }
+  if(!searched && !confirmed) return null;
+  return {live:false};
 }
 function linkHost(raw){
   try{ return new URL(String(raw||"").trim()).hostname.replace(/^www\./,""); }catch(e){ return ""; }
