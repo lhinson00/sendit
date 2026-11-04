@@ -936,7 +936,21 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .spark i em{font-size:8px;letter-spacing:.02em;color:#8a8478;margin-top:4px;font-style:normal}
 .biorows{margin-top:6px}.biorows div{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:baseline;padding:1px 0}.biorows i{font-style:normal;color:#9b9288;font-size:10px;letter-spacing:.12em}.biorows b{font-weight:700;font-size:13px}
 .seasonpick{display:block;margin:12px 12px 0;color:#c9c2b8;font-size:12px}.seasonpick select{margin-left:8px;background:#14110e;color:#fff;border:1px solid #3a2a18;border-radius:8px;padding:8px 10px}.teamcell{display:inline-flex;align-items:center;gap:6px}.teamcell img{width:18px;height:18px;object-fit:contain}
-.ptabs{display:flex;gap:22px;padding:0 14px;border-bottom:1px solid #2a241c;position:sticky;top:0;background:#0c0a09;z-index:3}.ptabs button{background:none;border:0;color:#9b9288;font-weight:800;font-size:15px;padding:14px 0 10px;border-bottom:3px solid transparent}.ptabs button.on{color:#fff;border-bottom-color:#ff7a18}.ppane{padding-top:8px}
+.ptabs{display:flex;gap:22px;padding:0 14px;border-bottom:1px solid #2a241c;position:sticky;top:0;background:#0c0a09;z-index:3;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}.ptabs button{flex:none;white-space:nowrap;background:none;border:0;color:#9b9288;font-weight:800;font-size:15px;padding:14px 0 10px;border-bottom:3px solid transparent}.ptabs button.on{color:#fff;border-bottom-color:#ff7a18}.ppane{padding-top:8px}
+.rdeck{display:flex;flex-direction:column;gap:8px}
+.rcard{display:grid;grid-template-columns:34px 48px minmax(0,1fr);grid-template-areas:"no face who" "meters meters meters";gap:2px 10px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:10px 12px;cursor:pointer;box-shadow:inset 3px 0 0 var(--orange)}
+.rcard .rno{grid-area:no;font-family:"Bebas Neue",sans-serif;font-size:28px;line-height:1;color:var(--orange)}
+.rcard img{grid-area:face;width:48px;height:48px;border-radius:50%;object-fit:cover;background:#1a120c}
+.rcard img.miss{visibility:hidden}
+.rcard .rwho{grid-area:who;min-width:0}
+.rcard .rwho b{display:block;font-size:16px;font-weight:750;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcard .rwho em{display:block;margin-top:2px;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.rmeters{grid-area:meters;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.rmeters i{background:#0c0d12;border-radius:10px;padding:7px 2px 6px;text-align:center;min-width:0}
+.rmeters b{display:block;font-family:"Bebas Neue",sans-serif;font-size:20px;line-height:.9;color:#fff}
+.rmeters span{display:block;margin-top:3px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.statline .lead{grid-column:1 / -1}
+.statline .lead b{font-size:48px;color:var(--orange)}
 .problock{margin:18px 12px 0}.problock h3{margin:0 0 8px;font-size:18px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a241c;border-radius:12px}
 .protable{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
@@ -7320,6 +7334,27 @@ async function openMlsLeaders(){
     host.innerHTML="<div class='lgrid ltable'>"+blocks.join("")+"</div>";
   }catch(e){ host.innerHTML="<p class='hint'>Could not load leaders. "+(e.message||"")+"</p>"; }
 }
+function playerDeck(people){
+  const list=(people||[]).filter(p=>p&&p.name);
+  if(!list.length) return "<p class='hint'>Roster not posted.</p>";
+  return `<div class="rdeck">${list.map(p=>{
+    const shot=p.shot?`<img alt="" src="${esc(p.shot)}" onerror="this.classList.add('miss')"/>`:`<img alt="" class="miss"/>`;
+    const meters=(p.meters||[]).map(([k,v])=>`<i><b>${esc(v==null||v===""?"—":v)}</b><span>${esc(k)}</span></i>`).join("");
+    const meta=[p.pos,p.meta].filter(Boolean).join(" · ");
+    return `<button type="button" class="rcard prow" data-pid="${esc(p.id||"")}" data-pname="${esc(p.name)}"><span class="rno">${esc(p.no||p.pos||"·")}</span>${shot}<span class="rwho"><b>${esc(p.name)}</b><em>${esc(meta)}</em></span>${meters?`<span class="rmeters">${meters}</span>`:""}</button>`;
+  }).join("")}</div>`;
+}
+function statLine(pairs){
+  const rows=(pairs||[]).filter(x=>x && x[1]!=null && String(x[1]).trim()!=="" && x[1]!=="—");
+  if(!rows.length) return "<p class='hint'>Stats not posted.</p>";
+  return `<div class="statline">${rows.map(([k,v],i)=>`<div class="${i===0?"lead":""}"><i>${esc(k)}</i><b>${esc(v)}</b></div>`).join("")}</div>`;
+}
+function teamTabs(tabs, active){
+  const use=(tabs||[]).filter(t=>t&&t.html);
+  if(!use.length) return "";
+  const on=active&&use.some(t=>t.id===active)?active:use[0].id;
+  return `<nav class="ptabs">${use.map(t=>`<button type="button" data-psec="${t.id}" class="${t.id===on?"on":""}">${t.label}</button>`).join("")}</nav>${use.map(t=>`<div class="ppane" data-ppane="${t.id}"${t.id===on?"":" hidden"}>${t.html}</div>`).join("")}`;
+}
 async function openMlsTeam(tid, name){
   if(!tid) return;
   window.FROMTEAM=true; window.FROMMLS=true;
@@ -7349,7 +7384,6 @@ async function openMlsTeam(tid, name){
     };
     const groups={"Goalkeepers":[],"Defenders":[],"Midfielders":[],"Forwards":[]};
     people.forEach(p=>{ (groups[bucket(p)]=groups[bucket(p)]||[]).push(p); });
-    const squad=rosterSheet(Object.keys(groups).map(k=>({title:k, rows:groups[k].map(a=>({id:a.id, name:a.displayName||"", no:a.jersey||"", pos:(a.position&&a.position.abbreviation)||""}))})));
     const list=(sched.events||[]).slice().reverse().slice(0,14);
     const sked=list.map(ev=>{
       const c=(ev.competitions||[])[0]||{};
@@ -7367,8 +7401,17 @@ async function openMlsTeam(tid, name){
       const dt=(ev.date||"").slice(0,10);
       return `<tr><td class="l">${dt}</td><td class="l">${me.homeAway==="home"?"vs":"@"} ${(opp.team&&(opp.team.abbreviation||opp.team.displayName))||""}</td><td><span class="res ${dec}">${dec||"·"}</span></td><td>${ms!==""?ms+"–"+os:(stt.shortDetail||"")}</td></tr>`;
     }).join("");
+    const rosterHtml=["Goalkeepers","Defenders","Midfielders","Forwards"].filter(k=>(groups[k]||[]).length).map(k=>{
+      const people=groups[k].map(a=>({
+        id:a.id, name:a.displayName||"", no:a.jersey||"", pos:(a.position&&a.position.abbreviation)||"",
+        shot:(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/soccer/players/full/"+a.id+".png"):""),
+        meters:[["POS",(a.position&&a.position.abbreviation)||"—"],["HT",a.displayHeight||"—"],["WT",a.displayWeight||"—"],["AGE",a.age||"—"]]
+      }));
+      return `<h3 class="kicker">${k}</h3>${playerDeck(people)}`;
+    }).join("")||"<p class='hint'>Roster not posted.</p>";
+    const schedHtml=`<div style="overflow:auto"><table class="mlstbl"><thead><tr><th class="l">Date</th><th class="l">Opp</th><th></th><th>Score</th></tr></thead><tbody>${sked||""}</tbody></table></div>`;
     $("playerRoom").innerHTML=`
-      <div class="mlsdesk">
+      <div class="tbook mlsdesk">
         <div class="mlshero">
           <img class="crest" alt="" src="${logo}"/>
           <div>
@@ -7377,13 +7420,13 @@ async function openMlsTeam(tid, name){
             <p class="meta">${rec.summary||""}</p>
           </div>
         </div>
-        <div class="mlsgrid">${tiles.map(x=>`<div class="tile"><em>${x[0]}</em><b>${x[1]}</b></div>`).join("")}</div>
-        <div class="mlspane">
-          <h3>Results</h3>
-          <div style="overflow:auto"><table class="mlstbl"><thead><tr><th class="l">Date</th><th class="l">Opp</th><th></th><th>Score</th></tr></thead><tbody>${sked||""}</tbody></table></div>
-        </div>
-        ${squad}
+        ${teamTabs([
+          {id:"roster",label:"Roster",html:rosterHtml},
+          {id:"stats",label:"Stats",html:statLine(tiles)},
+          {id:"sched",label:"Schedule",html:schedHtml}
+        ],"roster")}
       </div>`;
+    bindPlayerTabs();
   }catch(e){ $("playerRoom").innerHTML="<p class='hint'>Could not open club. "+(e.message||"")+"</p>"; }
 }
 
@@ -8102,24 +8145,16 @@ async function openLeagueTeam(tid, name, sport){
     const shotOf=a=>(a.headshot&&(a.headshot.href||a.headshot))||(a.id?("https://a.espncdn.com/i/headshots/"+(sport==="nhl"?"nhl":"mlb")+"/players/full/"+a.id+".png"):"");
     const pblocks=pl.results||[];
     const groups=sport==="nhl"?["team","goalkeeping"]:["batting","pitching"];
-    const leadHtml=`<div class="tlead">${groups.map(nm=>{
-      const blk=pblocks.find(x=>x.name===nm);
-      const L=(blk&&blk.leaders&&blk.leaders[0])||{};
-      const a=L.athlete||{};
-      const line = nm==="batting" ? sval(((L.statistics||[])[0]||{}).stats||[],["AVG","avg"]) : sval(((L.statistics||[])[0]||{}).stats||[],["ERA"]);
-      return `<div class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shotOf(a)}"/><div><i>${(blk&&blk.displayName)||nm}</i><b>${line||L.displayValue||"—"}</b><em>${a.displayName||""}</em></div></div>`;
-    }).join("")}</div>`;
-    const tableHtml=(sport==="nhl"?["team","goalkeeping"]:["batting","pitching","fielding"]).map(nm=>{
+    const deckGroups=(sport==="nhl"?["team","goalkeeping"]:["batting","pitching"]).map(nm=>{
       const blk=pblocks.find(x=>x.name===nm)||{};
-      const spec=cols[nm];
-      const rows=(blk.leaders||[]).slice(0,18).map(L=>{
+      const spec=(cols[nm]||[]).slice(0,4);
+      const people=(blk.leaders||[]).slice(0,18).map(L=>{
         const a=L.athlete||{};
         const pack=(L.statistics||[]).flatMap(p=>p.stats||[]);
-        const pos=(a.position&&a.position.abbreviation)||"";
-        return `<tr class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><td><span class="nm"><b>${a.displayName||""}</b><em>${pos}</em></span></td>${spec.map(c=>`<td>${sval(pack,c.slice(1))}</td>`).join("")}</tr>`;
-      }).join("");
-      return `<div class="sgrp"><h3>${blk.displayName||nm}</h3><div style="overflow:auto"><table class="ptable"><thead><tr><th>NAME</th>${spec.map(c=>`<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
-    }).join("");
+        return {id:a.id, name:a.displayName||"", pos:(a.position&&a.position.abbreviation)||"", shot:shotOf(a), meters:spec.map(c=>[c[0], sval(pack,c.slice(1))])};
+      }).filter(p=>p.name);
+      return people.length?`<h3 class="kicker">${blk.displayName||nm}</h3>${playerDeck(people)}`:"";
+    }).join("")||"<p class='hint'>Roster not posted.</p>";
     const all=(sched.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
     const now=Date.now();
     const past=all.filter(ev=>String((((ev.competitions||[])[0]||{}).status||{}).type||{}).state==="post" || new Date(ev.date||0).getTime()<now-3*3600000).slice(-5);
@@ -8148,13 +8183,14 @@ async function openLeagueTeam(tid, name, sport){
             <p>${recSum}</p>
           </div>
         </div>
-        <div class="tsk">${tiles.map(([k,v])=>`<div><i>${k}</i><b>${v||"—"}</b></div>`).join("")}</div>
-        ${leadHtml}
-        ${tableHtml}
-        <h3 class="kicker" style="margin-top:18px">Last 5 · Next 5</h3>
-        ${games||"<p class='hint'>No schedule.</p>"}
-        ${sport==="mlb"?`<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`:""}
+        ${teamTabs([
+          {id:"roster",label:"Roster",html:deckGroups},
+          {id:"stats",label:"Stats",html:statLine(tiles)},
+          {id:"sched",label:"Schedule",html:games||"<p class='hint'>No schedule.</p>"},
+          sport==="mlb"?{id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}:null
+        ],"roster")}
       </div>`;
+    bindPlayerTabs();
     if(sport==="mlb") fillTeamHistory("mlb", tid);
   }catch(e){
     $("playerRoom").innerHTML="<p class='hint'>Could not open "+name+". "+(e.message||"")+"</p>";
@@ -8341,27 +8377,17 @@ async function openTeam(tid, name, sport){
     };
     const shotFold=isNfl?"nfl":"college-football";
     const shotOf=a=> (a.headshot&&(a.headshot.href||a.headshot)) || (a.id?("https://a.espncdn.com/i/headshots/"+shotFold+"/players/full/"+a.id+".png"):"");
-    const leadHtml = `<div class="tlead">${["passing","rushing","receiving","defensive"].map(nm=>{
-      const blk=pblocks.find(x=>x.name===nm);
-      const L=(blk&&blk.leaders&&blk.leaders[0])||{};
+    const pick=(blk, keys)=>((blk&&blk.leaders)||[]).map(L=>{
       const a=L.athlete||{};
-      return `<div class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><img alt="" src="${shotOf(a)}"/><div><i>${(blk&&blk.displayName)||nm}</i><b>${L.displayValue||"—"}</b><em>${a.displayName||""} ${(a.position&&a.position.abbreviation)||""}</em></div></div>`;
-    }).join("")}</div>`;
-    const tableHtml = ["passing","rushing","receiving","defensive"].map(nm=>{
-      const blk=pblocks.find(x=>x.name===nm)||{};
-      const spec=cols[nm];
-      const heads=spec.map(c=>c[0]);
-      const rows=(blk.leaders||[]).map(L=>{
-        const a=L.athlete||{};
-        const pack=((L.statistics||[])[0]||{}).stats||[];
-        const pos=(a.position&&a.position.abbreviation)||"";
-        return `<tr class="prow" data-pid="${a.id||""}" data-pname="${String(a.displayName||"").replace(/"/g,"")}"><td><span class="nm"><b>${a.displayName||""}</b><em>${pos}</em></span></td>${spec.map(c=>`<td>${sval(pack,c.slice(1))}</td>`).join("")}</tr>`;
-      }).join("");
-      const tot=((ptotals.find(x=>x.name===nm)||{}).stats)||[];
-      const totRow = tot.length?`<tr class="tot"><td>Total</td>${spec.map(c=>`<td>${sval(tot,c.slice(1))}</td>`).join("")}</tr>`:"";
-      return `<div class="sgrp"><h3>${blk.displayName||nm}</h3><div style="overflow:auto"><table class="ptable"><thead><tr><th>NAME</th>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}${totRow}</tbody></table></div></div>`;
-    }).join("");
-    const groupHtml = leadHtml + tableHtml + groups.slice(4).map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3><div class="sgrid">${rows.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div></div>`).join("");
+      const pack=((L.statistics||[])[0]||{}).stats||[];
+      return {id:a.id, name:a.displayName||"", pos:(a.position&&a.position.abbreviation)||"", no:(a.position&&a.position.abbreviation)||"", shot:shotOf(a), meters:keys.map(([lab,...names])=>[lab, sval(pack, names)])};
+    }).filter(p=>p.name);
+    const blocks=[["Passing","passing",[["YDS","passingYards","netPassingYards"],["TD","passingTouchdowns"],["INT","interceptions"],["RTG","QBRating","quarterbackRating"]]],["Rushing","rushing",[["YDS","rushingYards"],["TD","rushingTouchdowns"],["AVG","yardsPerRushAttempt"],["CAR","rushingAttempts"]]],["Receiving","receiving",[["YDS","receivingYards"],["TD","receivingTouchdowns"],["REC","receptions"],["AVG","yardsPerReception"]]],["Defense","defensive",[["TOT","totalTackles"],["SACK","sacks"],["TFL","tacklesForLoss"],["INT","interceptions"]]]];
+    const rosterHtml=blocks.map(([title,nm,keys])=>{
+      const people=pick(pblocks.find(x=>x.name===nm), keys);
+      return people.length?`<h3 class="kicker">${title}</h3>${playerDeck(people)}`:"";
+    }).join("")||"<p class='hint'>Roster not posted.</p>";
+    const statsHtml=groups.map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3>${statLine(rows)}</div>`).join("");
     const games=(sched.events||[]).map(ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8389,12 +8415,14 @@ async function openTeam(tid, name, sport){
             <p>${recSum} · ${t.abbreviation||""}</p>
           </div>
         </div>
-        ${groupHtml}
-        <h3 class="kicker">Schedule</h3>
-        ${games||"<p class='hint'>No schedule.</p>"}
-        <h3 class="kicker">Season history</h3>
-        <div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>
+        ${teamTabs([
+          {id:"roster",label:"Roster",html:rosterHtml},
+          {id:"stats",label:"Stats",html:statsHtml},
+          {id:"sched",label:"Schedule",html:games||"<p class='hint'>No schedule.</p>"},
+          {id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}
+        ],"roster")}
       </div>`;
+    bindPlayerTabs();
     $("playerRoom").querySelectorAll("[data-gid]").forEach(b=>b.onclick=ev=>{
       ev.stopPropagation();
       if(b.dataset.gid){ LEAGUE=isNfl?"nfl":"cfb"; openGame(b.dataset.gid, b.dataset.gid); }
@@ -8724,11 +8752,6 @@ async function openHoopTeam(lg, tid, name){
       if(Number.isFinite(n)){ oa+=n; on++; }
     });
     const oppAvg=on?(oa/on).toFixed(1):"";
-    const tiles=[["PPG","avgPoints"],["OPP","avgPointsAgainst","avgDefensivePoints"],["RPG","avgRebounds"],["APG","avgAssists"],["FG%","fieldGoalPct"],["3P%","threePointFieldGoalPct"]].map(([lab,...names])=>{
-      let v=grab(names);
-      if(lab==="OPP" && !v) v=oppAvg;
-      return v?`<div><i>${lab}</i><b>${v}</b></div>`:"";
-    }).join("");
     const flat=[];
     (rost.athletes||[]).forEach(a=>{
       if(a && Array.isArray(a.items)) a.items.forEach(p=>flat.push(p));
@@ -8756,12 +8779,12 @@ async function openHoopTeam(lg, tid, name){
     });
     const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
     flat.sort((a,b)=>num((book[String(b.id)]||{}).ppg)-num((book[String(a.id)]||{}).ppg) || String(a.displayName||"").localeCompare(String(b.displayName||"")));
-    const squad=flat.length?`<div class="sgrp"><div style="overflow:auto"><table class="ptable"><thead><tr><th>Player</th><th>GP</th><th>PPG</th><th>RPG</th><th>APG</th><th>FG%</th></tr></thead><tbody>${flat.map(a=>{
+    const folder=lg==="wcbb"?"womens-college-basketball":"mens-college-basketball";
+    const squad=playerDeck(flat.map(a=>{
       const st=book[String(a.id)]||{};
       const pos=(a.position&&a.position.abbreviation)||"";
-      const sub=[a.jersey?("#"+a.jersey):"", pos].filter(Boolean).join(" · ");
-      return `<tr class="prow" data-pid="${esc(a.id||"")}" data-pname="${esc(a.displayName||"")}"><td><span class="nm"><b>${esc(a.displayName||"")}</b><em>${esc(sub)}</em></span></td><td>${esc(st.gp||"—")}</td><td>${esc(st.ppg||"—")}</td><td>${esc(st.rpg||"—")}</td><td>${esc(st.apg||"—")}</td><td>${esc(st.fg||"—")}</td></tr>`;
-    }).join("")}</tbody></table></div></div>`:"<p class='hint'>Roster not posted.</p>";
+      return {id:a.id, name:a.displayName||"", no:a.jersey||"", pos, shot:a.id?("https://a.espncdn.com/i/headshots/"+folder+"/players/full/"+a.id+".png"):"", meters:[["PPG",st.ppg||"—"],["RPG",st.rpg||"—"],["APG",st.apg||"—"],["FG%",st.fg||"—"]]};
+    }));
     const gameLine=ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8782,7 +8805,15 @@ async function openHoopTeam(lg, tid, name){
     const past=all.filter(ev=>new Date(ev.date||0).getTime()<now).slice(-5);
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
-    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div>${tiles?`<div class="tsk">${tiles}</div>`:""}<h3 class="kicker">Roster</h3>${squad||"<p class='hint'>Roster not posted.</p>"}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
+    const statPairs=[["PPG", grab(["avgPoints"])],["OPP", grab(["avgPointsAgainst","avgDefensivePoints"])||oppAvg],["RPG", grab(["avgRebounds"])],["APG", grab(["avgAssists"])],["FG%", grab(["fieldGoalPct"])],["3P%", grab(["threePointFieldGoalPct"])]];
+    const schedHtml=`${next?`<h3 class="kicker">Next</h3>${gameLine(next)}`:""}<h3 class="kicker">${past.length?"Recent":"Schedule"}</h3>${past.concat(upcoming).map(gameLine).join("")||"<p class='hint'>No games posted.</p>"}`;
+    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div>${teamTabs([
+      {id:"roster",label:"Roster",html:squad},
+      {id:"stats",label:"Stats",html:statLine(statPairs)},
+      {id:"sched",label:"Schedule",html:schedHtml},
+      {id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}
+    ],"roster")}</div>`;
+    bindPlayerTabs();
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
     fillTeamHistory(lg, tid);
   }catch(e){
@@ -8965,12 +8996,11 @@ async function openNbaTeam(tid, name){
     });
     const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
     flat.sort((a,b)=>num((book[String(b.id)]||{}).ppg)-num((book[String(a.id)]||{}).ppg) || String(a.displayName||"").localeCompare(String(b.displayName||"")));
-    const squad=flat.length?`<div class="sgrp"><div style="overflow:auto"><table class="ptable"><thead><tr><th>Player</th><th>GP</th><th>PPG</th><th>RPG</th><th>APG</th><th>FG%</th></tr></thead><tbody>${flat.map(a=>{
+    const squad=playerDeck(flat.map(a=>{
       const st=book[String(a.id)]||{};
       const pos=(a.position&&a.position.abbreviation)||"";
-      const sub=[a.jersey?("#"+a.jersey):"", pos].filter(Boolean).join(" · ");
-      return `<tr class="prow" data-pid="${esc(a.id||"")}" data-pname="${esc(a.displayName||"")}"><td><span class="nm"><b>${esc(a.displayName||"")}</b><em>${esc(sub)}</em></span></td><td>${esc(st.gp||"—")}</td><td>${esc(st.ppg||"—")}</td><td>${esc(st.rpg||"—")}</td><td>${esc(st.apg||"—")}</td><td>${esc(st.fg||"—")}</td></tr>`;
-    }).join("")}</tbody></table></div></div>`:"<p class='hint'>Roster not posted.</p>";
+      return {id:a.id, name:a.displayName||"", no:a.jersey||"", pos, shot:a.id?("https://a.espncdn.com/i/headshots/nba/players/full/"+a.id+".png"):"", meters:[["PPG",st.ppg||"—"],["RPG",st.rpg||"—"],["APG",st.apg||"—"],["FG%",st.fg||"—"]]};
+    }));
     const gameLine=ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8993,7 +9023,15 @@ async function openNbaTeam(tid, name){
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
     const games=past.concat(upcoming).map(gameLine).join("");
-    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Roster</h3>${squad}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
+    const schedHtml=`${next?`<h3 class="kicker">Next</h3>${gameLine(next)}`:""}<h3 class="kicker">${past.length?"Recent":"Schedule"}</h3>${games||"<p class='hint'>No games posted.</p>"}`;
+    const statPairs=useful.concat([["3P%", grab("offensive",["threePointFieldGoalPct"])],["FT%", grab("offensive",["freeThrowPct"])],["STL", grab("defensive",["avgSteals"])],["BLK", grab("defensive",["avgBlocks"])]]);
+    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${teamTabs([
+      {id:"roster",label:"Roster",html:squad},
+      {id:"stats",label:"Stats",html:statLine(statPairs)},
+      {id:"sched",label:"Schedule",html:schedHtml},
+      {id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}
+    ],"roster")}</div>`;
+    bindPlayerTabs();
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
     fillTeamHistory("nba", tid);
   }catch(e){
