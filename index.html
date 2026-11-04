@@ -8906,6 +8906,11 @@ async function openNbaTeam(tid, name){
   window.FROMMLB=false;
   window.FROMNHL=false;
   window.FROMNFL=false;
+  window.FROMCBB=false;
+  window.FROMWCBB=false;
+  window.FROMMLS=false;
+  window.FROMTN=false;
+  window.FROM_TEAM_PLAYER=false;
   window.TEAM_CTX={id:tid, name:name||"Team"};
   armPin({kind:"team", lg:"nba", id:String(tid), name:name||"Team"});
   LEAGUE="nba";
@@ -8915,9 +8920,11 @@ async function openNbaTeam(tid, name){
   const base="https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/teams/"+tid;
   try{
     const pull=async url=>{ try{ const res=await fetch(url,{cache:"no-store"}); if(!res.ok) return {}; return await res.json(); }catch(e){ return {}; } };
-    const [sched,stat]=await Promise.all([
+    const [sched,stat,rost,plstat]=await Promise.all([
       pull(base+"/schedule"),
-      pull(base+"/statistics")
+      pull(base+"/statistics"),
+      pull(base+"/roster"),
+      pull(base+"/athletes/statistics")
     ]);
     const t=Object.assign({}, stat.team||{}, sched.team||{});
     const rec=((t.record&&t.record.items)||[]).find(x=>x.type==="total")||{};
@@ -8931,6 +8938,39 @@ async function openNbaTeam(tid, name){
       return "—";
     };
     const useful=[["PPG", grab("offensive",["avgPoints"])],["OPP", grab("defensive",["avgPointsAgainst"])],["RPG", grab("general",["avgRebounds"])],["APG", grab("offensive",["avgAssists"])],["FG%", grab("offensive",["fieldGoalPct"])]].filter(([,v])=>v && v!=="—" && v!=="0" && v!=="0.0");
+    const flat=[];
+    (rost.athletes||[]).forEach(a=>{
+      if(a && Array.isArray(a.items)) a.items.forEach(p=>flat.push(p));
+      else if(a && (a.displayName||a.fullName)) flat.push(a);
+    });
+    const book={};
+    const grabP=(groups, gname, names)=>{
+      const g=(groups||[]).find(x=>x.name===gname)||{};
+      for(const n of names){
+        const s=(g.stats||[]).find(x=>x.name===n);
+        if(s && s.displayValue!=null && s.displayValue!=="") return String(s.displayValue);
+      }
+      return "";
+    };
+    (((plstat.results||[])[0]||{}).leaders||[]).forEach(L=>{
+      const a=L.athlete||{};
+      if(!a.id) return;
+      book[String(a.id)]={
+        gp:grabP(L.statistics,"general",["gamesPlayed"]),
+        ppg:grabP(L.statistics,"offensive",["avgPoints"])||String(L.displayValue||""),
+        rpg:grabP(L.statistics,"general",["avgRebounds"]),
+        apg:grabP(L.statistics,"offensive",["avgAssists"]),
+        fg:grabP(L.statistics,"offensive",["fieldGoalPct"])
+      };
+    });
+    const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
+    flat.sort((a,b)=>num((book[String(b.id)]||{}).ppg)-num((book[String(a.id)]||{}).ppg) || String(a.displayName||"").localeCompare(String(b.displayName||"")));
+    const squad=flat.length?`<div class="sgrp"><div style="overflow:auto"><table class="ptable"><thead><tr><th>Player</th><th>GP</th><th>PPG</th><th>RPG</th><th>APG</th><th>FG%</th></tr></thead><tbody>${flat.map(a=>{
+      const st=book[String(a.id)]||{};
+      const pos=(a.position&&a.position.abbreviation)||"";
+      const sub=[a.jersey?("#"+a.jersey):"", pos].filter(Boolean).join(" · ");
+      return `<tr class="prow" data-pid="${esc(a.id||"")}" data-pname="${esc(a.displayName||"")}"><td><span class="nm"><b>${esc(a.displayName||"")}</b><em>${esc(sub)}</em></span></td><td>${esc(st.gp||"—")}</td><td>${esc(st.ppg||"—")}</td><td>${esc(st.rpg||"—")}</td><td>${esc(st.apg||"—")}</td><td>${esc(st.fg||"—")}</td></tr>`;
+    }).join("")}</tbody></table></div></div>`:"<p class='hint'>Roster not posted.</p>";
     const gameLine=ev=>{
       const c=(ev.competitions||[])[0]||{};
       const comps=c.competitors||[];
@@ -8953,7 +8993,7 @@ async function openNbaTeam(tid, name){
     const nid=next&&String(next.id||"");
     const upcoming=all.filter(ev=>new Date(ev.date||0).getTime()>=now && String(ev.id||"")!==nid).slice(0,5);
     const games=past.concat(upcoming).map(gameLine).join("");
-    $("playerRoom").innerHTML=`<div class="phero"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
+    $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${useful.length?`<div class="tsk">${useful.map(([k,v])=>`<div><i>${k}</i><b>${v}</b></div>`).join("")}</div>`:""}<h3 class="kicker">Roster</h3>${squad}<h3 class="kicker">Next</h3>${next?gameLine(next):"<p class='hint'>No game posted.</p>"}<h3 class="kicker">${past.length?"Recent and upcoming":"Schedule"}</h3>${games||""}<h3 class="kicker">Season history</h3><div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div></div>`;
     $("playerRoom").querySelectorAll(".tgame[data-gid]").forEach(b=>b.onclick=()=>{ if(b.dataset.gid) openGame(b.dataset.gid); });
     fillTeamHistory("nba", tid);
   }catch(e){
