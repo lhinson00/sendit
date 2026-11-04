@@ -971,6 +971,20 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .sline .slead{text-align:right}
 .sline .slead b{display:block;font-family:"Bebas Neue",sans-serif;font-size:26px;line-height:.9;color:var(--orange)}
 .sline .slead i{font-style:normal;font-size:9px;letter-spacing:.12em;font-weight:800;color:var(--muted)}
+.sbox{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 12px 18px;border:1px solid #2a241c;border-radius:8px}
+.sbox table{border-collapse:collapse;width:100%;min-width:680px}
+.sbox table.tight{min-width:0}
+.sbox th,.sbox td{padding:9px 8px;text-align:right;font-size:12px;white-space:nowrap;border-bottom:1px solid #1c1814;font-weight:600}
+.sbox th:first-child{text-align:left;position:sticky;left:0;background:#101218;min-width:128px;z-index:1}
+.sbox thead th{color:#9b9288;font-size:10px;letter-spacing:.08em;font-weight:800;cursor:pointer;background:#14120f}
+.sbox thead th:first-child{z-index:2}
+.sbox thead th.on{color:var(--orange)}
+.sbox thead th.on:after{content:" ↓"}
+.sbox thead th.on.asc:after{content:" ↑"}
+.sbox tbody th{color:#f7f2ea;font-weight:700}
+.sbox tbody th em{display:block;font-style:normal;font-size:10px;letter-spacing:.06em;color:#9b9288;font-weight:700}
+.sbox tfoot th,.sbox tfoot td{color:#fff;font-weight:800;border-top:1px solid #3a2a18;background:#14120f}
+.sbox tfoot th{position:sticky;left:0;z-index:1}
 .problock{margin:18px 12px 0}.problock h3{margin:0 0 8px;font-size:18px;font-weight:800}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #2a241c;border-radius:12px}
 .protable{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
@@ -4995,6 +5009,9 @@ function bindPlayerTabs(){
       root.querySelectorAll(".ppane").forEach(p=>{ p.hidden = p.dataset.ppane!==btn.dataset.psec; });
     };
   });
+  root.querySelectorAll(".sbox thead th[data-k]").forEach(th=>{
+    th.onclick=ev=>{ ev.stopPropagation(); sortStatBox(th.closest("table"), th.dataset.k); };
+  });
   root.querySelectorAll(".rslt[data-gid]").forEach(b=>{
     if(b.dataset.bound) return;
     b.dataset.bound="1";
@@ -7443,6 +7460,106 @@ function takeTeamTab(){
   window.TEAM_TAB="";
   return t;
 }
+function athleteStatMap(groups){
+  const map={};
+  (groups||[]).forEach(g=>{(g.stats||[]).forEach(s=>{
+    if(s && s.name && s.displayValue!=null && String(s.displayValue)!=="") map[s.name]=String(s.displayValue);
+  });});
+  return map;
+}
+function catMap(cats){
+  const map={};
+  (cats||[]).forEach(c=>{(c.stats||[]).forEach(s=>{
+    if(s && s.name && s.displayValue!=null && String(s.displayValue)!=="") map[s.name]=String(s.displayValue);
+  });});
+  return map;
+}
+function readStat(map, names){
+  for(const n of names){ if(map && map[n]) return map[n]; }
+  return "";
+}
+const HOOP_COLS=[["gp","GP"],["min","MIN"],["pts","PTS"],["reb","REB"],["ast","AST"],["stl","STL"],["blk","BLK"],["to","TO"],["fg","FG%"],["tp","3P%"],["ft","FT%"]];
+function hoopLine(map){
+  const min=readStat(map,["avgMinutes"]);
+  return {
+    gp:readStat(map,["gamesPlayed"]),
+    min:(min==="0"||min==="0.0")?"":min,
+    pts:readStat(map,["avgPoints"]),
+    reb:readStat(map,["avgRebounds"]),
+    ast:readStat(map,["avgAssists"]),
+    stl:readStat(map,["avgSteals"]),
+    blk:readStat(map,["avgBlocks"]),
+    to:readStat(map,["avgTurnovers"]),
+    fg:readStat(map,["fieldGoalPct"]),
+    tp:readStat(map,["threePointFieldGoalPct","threePointPct"]),
+    ft:readStat(map,["freeThrowPct"])
+  };
+}
+function statNum(v){
+  const n=parseFloat(String(v==null?"":v).replace(/[^\d.\-]/g,""));
+  return Number.isFinite(n)?n:null;
+}
+function statBox(title, cols, rows, team, sortKey){
+  const key=sortKey||(cols[0]?cols[0][0]:"");
+  const list=(rows||[]).slice().sort((a,b)=>{
+    const av=statNum((a.vals||{})[key]), bv=statNum((b.vals||{})[key]);
+    if(av==null && bv==null) return String(a.name||"").localeCompare(String(b.name||""));
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    return bv-av;
+  });
+  const cell=(vals,k)=>{
+    const v=(vals||{})[k];
+    const n=statNum(v);
+    return `<td data-n="${n==null?"":n}">${esc(v==null||v===""?"—":v)}</td>`;
+  };
+  const head=`<th data-k="name">Player</th>`+cols.map(([k,lab])=>`<th data-k="${esc(k)}" class="${k===key?"on":""}">${esc(lab)}</th>`).join("");
+  const body=list.map(r=>`<tr class="prow" data-pid="${esc(r.id||"")}" data-pname="${esc(r.name||"")}" data-name="${esc(r.name||"")}"><th>${esc(r.name||"")}${r.pos?`<em>${esc(r.pos)}</em>`:""}</th>${cols.map(([k])=>cell(r.vals,k)).join("")}</tr>`).join("");
+  const foot=team?`<tfoot><tr><th>Team</th>${cols.map(([k])=>cell(team,k)).join("")}</tr></tfoot>`:"";
+  return `${title?`<h3 class="kicker">${esc(title)}</h3>`:""}<div class="sbox"><table data-sort="${esc(key)}" data-dir="desc"><thead><tr>${head}</tr></thead><tbody>${body||""}</tbody>${foot}</table></div>`;
+}
+function meterBox(title, people){
+  const cols=[];
+  (people||[]).forEach(p=>{(p.meters||[]).forEach(([lab])=>{ if(lab && cols.indexOf(lab)<0) cols.push(lab); });});
+  const rows=(people||[]).filter(p=>p&&p.name).map(p=>({
+    id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0],
+    vals:Object.fromEntries((p.meters||[]).map(([k,v])=>[k, v==null||v==="—"?"":v]))
+  }));
+  if(!rows.length || !cols.length) return "";
+  return statBox(title, cols.map(c=>[c,c]), rows, null, cols[0]);
+}
+function pairBox(title, pairs){
+  const rows=(pairs||[]).filter(x=>x && x[1]!=null && String(x[1]).trim() && x[1]!=="—" && x[1]!=="-" && x[1]!=="%");
+  if(!rows.length) return "";
+  return `${title?`<h3 class="kicker">${esc(title)}</h3>`:""}<div class="sbox"><table class="tight"><tbody>${rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function sortStatBox(table, key){
+  if(!table || !key) return;
+  const dir=table.dataset.sort===key ? (table.dataset.dir==="desc"?"asc":"desc") : (key==="name"?"asc":"desc");
+  table.dataset.sort=key;
+  table.dataset.dir=dir;
+  const ths=[...table.querySelectorAll("thead th")];
+  const idx=ths.findIndex(th=>th.dataset.k===key);
+  ths.forEach(th=>{
+    const on=th.dataset.k===key;
+    th.classList.toggle("on", on);
+    th.classList.toggle("asc", on && dir==="asc");
+  });
+  const body=table.tBodies[0];
+  if(!body || idx<0) return;
+  [...body.rows].sort((a,b)=>{
+    if(key==="name"){
+      const an=a.dataset.name||a.cells[0].innerText, bn=b.dataset.name||b.cells[0].innerText;
+      return dir==="asc"?an.localeCompare(bn):bn.localeCompare(an);
+    }
+    const n=row=>{ const cell=row.cells[idx]; const v=cell?parseFloat(cell.dataset.n):NaN; return Number.isFinite(v)?v:null; };
+    const av=n(a), bv=n(b);
+    if(av==null && bv==null) return 0;
+    if(av==null) return 1;
+    if(bv==null) return -1;
+    return dir==="asc"?av-bv:bv-av;
+  }).forEach(r=>body.appendChild(r));
+}
 async function openMlsTeam(tid, name){
   if(!tid) return;
   window.FROMTEAM=true; window.FROMMLS=true;
@@ -7518,7 +7635,7 @@ async function openMlsTeam(tid, name){
         </div>
         ${teamTabs([
           {id:"roster",label:"Roster",html:rosterHtml},
-          {id:"stats",label:"Stats",html:`<h3 class="kicker">Team</h3>${statLine(tiles)}<h3 class="kicker">Players</h3>${statSheet(rosterPeople)}`},
+          {id:"stats",label:"Stats",html:`${pairBox("Team", tiles)}${meterBox("Players", rosterPeople)}`},
           {id:"sched",label:"Schedule",html:schedHtml}
         ],takeTeamTab())}
       </div>`;
@@ -8243,16 +8360,16 @@ async function openLeagueTeam(tid, name, sport){
     const groups=sport==="nhl"?["team","goalkeeping"]:["batting","pitching"];
     const sheets=(sport==="nhl"?["team","goalkeeping"]:["batting","pitching"]).map(nm=>{
       const blk=pblocks.find(x=>x.name===nm)||{};
-      const spec=(cols[nm]||[]).slice(0,4);
-      const people=(blk.leaders||[]).slice(0,18).map(L=>{
+      const spec=cols[nm]||[];
+      const people=(blk.leaders||[]).map(L=>{
         const a=L.athlete||{};
         const pack=(L.statistics||[]).flatMap(p=>p.stats||[]);
         return {id:a.id, name:a.displayName||"", pos:(a.position&&a.position.abbreviation)||"", shot:shotOf(a), meters:spec.map(c=>[c[0], sval(pack,c.slice(1))])};
       }).filter(p=>p.name);
       return {title:blk.displayName||nm, people};
     }).filter(g=>g.people.length);
-    const deckGroups=sheets.map(g=>`<h3 class="kicker">${g.title}</h3>${playerDeck(g.people)}`).join("")||"<p class='hint'>Roster not posted.</p>";
-    const playerStats=sheets.map(g=>`<h3 class="kicker">${g.title}</h3>${statSheet(g.people)}`).join("");
+    const deckGroups=sheets.map(g=>`<h3 class="kicker">${g.title}</h3>${playerDeck(g.people.map(p=>Object.assign({}, p, {meters:(p.meters||[]).slice(0,4)})))}`).join("")||"<p class='hint'>Roster not posted.</p>";
+    const playerStats=sheets.map(g=>meterBox(g.title, g.people)).join("");
     const schedHtml=resultBoard(sched.events||[], tid, team=>{
       if(team.logos&&team.logos[0]) return team.logos[0].href||team.logos[0];
       const ab=String(team.abbreviation||"").toLowerCase();
@@ -8270,7 +8387,7 @@ async function openLeagueTeam(tid, name, sport){
         </div>
         ${teamTabs([
           {id:"roster",label:"Roster",html:deckGroups},
-          {id:"stats",label:"Stats",html:`<h3 class="kicker">Team</h3>${statLine(tiles)}${playerStats}`},
+          {id:"stats",label:"Stats",html:`${pairBox("Team", tiles)}${playerStats}`},
           {id:"sched",label:"Schedule",html:schedHtml},
           sport==="mlb"?{id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}:null
         ],takeTeamTab())}
@@ -8473,7 +8590,11 @@ async function openTeam(tid, name, sport){
       return {title, people};
     }).filter(g=>g.people.length);
     const rosterHtml=grouped.map(g=>`<h3 class="kicker">${g.title}</h3>${playerDeck(g.people)}`).join("")||"<p class='hint'>Roster not posted.</p>";
-    const statsHtml=`<h3 class="kicker">Team</h3>${groups.map(([title,rows])=>`<div class="sgrp"><h3>${title}</h3>${statLine(rows)}</div>`).join("")}${grouped.map(g=>`<h3 class="kicker">${g.title}</h3>${statSheet(g.people)}`).join("")}`;
+    const boxHtml=[["Passing","passing"],["Rushing","rushing"],["Receiving","receiving"],["Defense","defensive"]].map(([title,nm])=>{
+      const people=pick(pblocks.find(x=>x.name===nm), cols[nm]||[]);
+      return people.length?meterBox(title, people):"";
+    }).join("");
+    const statsHtml=groups.map(([title,rows])=>pairBox(title, rows)).join("")+boxHtml;
     const schedHtml=resultBoard(sched.events||[], tid, team=>{
       if(team.logos&&team.logos[0]) return team.logos[0].href||team.logos[0];
       if(isNfl){ const ab=String(team.abbreviation||"").toLowerCase(); return ab?("https://a.espncdn.com/i/teamlogos/nfl/500/"+ab+".png"):""; }
@@ -8839,12 +8960,14 @@ async function openHoopTeam(lg, tid, name){
     (((plstat.results||[])[0]||{}).leaders||[]).forEach(L=>{
       const a=L.athlete||{};
       if(!a.id) return;
+      const map=athleteStatMap(L.statistics);
       book[String(a.id)]={
-        gp:grabP(L.statistics,"general",["gamesPlayed"]),
-        ppg:grabP(L.statistics,"offensive",["avgPoints"])||String(L.displayValue||""),
-        rpg:grabP(L.statistics,"general",["avgRebounds"]),
-        apg:grabP(L.statistics,"offensive",["avgAssists"]),
-        fg:grabP(L.statistics,"offensive",["fieldGoalPct"])
+        gp:map.gamesPlayed||"",
+        ppg:map.avgPoints||String(L.displayValue||""),
+        rpg:map.avgRebounds||"",
+        apg:map.avgAssists||"",
+        fg:map.fieldGoalPct||"",
+        line:hoopLine(map)
       };
     });
     const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
@@ -8856,11 +8979,15 @@ async function openHoopTeam(lg, tid, name){
       return {id:a.id, name:a.displayName||"", no:a.jersey||"", pos:[pos, st.gp?st.gp+" GP":""].filter(Boolean).join(" · "), shot:a.id?("https://a.espncdn.com/i/headshots/"+folder+"/players/full/"+a.id+".png"):"", meters:[["PPG",st.ppg||"—"],["RPG",st.rpg||"—"],["APG",st.apg||"—"],["FG%",st.fg||"—"]]};
     });
     const squad=playerDeck(hoopPeople);
-    const statPairs=[["PPG", grab(["avgPoints"])],["OPP", grab(["avgPointsAgainst","avgDefensivePoints"])||oppAvg],["RPG", grab(["avgRebounds"])],["APG", grab(["avgAssists"])],["FG%", grab(["fieldGoalPct"])],["3P%", grab(["threePointFieldGoalPct"])]];
+    const teamLine=hoopLine(catMap(cats));
+    const opp=grab(["avgPointsAgainst","avgDefensivePoints"])||oppAvg;
+    const note=[teamLine.pts?teamLine.pts+" PPG":"", opp?"OPP "+opp:""].filter(Boolean).join(" · ");
+    const boxRows=hoopPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
+    const statsHtml=(note?`<p class="hint">${esc(note)}</p>`:"")+statBox("", HOOP_COLS, boxRows, teamLine, "pts");
     const schedHtml=resultBoard(sched.events||[], tid, team=>nbaLogo(team||{}));
     $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(tm)}"/><div class="phero-copy"><p class="kicker">${tm.standingSummary||meta.label}</p><h2>${tm.displayName||name}</h2><p>${rec.summary||meta.stand.slice(0,7)}</p></div></div>${teamTabs([
       {id:"roster",label:"Roster",html:squad},
-      {id:"stats",label:"Stats",html:`<h3 class="kicker">Team</h3>${statLine(statPairs)}<h3 class="kicker">Players</h3>${statSheet(hoopPeople)}`},
+      {id:"stats",label:"Stats",html:statsHtml},
       {id:"sched",label:"Schedule",html:schedHtml},
       {id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}
     ],takeTeamTab())}</div>`;
@@ -9036,12 +9163,14 @@ async function openNbaTeam(tid, name){
     (((plstat.results||[])[0]||{}).leaders||[]).forEach(L=>{
       const a=L.athlete||{};
       if(!a.id) return;
+      const map=athleteStatMap(L.statistics);
       book[String(a.id)]={
-        gp:grabP(L.statistics,"general",["gamesPlayed"]),
-        ppg:grabP(L.statistics,"offensive",["avgPoints"])||String(L.displayValue||""),
-        rpg:grabP(L.statistics,"general",["avgRebounds"]),
-        apg:grabP(L.statistics,"offensive",["avgAssists"]),
-        fg:grabP(L.statistics,"offensive",["fieldGoalPct"])
+        gp:map.gamesPlayed||"",
+        ppg:map.avgPoints||String(L.displayValue||""),
+        rpg:map.avgRebounds||"",
+        apg:map.avgAssists||"",
+        fg:map.fieldGoalPct||"",
+        line:hoopLine(map)
       };
     });
     const num=v=>{ const n=parseFloat(v); return Number.isFinite(n)?n:-1; };
@@ -9052,11 +9181,15 @@ async function openNbaTeam(tid, name){
       return {id:a.id, name:a.displayName||"", no:a.jersey||"", pos:[pos, st.gp?st.gp+" GP":""].filter(Boolean).join(" · "), shot:a.id?("https://a.espncdn.com/i/headshots/nba/players/full/"+a.id+".png"):"", meters:[["PPG",st.ppg||"—"],["RPG",st.rpg||"—"],["APG",st.apg||"—"],["FG%",st.fg||"—"]]};
     });
     const squad=playerDeck(nbaPeople);
-    const statPairs=useful.concat([["3P%", grab("offensive",["threePointFieldGoalPct"])],["FT%", grab("offensive",["freeThrowPct"])],["STL", grab("defensive",["avgSteals"])],["BLK", grab("defensive",["avgBlocks"])]]);
+    const teamLine=hoopLine(catMap(cats));
+    const opp=grab("defensive",["avgPointsAgainst"]);
+    const note=[teamLine.pts?teamLine.pts+" PPG":"", opp&&opp!=="—"?"OPP "+opp:""].filter(Boolean).join(" · ");
+    const boxRows=nbaPeople.map(p=>({id:p.id, name:p.name, pos:String(p.pos||"").split(" · ")[0], vals:(book[String(p.id)]||{}).line||{}})).filter(r=>r.vals.pts||r.vals.gp);
+    const statsHtml=(note?`<p class="hint">${esc(note)}</p>`:"")+statBox("", HOOP_COLS, boxRows, teamLine, "pts");
     const schedHtml=resultBoard(sched.events||[], tid, team=>nbaLogo(team||{}));
     $("playerRoom").innerHTML=`<div class="phero tbook"><div class="thead"><img class="tmark" alt="" src="${nbaLogo(t)}"/><div class="phero-copy"><p class="kicker">${t.standingSummary||"NBA"}</p><h2>${t.displayName||name}</h2><p>${rec.summary||t.recordSummary||""}</p></div></div>${teamTabs([
       {id:"roster",label:"Roster",html:squad},
-      {id:"stats",label:"Stats",html:`<h3 class="kicker">Team</h3>${statLine(statPairs)}<h3 class="kicker">Players</h3>${statSheet(nbaPeople)}`},
+      {id:"stats",label:"Stats",html:statsHtml},
       {id:"sched",label:"Schedule",html:schedHtml},
       {id:"hist",label:"History",html:`<div id="teamHist"><p class="hint">Loading seasons since 2002…</p></div>`}
     ],takeTeamTab())}</div>`;
