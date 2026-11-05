@@ -4786,12 +4786,12 @@ async function openPlayer(pid, name){
     }
     let log = {}, splitsPack = {};
     try{
-      const [logRes, splitRes, statsRes] = await Promise.all([
-        fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/gamelog",{cache:"no-store"}),
+      const [logged, splitRes, statsRes] = await Promise.all([
+        playerLog(LEAGUE, pid),
         fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/splits",{cache:"no-store"}),
         fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid+"/stats",{cache:"no-store"})
       ]);
-      if(logRes.ok) log = await logRes.json();
+      if(logged) log = logged;
       if(splitRes.ok) splitsPack = await splitRes.json();
       if(statsRes.ok) window.CAREER_PACK = await statsRes.json();
       window.PLAYER_PATH = path;
@@ -5731,6 +5731,22 @@ async function liveAthleteStats(lg, pid, eventId, teamId){
   }
   return {names, stats, score:head.score, detail:head.detail, sit:lg==="mlb"?teamLive(d, lg):null};
 }
+async function playerLog(lg, id){
+  const path=YPATH[lg];
+  if(!path||!id) return null;
+  const base="https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+id+"/gamelog";
+  const d=await pullJSON(base);
+  if(!d) return null;
+  const played=x=>!!x && (x.seasonTypes||[]).some(st=>!/preseason/i.test(st.displayName||"") && (st.categories||[]).some(c=>(c.events||[]).length));
+  const season=((d.filters||[]).find(f=>f.name==="season"))||null;
+  const years=((season&&season.options)||[]).map(o=>Number(o.value)).filter(n=>Number.isFinite(n));
+  const top=years.length?Math.max.apply(null, years):0;
+  if(top && String(top)!==String(season.value)){
+    const fresh=await pullJSON(base+"?season="+top);
+    if(played(fresh)) return fresh;
+  }
+  return d;
+}
 async function fillPlayerBook(p){
   const card={record:[p.pos, p.team].filter(Boolean).join(" · ")||lgLabel(p.lg)};
   let live=false, eventId="", detail="", oppBit="";
@@ -5757,7 +5773,7 @@ async function fillPlayerBook(p){
     if(chips.length) stat={live:true, context:[(pack&&pack.detail)||detail, oppBit].filter(Boolean).join(" · "), chips};
   }
   if(!stat){
-    const d=await pullJSON("https://site.web.api.espn.com/apis/common/v3/sports/"+YPATH[p.lg]+"/athletes/"+p.id+"/gamelog");
+    const d=await playerLog(p.lg, p.id);
     const row=latestLog(d);
     if(row){
       const chips=chipsFor(p.lg, p.pos, row.names, row.stats);
