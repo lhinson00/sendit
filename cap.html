@@ -1160,13 +1160,13 @@ async function refreshInjuries(why){
   const before=JSON.stringify(STATE.inj||{});
   await loadInjuries();
   repriceAll();
+  const n=await syncLiveRoster();
   paintAll();
   const stamp=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).format(new Date());
   const line=$("weekLine");
   if(line && !line.textContent.includes("Could not")) line.textContent=(STATE.label||"Week")+" · $50,000 · injuries "+stamp+" CT";
   if(before!==JSON.stringify(STATE.inj||{})) toast("Injury report updated · "+stamp+" CT");
-  const n=await syncLiveRoster();
-  if(n){ paintAll(); toast(n===1?"Depth chart added a player":"Depth chart added "+n+" players"); }
+  if(n) toast(n===1?"Starter added from the depth chart":n+" starters added from the depth chart");
 }
 function startInjuryClock(){
   const tick=async()=>{
@@ -1251,42 +1251,63 @@ function stampDepth(cur, depth){
   if(cur.line) cur.line=String(cur.line).replace(/ · (QB|RB|WR|TE)\d+$/,"")+(depth<=8?" · "+cur.pos+depth:"");
 }
 async function syncLiveRoster(){
-  const games=STATE.games||[];
-  if(!games.length || !STATE.pool) return 0;
-  const jobs=[];
-  games.forEach(g=>{
-    if(g.homeId) jobs.push([g.homeId, g.homeAb, g]);
-    if(g.awayId) jobs.push([g.awayId, g.awayAb, g]);
-  });
-  const added=[];
-  for(let i=0;i<jobs.length;i+=6){
-    await Promise.all(jobs.slice(i,i+6).map(async ([tid,ab,g])=>{
-      delete DEPTH[tid];
-      await loadDepth(tid);
-      const rows=await loadRoster(tid, ab, g);
-      rows.forEach(p=>{
-        if(p.pos==="DST") return;
-        const cur=STATE.pool.find(x=>x.id===p.id);
-        if(cur){ stampDepth(cur, p.depth); return; }
-        if(!onDepthChart(p) || added.some(x=>x.id===p.id) || STATE.pool.some(x=>x.id===p.id)) return;
-        p.starter=p.depth===1;
-        added.push(p);
-      });
-    }));
-  }
-  if(!added.length) return 0;
-  STATE.pool.push(...added);
-  await pullLogs(added);
-  added.forEach(p=>{
-    if(!LOG_OK[p.id]){ LOGS[p.id]=LOGS[p.id]||[]; LOG_OK[p.id]=1; }
-    let sal=priceLikeDk(p);
-    if(sal==null) sal=(bandFor(p.pos)||[3000])[0];
-    if(p.pos==="QB" && p.depth===1 && sal<5600) sal=5600;
-    p.sal=sal;
-    p.priced=true;
-    p.liveAdd=true;
-  });
-  return added.length;
+  if(window._capSync) return window._capSync;
+  const run=(async ()=>{
+    const games=STATE.games||[];
+    if(!games.length || !STATE.pool) return 0;
+    const jobs=[];
+    games.forEach(g=>{
+      if(g.homeId) jobs.push([g.homeId, g.homeAb, g]);
+      if(g.awayId) jobs.push([g.awayId, g.awayAb, g]);
+    });
+    const added=[];
+    for(let i=0;i<jobs.length;i+=8){
+      await Promise.all(jobs.slice(i,i+8).map(async ([tid,ab,g])=>{
+        const ctl=new AbortController();
+        const timer=setTimeout(()=>ctl.abort(), 8000);
+        let d=null;
+        try{
+          const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/depthcharts",{cache:"no-store",signal:ctl.signal});
+          if(r.ok) d=await r.json();
+        }catch(e){}
+        clearTimeout(timer);
+        if(!d) return;
+        const qbs=[];
+        (d.depthchart||[]).forEach(chart=>{
+          Object.keys(chart.positions||{}).forEach(k=>{
+            const slot=chart.positions[k]||{};
+            const abbr=String((slot.position&&slot.position.abbreviation)||k).toUpperCase();
+            if(abbr!=="QB") return;
+            (slot.athletes||[]).forEach((a,n)=>{
+              const id=String(a.id||"");
+              if(!id) return;
+              const name=a.displayName||a.fullName||a.shortName||"";
+              const prev=qbs.find(x=>x.id===id);
+              if(!prev || prev.depth>n+1){
+                if(prev) prev.depth=n+1;
+                else qbs.push({id, name, depth:n+1});
+              }
+            });
+          });
+        });
+        qbs.forEach(q=>{
+          const cur=STATE.pool.find(x=>x.id===q.id);
+          if(cur){ stampDepth(cur, q.depth); return; }
+          if(q.depth!==1 || !q.name) return;
+          if(injOf({id:q.id})==="Out" || injOf({id:q.id})==="Injured Reserve") return;
+          if(added.some(x=>x.id===q.id) || STATE.pool.some(x=>x.id===q.id)) return;
+          const opp=String(tid)===String(g.homeId)?g.awayAb:g.homeAb;
+          const when=g.start?new Date(g.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}):"";
+          added.push({id:q.id, name:q.name, pos:"QB", team:ab, opp, eventId:g.eventId, when, start:g.start, starter:true, depth:1, status:"Active", sal:5600, priced:true, book:true, liveAdd:true, line:"Starter"});
+        });
+      }));
+    }
+    if(added.length) STATE.pool.push(...added);
+    return added.length;
+  })();
+  window._capSync=run;
+  try{ return await run; }
+  finally{ if(window._capSync===run) window._capSync=null; }
 }
 async function loadPool(){
   const r=await fetch("/data/cap-week.json",{cache:"no-store"});
