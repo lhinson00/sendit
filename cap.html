@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- cap-starter -->
+<!-- cap-milton -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -1160,13 +1160,11 @@ async function refreshInjuries(why){
   const before=JSON.stringify(STATE.inj||{});
   await loadInjuries();
   repriceAll();
-  const n=await syncLiveRoster();
   paintAll();
   const stamp=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric",minute:"2-digit"}).format(new Date());
   const line=$("weekLine");
   if(line && !line.textContent.includes("Could not")) line.textContent=(STATE.label||"Week")+" · $50,000 · injuries "+stamp+" CT";
   if(before!==JSON.stringify(STATE.inj||{})) toast("Injury report updated · "+stamp+" CT");
-  if(n) toast(n===1?"Starter added from the depth chart":n+" starters added from the depth chart");
 }
 function startInjuryClock(){
   const tick=async()=>{
@@ -1233,82 +1231,6 @@ async function loadDefenses(){
     }catch(e){}
   }));
 }
-function onDepthChart(p){
-  if(!p || p.pos==="DST" || /practice/i.test(p.status||"")) return false;
-  const inj=injOf(p);
-  if(inj==="Out"||inj==="Injured Reserve") return false;
-  const seat=p.depth||99;
-  if(p.pos==="QB") return seat<=2;
-  if(p.pos==="RB") return seat<=2;
-  if(p.pos==="WR") return seat<=3;
-  if(p.pos==="TE") return seat<=2;
-  return false;
-}
-function stampDepth(cur, depth){
-  if(!(depth>0 && depth<99) || cur.depth===depth) return;
-  cur.depth=depth;
-  cur.starter=depth===1;
-  if(cur.line) cur.line=String(cur.line).replace(/ · (QB|RB|WR|TE)\d+$/,"")+(depth<=8?" · "+cur.pos+depth:"");
-}
-async function syncLiveRoster(){
-  if(window._capSync) return window._capSync;
-  const run=(async ()=>{
-    const games=STATE.games||[];
-    if(!games.length || !STATE.pool) return 0;
-    const jobs=[];
-    games.forEach(g=>{
-      if(g.homeId) jobs.push([g.homeId, g.homeAb, g]);
-      if(g.awayId) jobs.push([g.awayId, g.awayAb, g]);
-    });
-    const added=[];
-    for(let i=0;i<jobs.length;i+=8){
-      await Promise.all(jobs.slice(i,i+8).map(async ([tid,ab,g])=>{
-        const ctl=new AbortController();
-        const timer=setTimeout(()=>ctl.abort(), 8000);
-        let d=null;
-        try{
-          const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/teams/"+tid+"/depthcharts",{cache:"no-store",signal:ctl.signal});
-          if(r.ok) d=await r.json();
-        }catch(e){}
-        clearTimeout(timer);
-        if(!d) return;
-        const qbs=[];
-        (d.depthchart||[]).forEach(chart=>{
-          Object.keys(chart.positions||{}).forEach(k=>{
-            const slot=chart.positions[k]||{};
-            const abbr=String((slot.position&&slot.position.abbreviation)||k).toUpperCase();
-            if(abbr!=="QB") return;
-            (slot.athletes||[]).forEach((a,n)=>{
-              const id=String(a.id||"");
-              if(!id) return;
-              const name=a.displayName||a.fullName||a.shortName||"";
-              const prev=qbs.find(x=>x.id===id);
-              if(!prev || prev.depth>n+1){
-                if(prev) prev.depth=n+1;
-                else qbs.push({id, name, depth:n+1});
-              }
-            });
-          });
-        });
-        qbs.forEach(q=>{
-          const cur=STATE.pool.find(x=>x.id===q.id);
-          if(cur){ stampDepth(cur, q.depth); return; }
-          if(q.depth!==1 || !q.name) return;
-          if(injOf({id:q.id})==="Out" || injOf({id:q.id})==="Injured Reserve") return;
-          if(added.some(x=>x.id===q.id) || STATE.pool.some(x=>x.id===q.id)) return;
-          const opp=String(tid)===String(g.homeId)?g.awayAb:g.homeAb;
-          const when=g.start?new Date(g.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}):"";
-          added.push({id:q.id, name:q.name, pos:"QB", team:ab, opp, eventId:g.eventId, when, start:g.start, starter:true, depth:1, status:"Active", sal:5600, priced:true, book:true, liveAdd:true, line:"Starter"});
-        });
-      }));
-    }
-    if(added.length) STATE.pool.push(...added);
-    return added.length;
-  })();
-  window._capSync=run;
-  try{ return await run; }
-  finally{ if(window._capSync===run) window._capSync=null; }
-}
 async function loadPool(){
   const r=await fetch("/data/cap-week.json",{cache:"no-store"});
   if(!r.ok) throw new Error("Price book missing");
@@ -1318,12 +1240,7 @@ async function loadPool(){
   STATE.pool=book.players.map(p=>Object.assign({priced:true, book:true}, p));
   $("weekLine").textContent=(STATE.label||"Week")+" · $50,000";
   paintAll();
-  loadInjuries().then(async ()=>{
-    STATE.pool.forEach(p=>{ p.inj=injOf(p)||p.inj; });
-    const n=await syncLiveRoster();
-    paintAll();
-    if(n) toast(n===1?"Depth chart added a player":"Depth chart added "+n+" players");
-  }).catch(()=>{});
+  loadInjuries().then(()=>{ STATE.pool.forEach(p=>{ p.inj=injOf(p)||p.inj; }); paintAll(); }).catch(()=>{});
   pullBoard().then(()=>paintStand()).catch(()=>{});
 }
 
