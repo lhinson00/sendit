@@ -232,6 +232,15 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ystream{margin:6px 0 0;color:#f7f2ea;font-size:14px;font-weight:700}
 .yframe{position:relative;width:100%;aspect-ratio:16/9;margin-top:8px;background:#000;border-radius:10px;overflow:hidden}
 .yframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.films{padding:8px var(--pad) 96px}
+.films h2{margin:0;font-family:"Bebas Neue",sans-serif;font-size:40px;font-weight:400;letter-spacing:.03em}
+.filmnote{margin:4px 0 12px;color:#9a9186;font-size:13px}
+.filmrow{display:grid;grid-template-columns:112px minmax(0,1fr);gap:10px;align-items:center;width:100%;margin-top:8px;padding:8px;background:#0c0d12;border:1px solid #241e18;border-radius:12px;color:#fff;text-align:left;font:inherit;cursor:pointer}
+.filmrow.on{border-color:#ff7a18}
+.filmrow img{width:112px;height:63px;object-fit:cover;border-radius:8px;background:#16120e}
+.filmrow b{display:block;font-size:15px;line-height:1.25}
+.filmrow em{display:block;margin-top:3px;font-style:normal;color:#9a9186;font-size:12px}
+.ylink button.yopen{flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer}
 .ylinkopen{display:inline-block;margin-top:8px;color:#ffc46b;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
 .ylink .yremove{margin-left:auto}
 .ypick{margin-top:12px;background:#101218;border:1px solid #2a241c;border-radius:14px;padding:6px 0 10px}
@@ -1280,6 +1289,15 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
   </div>
 </section>
 
+<section id="viewFilms" hidden>
+  <div class="films">
+    <h2 id="filmTitle">Films</h2>
+    <p class="filmnote">Only this channel. No YouTube home, search, or other channels.</p>
+    <div class="yframe" id="filmFrame" hidden></div>
+    <div id="filmList"></div>
+  </div>
+</section>
+
 <section id="viewLive" hidden>
   <div class="bar">
     <div class="barleft">
@@ -1479,6 +1497,8 @@ async function show(name, opts){
   $("viewGame").hidden = name!=="game";
   if($("viewPlayer")) $("viewPlayer").hidden = name!=="player";
   if($("viewOwner")) $("viewOwner").hidden = name!=="owner";
+  if($("viewFilms")) $("viewFilms").hidden = name!=="films";
+  if(name!=="films" && $("filmFrame")){ $("filmFrame").innerHTML=""; $("filmFrame").hidden=true; }
   const came = window.VIEW_NOW;
   window.VIEW_NOW = name;
   const back=$("navBack");
@@ -1503,7 +1523,7 @@ async function show(name, opts){
   if(window.trackUse) window.trackUse("view", name);
   const eye=$("brandEye"), title=$("brandTitle");
   if(eye) eye.textContent = name==="home" ? "Yours" : "Sports Sauce";
-  if(title) title.textContent = name==="home" ? "Sports Sauce" : "The Board";
+  if(title) title.textContent = name==="home" ? "Sports Sauce" : name==="films" ? (window.FILM_NAME||"Films") : "The Board";
   document.body.classList.toggle("away", name!=="home");
   if(name==="home" && typeof paintYours==="function") paintYours();
   if(name==="home" && typeof checkLinks==="function") checkLinks();
@@ -6056,6 +6076,8 @@ function ytChannel(raw){
     if(m) return {cid:m[1]};
     m=path.match(/^\/@([^/]+)/);
     if(m) return {handle:decodeURIComponent(m[1])};
+    m=path.match(/^\/playlist$/);
+    if(m && u.searchParams.get("list")) return {playlist:u.searchParams.get("list")};
     m=path.match(/^\/watch$/);
     if(m && u.searchParams.get("v")) return {watch:u.searchParams.get("v")};
     return {};
@@ -6188,6 +6210,71 @@ function paintLiveBoard(){
     return `<div class="ylink live"><div class="ylinktop"><span class="ylive">Live</span><b>${esc(l.name)}</b></div><p class="ystream">${esc(l._title||"Live now")}</p><div class="yframe"><iframe src="${src}" title="${esc(l._title||l.name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`;
   }).join("");
 }
+function filmWhen(s){
+  const d=new Date(String(s||"").replace(" ","T")+"Z");
+  if(!Number.isFinite(d.getTime())) return "";
+  return d.toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"});
+}
+async function rssFilms(feed){
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(), 8000);
+  try{
+    const r=await fetch("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(feed),{cache:"no-store",signal:ctl.signal});
+    if(!r.ok) return [];
+    const d=await r.json();
+    return ((d&&d.items)||[]).map(it=>{
+      const g=String(it.link||it.guid||"");
+      const m=g.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+      if(!m) return null;
+      return {id:m[1], title:it.title||"Film", thumb:it.thumbnail||"", when:it.pubDate||""};
+    }).filter(Boolean);
+  }catch(e){ return []; }
+  finally{ clearTimeout(timer); }
+}
+function playFilm(v){
+  const box=$("filmFrame");
+  if(!box || !v) return;
+  box.hidden=false;
+  const src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(v.id)+"?rel=0&playsinline=1&iv_load_policy=3&autoplay=1";
+  box.innerHTML=`<iframe src="${src}" title="${esc(v.title||"Film")}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`;
+  document.querySelectorAll(".filmrow").forEach(b=>b.classList.toggle("on", b.dataset.vid===v.id));
+  box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+function paintFilmList(films){
+  const host=$("filmList");
+  if(!host) return;
+  window.FILMS=films;
+  host.innerHTML=films.map(v=>`<button type="button" class="filmrow" data-vid="${esc(v.id)}">${v.thumb?`<img alt="" src="${esc(v.thumb)}"/>`:`<img alt="" src="https://i.ytimg.com/vi/${esc(v.id)}/hqdefault.jpg"/>`}<span><b>${esc(v.title)}</b><em>${esc(filmWhen(v.when))}</em></span></button>`).join("") || "<p class='hint'>No films on this channel yet.</p>";
+  host.querySelectorAll(".filmrow").forEach(b=>b.onclick=()=>{
+    const v=(window.FILMS||[]).find(x=>x.id===b.dataset.vid);
+    if(v) playFilm(v);
+  });
+}
+async function openFilms(l){
+  window.FILM_NAME=l.name||"Films";
+  show("films");
+  if($("filmTitle")) $("filmTitle").textContent=l.name||"Films";
+  const brand=$("brandTitle");
+  if(brand) brand.textContent=l.name||"Films";
+  if($("filmFrame")){ $("filmFrame").hidden=true; $("filmFrame").innerHTML=""; }
+  const host=$("filmList");
+  if(host) host.innerHTML="<p class='hint'>Loading films…</p>";
+  const info=ytChannel(l.url);
+  let feed="";
+  if(info.playlist) feed="https://www.youtube.com/feeds/videos.xml?playlist_id="+encodeURIComponent(info.playlist);
+  else if(info.watch && !info.cid && !info.handle){
+    paintFilmList([{id:info.watch, title:l.name||"Film", thumb:"", when:""}]);
+    playFilm({id:info.watch, title:l.name||"Film"});
+    return;
+  } else {
+    const cid=info.cid || await resolveChannel(l);
+    if(!cid){ if(host) host.innerHTML="<p class='hint'>Couldn't open that channel.</p>"; return; }
+    feed="https://www.youtube.com/feeds/videos.xml?channel_id="+encodeURIComponent(cid);
+  }
+  const films=await rssFilms(feed);
+  if(window.VIEW_NOW!=="films") return;
+  paintFilmList(films);
+}
 function paintLinks(){
   const host=$("yLinkList");
   if(!host) return;
@@ -6197,13 +6284,21 @@ function paintLinks(){
   paintLiveBoard();
   if(!LINKS.length){ host.innerHTML=""; return; }
   host.innerHTML=LINKS.map(l=>{
-    const open=ytLiveUrl(l.url)||l.url;
+    const info=ytChannel(l.url);
     const drop=`<button type="button" class="yremove" data-linkdrop="${esc(l.id)}" aria-label="Remove">×</button>`;
     if(l._live && l._vid){
       return `<div class="ylink live"><div class="ylinktop"><span class="ylive">Live</span><b>${esc(l.name)}</b>${drop}</div><p class="ystream">Playing at the top of Home</p></div>`;
     }
+    if(info.cid || info.handle || info.playlist || info.watch){
+      return `<div class="ylink"><button type="button" class="yopen" data-films="${esc(l.id)}"><b>${esc(l.name)}</b><em>Channel only</em></button>${drop}</div>`;
+    }
+    const open=l.url;
     return `<div class="ylink"><a href="${esc(open)}" target="_blank" rel="noopener"><b>${esc(l.name)}</b><em>${esc(linkHost(l.url)||"Link")}</em></a>${drop}</div>`;
   }).join("");
+  host.querySelectorAll("[data-films]").forEach(b=>b.onclick=()=>{
+    const l=LINKS.find(x=>x.id===b.dataset.films);
+    if(l) openFilms(l);
+  });
   host.querySelectorAll("[data-linkdrop]").forEach(b=>b.onclick=e=>{
     e.preventDefault();
     e.stopPropagation();
