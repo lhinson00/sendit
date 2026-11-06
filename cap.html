@@ -1350,6 +1350,7 @@ function scorePlayer(p){
     if(hs.type&&hs.type.state) st=hs.type.state;
   }
   if(!sum) return {pts:0, status:st==="pre"?"Yet to play":"…"};
+  if(p.pos==="DST" && st!=="in" && st!=="post") return {pts:0, status:"Yet to play"};
   const pts = p.pos==="DST" ? dstPtsFromSum(sum, p.teamId||p.id.replace("DST-","")) : playerPtsFromBox(sum, p.id);
   const status = st==="in"?"LIVE":st==="post"?"Final":"Yet to play";
   return {pts, status};
@@ -1462,15 +1463,17 @@ function pullBox(p){
 function scoreRows(p){
   if(!p) return [];
   if(p.pos==="DST"){
-    const sum=STATE.live[p.eventId]||STATE.live[String(p.eventId)]||{};
-    const b=dstBits(sum, p.teamId||String(p.id).replace("DST-",""));
+    const sc=scorePlayer(p);
+    const started=sc.status==="LIVE"||sc.status==="Final";
+    const sum=started?(STATE.live[p.eventId]||STATE.live[String(p.eventId)]||{}):{};
+    const b=started?dstBits(sum, p.teamId||String(p.id).replace("DST-","")):{pa:0,paPts:0,sk:0,ints:0,fr:0,dtd:0,sf:0};
     return [
-      {lab:"Points allowed", raw:b.pa+" allowed", rate:b.paPts+" pts", pts:b.paPts, on:true},
-      {lab:"Sacks", raw:String(b.sk), rate:"1 pt each", pts:b.sk, on:b.sk>0},
-      {lab:"Interceptions", raw:String(b.ints), rate:"2 pts each", pts:b.ints*2, on:b.ints>0},
-      {lab:"Fumbles recovered", raw:String(b.fr), rate:"2 pts each", pts:b.fr*2, on:b.fr>0},
-      {lab:"Defensive TDs", raw:String(b.dtd), rate:"6 pts each", pts:b.dtd*6, on:b.dtd>0},
-      {lab:"Safeties", raw:String(b.sf), rate:"2 pts each", pts:b.sf*2, on:b.sf>0}
+      {lab:"Points allowed", raw:started?(b.pa+" allowed"):"—", rate:started?(b.paPts+" pts"):"Starts at kickoff", pts:started?b.paPts:0, on:started},
+      {lab:"Sacks", raw:String(b.sk||0), rate:"1 pt each", pts:b.sk||0, on:started&&b.sk>0},
+      {lab:"Interceptions", raw:String(b.ints||0), rate:"2 pts each", pts:(b.ints||0)*2, on:started&&b.ints>0},
+      {lab:"Fumbles recovered", raw:String(b.fr||0), rate:"2 pts each", pts:(b.fr||0)*2, on:started&&b.fr>0},
+      {lab:"Defensive TDs", raw:String(b.dtd||0), rate:"6 pts each", pts:(b.dtd||0)*6, on:started&&b.dtd>0},
+      {lab:"Safeties", raw:String(b.sf||0), rate:"2 pts each", pts:(b.sf||0)*2, on:started&&b.sf>0}
     ];
   }
   const b=pullBox(p);
