@@ -2499,27 +2499,16 @@ function tnScoreOn(status){
   if(/\b(am|pm)\b/i.test(s) && !/qt|quarter|final|half/i.test(s)) return false;
   return /final|quarter|qtr|qt\.?|half|ot|overtime|end of/i.test(s);
 }
-function stampTnBracket(){
-  const book=window.TN_BRACKETS;
-  if(!book) return 0;
-  const rows=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && g.as!=="" && g.as!=null && g.hs!=="" && g.hs!=null && tnScoreOn(g.status));
-  let n=0;
-  Object.keys(book).forEach(id=>{
-    (book[id]||[]).forEach(g=>{
-      const teams=g.teams||[];
-      if(teams.length<2) return;
-      const a=teams[0], b=teams[1];
-      if(!a.name||!b.name||/^bye$/i.test(a.name)||/^bye$/i.test(b.name)) return;
-      const hit=rows.find(r=>(tnNameHit(a.name,r.away)&&tnNameHit(b.name,r.home))||(tnNameHit(a.name,r.home)&&tnNameHit(b.name,r.away)));
-      if(!hit) return;
-      const take=t=>tnNameHit(t.name,hit.away)?hit.as:(tnNameHit(t.name,hit.home)?hit.hs:"");
-      a.score=take(a);
-      b.score=take(b);
-      g.status=hit.status||g.status||"";
-      n++;
-    });
-  });
-  return n;
+function tnBracketDate(when){
+  const m=String(when||"").match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{1,2})/i);
+  if(!m) return "";
+  const months={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+  const mo=months[m[1].slice(0,3).toLowerCase()];
+  if(!mo) return "";
+  const today=(typeof chiToday==="function"?chiToday():"11-07-2026").split("-");
+  let year=Number(today[2])||2026;
+  if(Number(mo)<=2 && Number(today[0])>=8) year+=1;
+  return mo+"-"+String(m[2]).padStart(2,"0")+"-"+year;
 }
 function patchOpenBracket(){
   const host=$("boardPanel");
