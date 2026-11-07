@@ -2510,6 +2510,39 @@ function tnBracketDate(when){
   if(Number(mo)<=2 && Number(today[0])>=8) year+=1;
   return mo+"-"+String(m[2]).padStart(2,"0")+"-"+year;
 }
+function stampTnBracket(){
+  const book=window.TN_BRACKETS;
+  if(!book) return 0;
+  const rows=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && g.as!=="" && g.as!=null && g.hs!=="" && g.hs!=null && tnScoreOn(g.status));
+  const today=chiToday();
+  let n=0;
+  Object.keys(book).forEach(id=>{
+    (book[id]||[]).forEach(g=>{
+      const teams=g.teams||[];
+      if(teams.length<2) return;
+      const a=teams[0], b=teams[1];
+      const when=tnBracketDate(g.when);
+      if(when && tnDateKey(when)>tnDateKey(today)){
+        teams.forEach(t=>{ t.score=""; });
+        g.status="";
+        return;
+      }
+      if(!a.name||!b.name||/^bye$/i.test(a.name)||/^bye$/i.test(b.name)) return;
+      const hit=rows.find(r=>{
+        if(when && r.date!==when) return false;
+        if(!when && r.date!==fridaySelDate() && r.date!==today) return false;
+        return (tnNameHit(a.name,r.away)&&tnNameHit(b.name,r.home))||(tnNameHit(a.name,r.home)&&tnNameHit(b.name,r.away));
+      });
+      if(!hit) return;
+      const take=t=>tnNameHit(t.name,hit.away)?hit.as:(tnNameHit(t.name,hit.home)?hit.hs:"");
+      a.score=take(a);
+      b.score=take(b);
+      g.status=hit.status||g.status||"";
+      n++;
+    });
+  });
+  return n;
+}
 function patchOpenBracket(){
   const host=$("boardPanel");
   if(!host || window.TN_TAB!=="brack") return;
