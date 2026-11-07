@@ -415,8 +415,13 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .brgame .side.bye .who{color:#8a8478;font-weight:650}
 .brgame .host{color:#c2410c;font-style:normal;font-size:9px;font-weight:800;margin-right:3px}
 .brgame .rec{flex:none;font-size:10px;color:#6e685f;font-weight:650}
-.brgame .sc{flex:none;font-family:"Bebas Neue",sans-serif;font-size:16px;line-height:1}
-.brgame .when{flex:1;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:10px;color:#6e685f;background:#f7f3ec}
+.brgame .sc{flex:none;min-width:1.5em;font-family:"Bebas Neue",sans-serif;font-size:18px;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.brgame .sc:not(:empty)+.rec{display:none}
+.brgame.live{border-color:#c2410c;box-shadow:inset 3px 0 0 #c2410c}
+.brgame.live .sc{color:#c2410c}
+.brgame.fin .side.win .sc{color:#166534}
+.brgame .when{flex:1;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;font-size:10px;letter-spacing:.04em;color:#6e685f;background:#f7f3ec}
+.brgame.live .when{color:#c2410c;font-weight:800}
 .brgut{position:relative;width:18px;flex:none}
 .brline{position:absolute;left:0;width:12px;box-sizing:border-box;border-top:2px solid #1c1a17;border-right:2px solid #1c1a17;border-bottom:2px solid #1c1a17}
 .brline i{position:absolute;left:12px;width:6px;top:50%;margin-top:-1px;border-top:2px solid #1c1a17}
@@ -2481,7 +2486,61 @@ pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:
   pack.liveDay=day;
   window.TNFB=pack;
   try{ sessionStorage.setItem("sauceTnLive", JSON.stringify({day:day, games:pack.games.filter(g=>g.date===day), asOf:pack.asOf})); }catch(e){}
+  stampTnBracket();
+  if(typeof LEAGUE!=="undefined" && LEAGUE==="tssaa" && window.TN_TAB==="brack") patchOpenBracket();
   return hit;
+}
+function tnScoreOn(status){
+  const s=String(status||"");
+  if(/\b(am|pm)\b/i.test(s) && !/qt|quarter|final|half/i.test(s)) return false;
+  return /final|quarter|qtr|qt\.?|half|ot|overtime|end of/i.test(s);
+}
+function stampTnBracket(){
+  const book=window.TN_BRACKETS;
+  if(!book) return 0;
+  const rows=((window.TNFB||{}).games||[]).filter(g=>tnFootballGame(g) && g.as!=="" && g.as!=null && g.hs!=="" && g.hs!=null && tnScoreOn(g.status));
+  let n=0;
+  Object.keys(book).forEach(id=>{
+    (book[id]||[]).forEach(g=>{
+      const teams=g.teams||[];
+      if(teams.length<2) return;
+      const a=teams[0], b=teams[1];
+      if(!a.name||!b.name||/^bye$/i.test(a.name)||/^bye$/i.test(b.name)) return;
+      const hit=rows.find(r=>(tnNameHit(a.name,r.away)&&tnNameHit(b.name,r.home))||(tnNameHit(a.name,r.home)&&tnNameHit(b.name,r.away)));
+      if(!hit) return;
+      const take=t=>tnNameHit(t.name,hit.away)?hit.as:(tnNameHit(t.name,hit.home)?hit.hs:"");
+      a.score=take(a);
+      b.score=take(b);
+      g.status=hit.status||g.status||"";
+      n++;
+    });
+  });
+  return n;
+}
+function patchOpenBracket(){
+  const host=$("boardPanel");
+  if(!host || window.TN_TAB!=="brack") return;
+  const games=(window.TN_BRACKETS&&window.TN_BRACKETS[window.TN_BRACK])||[];
+  games.forEach(g=>{
+    const el=host.querySelector('[data-bg="'+String(g.id)+'"]');
+    if(!el) return;
+    const teams=(g.teams||[]).slice(0,2);
+    const nums=teams.map(t=>parseInt(t.score,10));
+    const scored=nums.length===2 && nums.every(n=>!isNaN(n));
+    const live=scored && !/final/i.test(g.status||"");
+    el.classList.toggle("live", live);
+    el.classList.toggle("fin", scored && !live);
+    teams.forEach((t,i)=>{
+      const side=el.querySelector('[data-side="'+i+'"]');
+      if(!side) return;
+      const sc=side.querySelector(".sc");
+      if(sc) sc.textContent=scored?String(t.score):"";
+      const win=scored && nums[0]!==nums[1] && nums[i]===Math.max(nums[0],nums[1]);
+      side.classList.toggle("win", !!win);
+    });
+    const when=el.querySelector(".when");
+    if(when) when.textContent=live?(g.status||"Live"):(scored?"Final":(g.when||""));
+  });
 }
 function tnLiveStatus(d){
   const period=String((d&&d.period)||"").replace(/\s+/g," ").trim();
@@ -2847,6 +2906,7 @@ async function loadTnBracketFile(){
     if(!r.ok) return;
     const d=await r.json();
     (d.classes||[]).forEach(c=>{ window.TN_BRACKETS[c.id]=c.games||[]; });
+    stampTnBracket();
   }catch(e){}
 }
 async function refreshTnBracket(id){
@@ -2859,6 +2919,7 @@ async function refreshTnBracket(id){
     const games=parseTnBracket(html);
     if(!games.length) return false;
     window.TN_BRACKETS[id]=games;
+    stampTnBracket();
     return true;
   }catch(e){ return false; }
 }
@@ -2894,18 +2955,22 @@ function paintTnBrackets(){
     const piece=(t, win)=>{
       const name=t.name||"TBD";
       const bye=/^bye$/i.test(name);
-      const right=t.score?`<span class="sc">${esc(t.score)}</span>`:(t.rec?`<span class="rec">${esc(t.rec)}</span>`:"");
-      return `<div class="side${bye?" bye":""}${win?" win":""}"><span class="seed">${esc(t.seed||"")}</span><span class="who">${t.host&&t.name&&!bye?'<i class="host">H</i>':""}${esc(bye?"Bye":name)}</span>${right}</div>`;
+      const has=t.score!=="" && t.score!=null;
+      const right=`<span class="sc">${has?esc(t.score):""}</span>`+(t.rec?`<span class="rec">${esc(t.rec)}</span>`:"");
+      return `<div class="side${bye?" bye":""}${win?" win":""}" data-side="${t._i}"><span class="seed">${esc(t.seed||"")}</span><span class="who">${t.host&&t.name&&!bye?'<i class="host">H</i>':""}${esc(bye?"Bye":name)}</span>${right}</div>`;
     };
     buckets.forEach((rnd,i)=>{
       const slot=UNIT*(base/Math.max(1,rnd.games.length));
       tree+=`<section class="brcol" style="height:${HEAD+bodyH}px"><h3>${rnd.name}</h3><div class="brbody" style="height:${bodyH}px">`+rnd.games.map((g,gi)=>{
         const teams=(g.teams&&g.teams.length?g.teams:[{},{}]).slice(0,2);
+        teams.forEach((t,ti)=>{ t._i=ti; });
         const nums=teams.map(t=>parseInt(t.score,10));
-        const scored=nums.length===2 && nums.every(n=>!isNaN(n)) && nums[0]!==nums[1];
+        const scored=nums.length===2 && nums.every(n=>!isNaN(n));
+        const live=scored && !/final/i.test(g.status||"");
         const top=gi*slot+(slot-GH)/2;
-        const sides=teams.map((t,ti)=>piece(t, scored && nums[ti]===Math.max(nums[0],nums[1]))).join("");
-        return `<div class="brslot" style="top:${top}px"><div class="brgame">${sides}<div class="when">${esc(g.when||"")}</div></div></div>`;
+        const sides=teams.map((t,ti)=>piece(t, scored && nums[0]!==nums[1] && nums[ti]===Math.max(nums[0],nums[1]))).join("");
+        const whenTxt=live?(g.status||"Live"):(scored?"Final":(g.when||""));
+        return `<div class="brslot" style="top:${top}px"><div class="brgame${live?" live":""}${scored&&!live?" fin":""}" data-bg="${esc(g.id)}">${sides}<div class="when">${esc(whenTxt)}</div></div></div>`;
       }).join("")+`</div></section>`;
       if(i<buckets.length-1){
         const srcSlot=slot;
