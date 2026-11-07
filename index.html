@@ -230,6 +230,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .ylink em{display:block;margin-top:2px;font-style:normal;font-size:12px;color:#9a9186;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ylive{flex:none;background:#3ee0a0;color:#042116;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 7px}
 .ystream{margin:6px 0 0;color:#f7f2ea;font-size:14px;font-weight:700}
+.ypicklive{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.ypicklive button{text-align:left;background:#101218;border:1px solid #3a3228;color:#f7f2ea;border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700;line-height:1.3;cursor:pointer}
+.ypicklive button.on{border-color:#3ee0a0;color:#fff}
 .yframe{position:relative;width:100%;aspect-ratio:16/9;margin-top:8px;background:#000;border-radius:10px;overflow:hidden}
 .yframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .films{padding:8px var(--pad) 96px}
@@ -6232,13 +6235,22 @@ async function rssVideoIds(cid){
   }catch(e){ return []; }
   finally{ clearTimeout(timer); }
 }
+function pushLive(list, seen, v){
+  if(!isOnAir(v)) return;
+  const vid=vidOf(v);
+  if(!vid || seen.has(vid)) return;
+  seen.add(vid);
+  list.push({vid, title:v.title||"Live"});
+}
 async function channelLive(l){
   const info=ytChannel(l.url);
   if(info.watch){
     const hit=await videoById(info.watch);
     if(hit===undefined) return null;
-    const on=hit && isOnAir(hit)?liveFrom(hit):null;
-    return on || {live:false};
+    const streams=[];
+    const seen=new Set();
+    if(hit) pushLive(streams, seen, hit);
+    return streams.length?{live:true, streams}:{live:false};
   }
   const cid=await resolveChannel(l);
   if(!cid) return info.handle||info.cid?null:{live:false};
@@ -6251,12 +6263,16 @@ async function channelLive(l){
   if(info.handle && queries.indexOf("@"+info.handle)<0) queries.push("@"+info.handle);
   let searched=false;
   const want="/channel/"+cid;
+  const streams=[];
+  const seen=new Set();
   for(const q of queries){
     const d=await piped("/search?q="+encodeURIComponent(q)+"&filter=videos");
     if(!d) continue;
     searched=true;
-    const hit=((d.items)||[]).find(x=>x && String(x.uploaderUrl||"").indexOf(want)>=0 && isOnAir(x));
-    if(hit) return liveFrom(hit);
+    ((d.items)||[]).forEach(x=>{
+      if(!x || String(x.uploaderUrl||"").indexOf(want)<0) return;
+      pushLive(streams, seen, x);
+    });
   }
   const ids=await rssVideoIds(cid);
   let confirmed=false;
@@ -6264,29 +6280,49 @@ async function channelLive(l){
     const hit=await videoById(id);
     if(hit===undefined) continue;
     confirmed=true;
-    if(hit && isOnAir(hit) && String(hit.uploaderUrl||"").indexOf(want)>=0) return liveFrom(hit);
-    if(hit) break;
+    if(hit && String(hit.uploaderUrl||"").indexOf(want)>=0) pushLive(streams, seen, hit);
   }
   if(!searched && !confirmed) return null;
-  return {live:false};
+  return streams.length?{live:true, streams}:{live:false};
 }
 function linkHost(raw){
   try{ return new URL(String(raw||"").trim()).hostname.replace(/^www\./,""); }catch(e){ return ""; }
 }
 let LINK_SIG="";
+function streamsOf(l){
+  if(l._streams && l._streams.length) return l._streams;
+  return l._vid?[{vid:l._vid, title:l._title||"Live"}]:[];
+}
+function livePick(id){
+  try{ return sessionStorage.getItem("sauceLivePick."+id)||"all"; }catch(e){ return "all"; }
+}
+function setLivePick(id, vid){
+  try{ sessionStorage.setItem("sauceLivePick."+id, vid); }catch(e){}
+  if($("yLive")) $("yLive").dataset.sig="";
+  paintLiveBoard();
+}
 function paintLiveBoard(){
   const host=$("yLive");
   if(!host) return;
-  const live=LINKS.filter(l=>l._live && l._vid);
-  const sig=live.map(l=>l.id+":"+l._vid).join("~");
+  const live=LINKS.filter(l=>l._live && streamsOf(l).length);
+  const sig=live.map(l=>l.id+":"+streamsOf(l).map(s=>s.vid).join(",")+":"+livePick(l.id)).join("~");
   if(sig===host.dataset.sig) return;
   host.dataset.sig=sig;
   if(!live.length){ host.hidden=true; host.innerHTML=""; return; }
   host.hidden=false;
   host.innerHTML=live.map(l=>{
-    const src="https://www.youtube.com/embed/"+encodeURIComponent(l._vid)+"?autoplay=1&mute=1&playsinline=1&rel=0";
-    return `<div class="ylink live"><div class="ylinktop"><span class="ylive">Live</span><b>${esc(l.name)}</b></div><p class="ystream">${esc(l._title||"Live now")}</p><div class="yframe"><iframe src="${src}" title="${esc(l._title||l.name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`;
+    const all=streamsOf(l);
+    let pick=livePick(l.id);
+    if(pick!=="all" && !all.some(s=>s.vid===pick)) pick="all";
+    const show=pick==="all"?all:all.filter(s=>s.vid===pick);
+    const picks=all.length>1?`<div class="ypicklive">${all.map(s=>`<button type="button" data-livepick="${esc(l.id)}" data-vid="${esc(s.vid)}" class="${pick===s.vid?"on":""}">${esc(s.title)}</button>`).join("")}<button type="button" data-livepick="${esc(l.id)}" data-vid="all" class="${pick==="all"?"on":""}">All live</button></div>`:"";
+    const frames=show.map(s=>{
+      const src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(s.vid)+"?autoplay=1&mute=1&playsinline=1&rel=0";
+      return `<p class="ystream">${esc(s.title)}</p><div class="yframe"><iframe src="${src}" title="${esc(s.title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`;
+    }).join("");
+    return `<div class="ylink live"><div class="ylinktop"><span class="ylive">Live</span><b>${esc(l.name)}</b></div>${picks}${frames}</div>`;
   }).join("");
+  host.querySelectorAll("[data-livepick]").forEach(b=>b.onclick=()=>setLivePick(b.dataset.livepick, b.dataset.vid));
 }
 function filmWhen(s){
   const d=new Date(String(s||"").replace(" ","T")+"Z");
@@ -6396,18 +6432,23 @@ async function checkLinks(){
     for(const l of LINKS){
       const info=ytChannel(l.url);
       if(!info.cid && !info.handle && !info.watch){
-        if(l._live){ l._live=false; l._vid=""; l._title=""; changed=true; }
+        if(l._live){ l._live=false; l._vid=""; l._title=""; l._streams=[]; changed=true; }
         continue;
       }
       const hit=await channelLive(l);
       if(!hit) continue;
+      const streams=(hit.streams||[]).slice(0,6);
       const was=!!l._live;
-      const next=!!hit.live && !!hit.vid;
-      if(!!l._live!==next || (l._vid||"")!==(hit.vid||"") || (l._title||"")!==(hit.title||"")) changed=true;
+      const next=streams.length>0;
+      const sig=streams.map(s=>s.vid).join(",");
+      const prev=(l._streams||[]).map(s=>s.vid).join(",");
+      const label=streams.length>1?(streams.length+" live"):(streams[0]?streams[0].title:"");
+      if(!!l._live!==next || prev!==sig || (l._title||"")!==label) changed=true;
       if(!was && next) window.LINK_JUMP=true;
       l._live=next;
-      l._vid=hit.vid||"";
-      l._title=hit.title||"";
+      l._streams=streams;
+      l._vid=streams[0]?streams[0].vid:"";
+      l._title=label;
     }
     if(changed){ LINK_SIG=""; if($("yLive")) $("yLive").dataset.sig=""; paintLinks(); }
     else paintLiveBoard();
