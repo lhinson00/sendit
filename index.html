@@ -1288,8 +1288,9 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     <div class="ylinks" id="yLinks">
       <div class="ylinkhead"><span>Links</span><button type="button" id="yLinkAdd">Add a link</button></div>
       <form class="ylinkform" id="yLinkForm" hidden>
-        <input id="yLinkName" placeholder="Name — High Forest Sports" maxlength="60" autocomplete="off"/>
-        <input id="yLinkUrl" placeholder="https://youtube.com/@lchssports" inputmode="url" autocomplete="off"/>
+        <input id="yLinkName" placeholder="Name — X Sports Network" maxlength="60" autocomplete="off"/>
+        <input id="yLinkUrl" placeholder="https://youtube.com/@xsportsnetwork" inputmode="url" autocomplete="off"/>
+        <input id="yLinkFor" placeholder="School — Summertown (optional)" maxlength="60" autocomplete="off"/>
         <button type="submit">Save</button>
       </form>
       <div id="yLinkList"></div>
@@ -2821,6 +2822,35 @@ function tnInSlate(g, cls, reg){
   };
   return hit(g.away)||hit(g.home);
 }
+function streamHitsSchool(text, school){
+  const title=normTnName(text);
+  const name=normTnName(school);
+  if(!title || !name || name.length<5) return false;
+  const words=name.split(" ").filter(Boolean);
+  if(words.length===1 && words[0].length<6) return new RegExp("(^| )"+words[0]+"( |$)").test(" "+title+" ");
+  if(title.indexOf(name)>=0) return true;
+  return words.every(w=>w.length<4 || title.indexOf(w)>=0);
+}
+function teamStreams(name){
+  const out=[];
+  const seen=new Set();
+  (typeof LINKS!=="undefined"?LINKS:[]).forEach(l=>{
+    let list=(l._streams&&l._streams.length)?l._streams.slice():(l._vid?[{vid:l._vid,title:l._title||l.name||"Live"}]:[]);
+    if(!list.length && l.for && streamHitsSchool(l.for, name)){
+      const info=typeof ytChannel==="function"?ytChannel(l.url):{};
+      if(info.watch) list=[{vid:info.watch, title:l.name||"Stream"}];
+    }
+    list.forEach(s=>{
+      if(!s||!s.vid||seen.has(s.vid)) return;
+      const titleHit=streamHitsSchool(s.title, name);
+      const pinHit=l.for && streamHitsSchool(l.for, name) && (list.length===1 || titleHit);
+      if(!titleHit && !pinHit) return;
+      seen.add(s.vid);
+      out.push(s);
+    });
+  });
+  return out.slice(0,3);
+}
 function openTnTeam(sid, name){
   window.FROMTEAM=true;
   window.FROMTN=true;
@@ -2854,7 +2884,12 @@ function openTnTeam(sid, name){
   upcoming.sort((a,b)=>String(a.key).localeCompare(String(b.key)));
   played.sort((a,b)=>String(b.key).localeCompare(String(a.key)));
   const block=(title, list)=>list.length?`<p class="kicker" style="margin:16px 0 6px">${title}</p><div class="tlist">${list.map(x=>x.html).join("")}</div>`:"";
-  $("playerRoom").innerHTML=`<div class="tbook"><p class="kicker">TSSAA · Football</p><h2>${name}</h2><p class="hint">${rec.w}-${rec.l}${rec.t?"-"+rec.t:""} · ${upcoming.length} remaining</p>${block("Remaining", upcoming)}${block("Played", played)}${games.length?"":"<p class='hint'>No games on the board for this school yet.</p>"}</div>`;
+  const streams=teamStreams(name);
+  const live=streams.map(s=>{
+    const src="https://www.youtube-nocookie.com/embed/"+encodeURIComponent(s.vid)+"?playsinline=1&rel=0";
+    return `<p class="ystream">${esc(s.title||"Live")}</p><div class="yframe"><iframe src="${src}" title="${esc(s.title||name)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>`;
+  }).join("");
+  $("playerRoom").innerHTML=`<div class="tbook"><p class="kicker">TSSAA · Football</p><h2>${esc(name)}</h2><p class="hint">${rec.w}-${rec.l}${rec.t?"-"+rec.t:""} · ${upcoming.length} remaining</p>${live}${block("Remaining", upcoming)}${block("Played", played)}${games.length?"":"<p class='hint'>No games on the board for this school yet.</p>"}</div>`;
 }
 function fmtTnDate(s){
   const m=String(s||"").match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
@@ -6140,7 +6175,7 @@ let LINKS=[];
 try{ LINKS=JSON.parse(localStorage.getItem("sauceLinks")||"[]")||[]; }catch(e){ LINKS=[]; }
 if(!Array.isArray(LINKS)) LINKS=[];
 function saveLinks(){
-  try{ localStorage.setItem("sauceLinks", JSON.stringify(LINKS.map(l=>({id:l.id,name:l.name,url:l.url,cid:l.cid||"",cname:l.cname||""})))); }catch(e){}
+  try{ localStorage.setItem("sauceLinks", JSON.stringify(LINKS.map(l=>({id:l.id,name:l.name,url:l.url,cid:l.cid||"",cname:l.cname||"",for:l.for||""})))); }catch(e){}
 }
 const PIPED=["https://api.piped.private.coffee","https://pipedapi.adminforge.de","https://pipedapi.kavin.rocks"];
 function ytChannel(raw){
@@ -6452,6 +6487,7 @@ async function checkLinks(){
     }
     if(changed){ LINK_SIG=""; if($("yLive")) $("yLive").dataset.sig=""; paintLinks(); }
     else paintLiveBoard();
+    if(changed && window.FROMTN && window.TEAM_CTX && window.VIEW_NOW==="player" && typeof openTnTeam==="function") openTnTeam(window.TEAM_CTX.id, window.TEAM_CTX.name);
     if(window.LINK_JUMP && $("yLive") && !$("yLive").hidden){
       window.LINK_JUMP=false;
       $("yLive").scrollIntoView({behavior:"smooth", block:"start"});
@@ -6477,10 +6513,12 @@ function bootLinks(){
     try{ url=new URL(url).toString(); }catch(err){ return; }
     if(LINKS.some(l=>l.url===url)){ form.hidden=true; add.textContent="Add a link"; return; }
     if(LINKS.length>=12) return;
-    LINKS.push({id:Date.now().toString(36), name, url});
+    const school=($("yLinkFor")&&$("yLinkFor").value||"").trim();
+    LINKS.push({id:Date.now().toString(36), name, url, for:school});
     saveLinks();
     $("yLinkName").value="";
     $("yLinkUrl").value="";
+    if($("yLinkFor")) $("yLinkFor").value="";
     form.hidden=true;
     add.textContent="Add a link";
     LINK_SIG="";
