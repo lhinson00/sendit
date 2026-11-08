@@ -1536,6 +1536,8 @@ async function show(name, opts){
   if(eye) eye.textContent = name==="home" ? "Yours" : "Sports Sauce";
   if(title) title.textContent = name==="home" ? "Sports Sauce" : name==="films" ? (window.FILM_NAME||"Films") : "The Board";
   document.body.classList.toggle("away", name!=="home");
+  if(name!=="player") window.PLACE_KIND=name;
+  if(name==="player" && window.PLACE_KIND==="team") window.PLAYER_CTX=null;
   if(name==="home" && typeof paintYours==="function") paintYours();
   if(name==="home" && typeof checkLinks==="function") checkLinks();
   savePlace();
@@ -1558,6 +1560,21 @@ function savePlace(){
       slate: window.SLATE_PICK||null,
       fighter: LEAGUE==="ufc" && window.PLAYER_CTX ? window.PLAYER_CTX : null
     }));
+    placeUrl();
+  }catch(e){}
+}
+function placeUrl(){
+  try{
+    if((location.hash||"")==="#owner") return;
+    const kind=window.PLACE_KIND||"";
+    let next=location.pathname;
+    if(kind==="player" && window.PLAYER_CTX && window.PLAYER_CTX.id){
+      next+="?league="+encodeURIComponent(LEAGUE||"")+"&player="+encodeURIComponent(window.PLAYER_CTX.id);
+    }else if(kind==="game" && OPEN){
+      next+="?league="+encodeURIComponent(LEAGUE||"")+"&game="+encodeURIComponent(OPEN);
+    }
+    const cur=location.pathname+location.search;
+    if(cur!==next) history.replaceState(null,"",next);
   }catch(e){}
 }
 async function restorePlace(){
@@ -2613,7 +2630,9 @@ function patchOpenBracket(){
       const seed=side.querySelector(".seed");
       if(seed) seed.textContent=t.seed||"";
       const who=side.querySelector(".who");
-      if(who) who.innerHTML=(t.host&&t.name&&!bye?'<i class="host">H</i>':"")+esc(bye?"Bye":(t.name||"TBD"));
+      if(who){
+        who.innerHTML=(t.host&&t.name&&!bye?'<i class="host">H</i>':"")+esc(bye?"Bye":(t.name||"TBD"));
+      }
       const rec=side.querySelector(".rec");
       if(rec) rec.textContent=scored?"":(t.rec||"");
       const sc=side.querySelector(".sc");
@@ -2936,6 +2955,7 @@ function openTnTeam(sid, name){
   window.FROMTN_TAB = window.TN_TAB || "fb";
   window.TEAM_CTX={id:sid,name:name};
   armPin({kind:"team", lg:"tssaa", id:tnAlignKey(name)||String(sid||""), name:name||"School"});
+  window.PLACE_KIND="team";
   if($("toGame")) $("toGame").textContent="← Back";
   show("player");
   const rawSid=String(sid||"").replace(/^n:/,"");
@@ -4931,6 +4951,7 @@ async function findMmaId(name){
 async function openFighter(pid, name){
   window.FROMKIT = false;
   window.FROMUFC = true;
+  window.PLACE_KIND="player";
   if($("toGame")) $("toGame").textContent = "← Slate";
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
@@ -4985,6 +5006,7 @@ async function openPlayer(pid, name){
   armPin({kind:"player", lg:LEAGUE, id:String(pid||""), name:name||"Player"});
   if(LEAGUE==="mls"){ return openMlsPlayer(pid, name); }
   window.FROMUFC = false;
+  window.PLACE_KIND="player";
   show("player", {fresh:true});
   $("playerRoom").innerHTML = "<p class='hint'>Loading "+name+"…</p>";
   try{
@@ -5125,7 +5147,7 @@ async function openPlayer(pid, name){
       const away=(prev.competitors||[]).find(x=>x.homeAway==="away")||prev.competitors[1]||{};
       const home=(prev.competitors||[]).find(x=>x.homeAway==="home")||prev.competitors[0]||{};
       const stt=(prev.fullStatus&&prev.fullStatus.type&&prev.fullStatus.type.shortDetail)||(prev.status||"Final");
-      return `<a class="gcard done pscore" style="text-decoration:none" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
+      return `<button type="button" class="gcard done pscore" data-prevgame="${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></button>`;
     })():"";
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
@@ -5174,7 +5196,7 @@ async function openPlayer(pid, name){
           <img class="pshot" alt="" src="${shot}" onerror="this.style.visibility='hidden'"/>
           <div class="phero-copy">
             <p class="kicker">${fromKit && kitPos ? kitPos+" · "+((ROSTER.find(p=>p.id===String(pid))||{}).team||"") : (st.displayName||"Player")}</p>
-            <h2>${name}</h2>
+            <h2>${bio.displayName||bio.fullName||name}</h2>
             <div class="biorows">${[
               ["HT/WT",[bio.displayHeight,bio.displayWeight].filter(Boolean).join(", ")],
               ["YEAR", college ? (bio.displayExperience || (bio.experience&&bio.experience.displayValue) || "") : ""],
@@ -5277,6 +5299,9 @@ function paintGameLog(log){
 function bindPlayerTabs(){
   const root=$("playerRoom");
   if(!root) return;
+  root.querySelectorAll("[data-prevgame]").forEach(b=>{
+    b.onclick=()=>{ if(b.dataset.prevgame) openGame(b.dataset.prevgame); };
+  });
   root.querySelectorAll(".ptabs button").forEach(btn=>{
     btn.onclick=()=>{
       root.querySelectorAll(".ptabs button").forEach(b=>b.classList.toggle("on", b===btn));
@@ -7715,6 +7740,7 @@ async function openMlsPlayer(pid, name){
   window.PLAYER_CTX={id:String(pid||""), name:name||"Player"};
   armPin({kind:"player", lg:"mls", id:String(pid||""), name:name||"Player"});
   window.FROMUFC=false;
+  window.PLACE_KIND="player";
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Loading "+name+"…</p>";
   try{
@@ -8066,6 +8092,7 @@ async function openMlsTeam(tid, name){
   window.FROMTEAM=true; window.FROMMLS=true;
   window.TEAM_CTX={id:tid,name:name||"Club"};
   armPin({kind:"team", lg:"mls", id:String(tid), name:name||"Club"});
+  window.PLACE_KIND="team";
   if($("toGame")) $("toGame").textContent="← MLS";
   show("player");
   $("playerRoom").innerHTML="<p class='hint'>Opening "+name+"…</p>";
@@ -8797,6 +8824,7 @@ async function openLeagueTeam(tid, name, sport){
   window.FROMMLB=sport!=="nhl";
   window.FROMNHL=sport==="nhl";
   window.TEAM_CTX={id:tid,name:name||"Team"};
+  window.PLACE_KIND="team";
   armPin({kind:"team", lg:sport==="nhl"?"nhl":"mlb", id:String(tid), name:name||"Team"});
   if($("toGame")) $("toGame").textContent="← Standings";
   show("player");
@@ -9035,6 +9063,7 @@ async function openTeam(tid, name, sport){
   if(isNfl) LEAGUE="nfl";
   else if(sport==="cfb") LEAGUE="cfb";
   window.TEAM_CTX = {id:tid, name:name||"Team"};
+  window.PLACE_KIND="team";
   armPin({kind:"team", lg:isNfl?"nfl":"cfb", id:String(tid), name:name||"Team"});
   window.FROM_TEAM_PLAYER = false;
   if($("toGame")) $("toGame").textContent = isNfl ? "← Standings" : (window.BOARD==="cfp" ? "← Playoff" : "← Rankings");
@@ -9468,6 +9497,7 @@ async function openHoopTeam(lg, tid, name){
   window.FROMMLS=false;
   window.FROMTN=false;
   window.TEAM_CTX={id:tid, name:name||"Team"};
+  window.PLACE_KIND="team";
   armPin({kind:"team", lg:lg, id:String(tid), name:name||"Team"});
   LEAGUE=lg;
   if($("toGame")) $("toGame").textContent=window.FROM_YOURS?"← Home":window.FROM_SLATE?"← Slate":"← Standings";
@@ -9685,6 +9715,7 @@ async function openNbaTeam(tid, name){
   window.FROMTN=false;
   window.FROM_TEAM_PLAYER=false;
   window.TEAM_CTX={id:tid, name:name||"Team"};
+  window.PLACE_KIND="team";
   armPin({kind:"team", lg:"nba", id:String(tid), name:name||"Team"});
   LEAGUE="nba";
   if($("toGame")) $("toGame").textContent="← Standings";
@@ -10298,20 +10329,34 @@ document.querySelectorAll("[data-lg]").forEach(b=>b.onclick=()=>{
   loadLeague(b.dataset.lg);
 });
 $("toHomeOwn") && ($("toHomeOwn").onclick=()=>show("home", {back:true}));
-setTimeout(restorePlace, 0);
+setTimeout(bootPlace, 0);
 window.addEventListener("scroll", ()=>{ if(window.HOLD_Y!=null) return; clearTimeout(window.PIN_T); window.PIN_T=setTimeout(savePlace, 120); }, {passive:true});
 window.addEventListener("pagehide", savePlace);
-(async function openFromQuery(){
+async function bootPlace(){
   try{
     const q=new URLSearchParams(location.search);
     const h=(location.hash||"").replace(/^#/,"");
+    const pid=q.get("player");
     const gid=q.get("game") || (h.startsWith("game=")?h.slice(5):"");
-    const lg=q.get("league") || "nfl";
-    if(!gid) return;
-    if(typeof loadLeague==="function") await loadLeague(lg);
-    if(typeof openGame==="function") openGame(gid, gid);
+    const lg=q.get("league")||"";
+    if(pid){
+      let nm="Player";
+      try{
+        const saved=JSON.parse(sessionStorage.getItem("saucePlace")||"null");
+        if(saved && saved.player && String(saved.player.id)===String(pid) && saved.player.name) nm=saved.player.name;
+      }catch(e){}
+      if(typeof loadLeague==="function") await loadLeague(lg||"cfb");
+      if(typeof openPlayer==="function") openPlayer(pid, nm);
+      return;
+    }
+    if(gid){
+      if(typeof loadLeague==="function") await loadLeague(lg||"nfl");
+      if(typeof openGame==="function") openGame(gid, gid);
+      return;
+    }
   }catch(e){}
-})();
+  restorePlace();
+}
 (function usageEngine(){
   const NS="lhinson00";
   const A="https://abacus.jasoncameron.dev";
