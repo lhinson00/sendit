@@ -329,6 +329,8 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .fstrip.right .farrow{left:5px}
 .fstrip.left .farrow{right:5px}
 .gcard .sc{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:"Bebas Neue",sans-serif;font-size:36px;line-height:1;color:#fff}
+.gcard.pscore .sc{flex-direction:row;gap:10px}
+.gcard.pscore .sc span{font-size:22px;color:#6a645c}
 .gcard .scline{display:flex;align-items:center;justify-content:center;gap:10px}
 .gcard .sc em{font-style:normal;min-width:1.15em;text-align:center}
 .gcard .scline > span{font-size:20px;color:#6a645c}
@@ -4991,7 +4993,8 @@ async function openPlayer(pid, name){
     if(!ovrRes.ok) throw new Error("ESPN "+ovrRes.status);
     const d = await ovrRes.json();
     let bio = d.athlete || {};
-    if(!bio.displayHeight){
+    const college=LEAGUE==="cfb"||LEAGUE==="cbb"||LEAGUE==="wcbb";
+    if(!bio.displayHeight || (college && !bio.displayExperience && !(bio.experience&&bio.experience.displayValue))){
       try{
         const bioRes = await fetch("https://site.web.api.espn.com/apis/common/v3/sports/"+path+"/athletes/"+pid,{cache:"no-store"});
         if(bioRes.ok){ const b=await bioRes.json(); bio=b.athlete||b; }
@@ -5122,7 +5125,7 @@ async function openPlayer(pid, name){
       const away=(prev.competitors||[]).find(x=>x.homeAway==="away")||prev.competitors[1]||{};
       const home=(prev.competitors||[]).find(x=>x.homeAway==="home")||prev.competitors[0]||{};
       const stt=(prev.fullStatus&&prev.fullStatus.type&&prev.fullStatus.type.shortDetail)||(prev.status||"Final");
-      return `<a class="gcard done" style="text-decoration:none" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
+      return `<a class="gcard done pscore" style="text-decoration:none" href="/?league=${LEAGUE}&game=${prev.id}"><div class="gstat"><span>Previous game</span><span>${stt}</span></div><div class="bigline"><div class="nm"><span class="logoplate"><img alt="" src="${away.logo||""}"/></span><span>${away.abbreviation||""}</span></div><div class="sc"><em>${away.score||"–"}</em><span>–</span><em>${home.score||"–"}</em></div><div class="nm r"><span>${home.abbreviation||""}</span><span class="logoplate"><img alt="" src="${home.logo||""}"/></span></div></div></a>`;
     })():"";
     const leads = leadKeys.map(pair=>{
       if(pair[0]==="W-L"){
@@ -5174,6 +5177,7 @@ async function openPlayer(pid, name){
             <h2>${name}</h2>
             <div class="biorows">${[
               ["HT/WT",[bio.displayHeight,bio.displayWeight].filter(Boolean).join(", ")],
+              ["YEAR", college ? (bio.displayExperience || (bio.experience&&bio.experience.displayValue) || "") : ""],
               ["BORN",[bio.displayDOB, bio.age?"("+bio.age+")":""].filter(Boolean).join(" ")],
               ["FROM", bio.displayBirthPlace||""],
               ["COLLEGE", (bio.college&&(bio.college.shortName||bio.college.name))||""],
