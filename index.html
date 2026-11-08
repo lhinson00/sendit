@@ -1849,6 +1849,42 @@ function rankChip(r){
   r=Number(r);
   return (r>0 && r<=25) ? `<span class="rknum">#${r}</span>` : "";
 }
+function pollStamp(p){ const t=Date.parse((p&&p.date)||""); return isFinite(t)?t:0; }
+function bestCfbPoll(rankings){
+  const list=rankings||[];
+  const named=(re)=>list.find(p=>re.test((p.name||"")+" "+(p.shortName||"")) && (p.ranks||[]).length);
+  const cfp=named(/playoff|cfp|committee/i);
+  const ap=named(/ap top|ap poll/i);
+  if(cfp && ap) return pollStamp(cfp)+3600000>=pollStamp(ap) ? cfp : ap;
+  return cfp||ap||null;
+}
+let CFB_RANK_AT=0, CFB_RANK_MAP=null;
+async function cfbRankMap(){
+  if(CFB_RANK_MAP && Date.now()-CFB_RANK_AT<120000) return CFB_RANK_MAP;
+  const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings",{cache:"no-store"});
+  if(!res.ok) return CFB_RANK_MAP;
+  const d=await res.json();
+  const poll=bestCfbPoll(d.rankings||[]);
+  if(!poll) return CFB_RANK_MAP;
+  const map={};
+  (poll.ranks||[]).forEach(r=>{
+    const id=String((r.team||{}).id||"");
+    const n=Number(r.current||0);
+    if(id && n>0 && n<=25) map[id]=n;
+  });
+  CFB_RANK_MAP=map;
+  CFB_RANK_AT=Date.now();
+  return map;
+}
+function stampCfbRanks(games, map){
+  if(!map) return games;
+  (games||[]).forEach(g=>{
+    if(!g || g.lg!=="cfb") return;
+    g.awayRank=map[String(g.awayId)]||99;
+    g.homeRank=map[String(g.homeId)]||99;
+  });
+  return games;
+}
 function filterCfb(games){
   if(LEAGUE!=="cfb" || CFB_FILT==="all") return games;
   if(CFB_FILT==="top25"){
@@ -3314,6 +3350,7 @@ async function loadLeague(lg){
   try{
     const evs = await pullScoreboard(lg);
     GAMES = evs.flatMap(ev=>mapComp(ev,lg));
+    if(lg==="cfb"){ try{ stampCfbRanks(GAMES, await cfbRankMap()); }catch(e){} }
     if($("nflTabs")) $("nflTabs").hidden = lg!=="nfl";
     if($("cfbTabs")) $("cfbTabs").hidden = lg!=="cfb";
     if($("mlbTabs")) $("mlbTabs").hidden = lg!=="mlb"; if($("nhlTabs")) $("nhlTabs").hidden = lg!=="nhl";
@@ -3341,6 +3378,7 @@ async function loadLeague(lg){
       try{
         const evs = await pullScoreboard(LEAGUE);
         GAMES = evs.flatMap(ev=>mapComp(ev,LEAGUE));
+        if(LEAGUE==="cfb"){ try{ stampCfbRanks(GAMES, await cfbRankMap()); }catch(e){} }
         paint(GAMES);
         paintDayTabs(LEAGUE);
         loadNews(LEAGUE);
@@ -8947,22 +8985,6 @@ async function openPolls(){
     });
     const extra=(d.rankings||[]).filter(p=>!polls.includes(p) && /playoff|cfp/i.test((p.name||"")));
     let list=polls.length?polls:(d.rankings||[]).slice(0,2);
-    const stamp=p=>{ const t=Date.parse((p&&p.date)||""); return isFinite(t)?t:0; };
-    const newer=(filePoll, espnPoll)=>{
-      if(!filePoll || !(filePoll.ranks||[]).length) return false;
-      if(!espnPoll) return true;
-      const ft=stamp(filePoll) || Date.parse((fresh&&fresh.iso)||(fresh&&fresh.date)||"");
-      const et=stamp(espnPoll);
-      return !!ft && ft>et;
-    };
-    const take=(kind, filePoll)=>{
-      if(!filePoll) return;
-      const hit=p=>kind==="ap"?/ap top|ap poll/i.test((p.name||"")+" "+(p.shortName||"")):/coaches/i.test((p.name||"")+" "+(p.shortName||""));
-      const espnPoll=list.find(hit);
-      if(!newer(filePoll, espnPoll)) return;
-      list = espnPoll ? list.map(p=>p===espnPoll?filePoll:p) : [filePoll].concat(list);
-    };
-    if(fresh){ take("coaches", fresh.coaches); take("ap", fresh.ap); }
     if(!list.length && fresh){
       list=[fresh.ap, fresh.coaches].filter(p=>p && (p.ranks||[]).length);
     }
@@ -8978,7 +9000,7 @@ async function openPolls(){
       return `<div class="pollcol"><h3>${p.name||p.shortName}</h3>${rows||"<p class='hint'>No ballot this week.</p>"}</div>`;
     };
     const cfp = extra[0] || (d.rankings||[]).find(p=>/playoff|cfp|committee/i.test(p.name||""));
-    const when=p=>{ const t=stamp(p); return t?new Date(t).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):""; };
+    const when=p=>{ const t=pollStamp(p); return t?new Date(t).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):""; };
     const label=list.map(p=>(p.shortName||p.name||"Poll")+(when(p)?(" "+when(p)):"")).join(" · ");
     if(!list.length) throw new Error("No poll posted yet");
     host.innerHTML = `<p class="hint">${label||((d.latestWeek&&d.latestWeek.displayName)||"Week polls")} · tap a team</p><div class="pollgrid">${list.map(col).join("")}</div>` +
