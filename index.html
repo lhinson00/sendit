@@ -6354,11 +6354,44 @@ function pushLive(list, seen, v){
   seen.add(vid);
   list.push({vid, title:v.title||"Live"});
 }
+async function channelOnAir(cid, l){
+  if(!cid) return null;
+  const ch=await piped("/channel/"+encodeURIComponent(cid));
+  if(!ch) return null;
+  if(l && ch.name && !l.cname){ l.cname=ch.name; saveLinks(); }
+  const tab=((ch.tabs)||[]).find(t=>t && t.name==="livestreams");
+  if(!tab || !tab.data) return [];
+  const data=typeof tab.data==="string"?tab.data:JSON.stringify(tab.data);
+  const page=await piped("/channels/tabs?data="+encodeURIComponent(data));
+  if(!page) return null;
+  return page.content || page.relatedStreams || [];
+}
+function streamsFrom(list){
+  const streams=[];
+  const seen=new Set();
+  (list||[]).forEach(v=>{
+    const vid=vidOf(v);
+    if(!vid || seen.has(vid)) return;
+    if(v && v.duration!=null && Number(v.duration)!==-1) return;
+    seen.add(vid);
+    streams.push({vid, title:v.title||"Live"});
+  });
+  return streams;
+}
 async function channelLive(l){
   const info=ytChannel(l.url);
   if(info.watch){
     const hit=await videoById(info.watch);
     if(hit===undefined) return null;
+    const m=String(hit&&hit.uploaderUrl||"").match(/channel\/(UC[\w-]+)/);
+    if(m){
+      const on=await channelOnAir(m[1], l);
+      if(on){
+        const mine=on.filter(v=>String(v.url||"").indexOf(info.watch)>=0);
+        const streams=streamsFrom(mine);
+        return streams.length?{live:true, streams}:{live:false};
+      }
+    }
     const streams=[];
     const seen=new Set();
     if(hit) pushLive(streams, seen, hit);
@@ -6366,6 +6399,11 @@ async function channelLive(l){
   }
   const cid=await resolveChannel(l);
   if(!cid) return info.handle||info.cid?null:{live:false};
+  const on=await channelOnAir(cid, l);
+  if(on){
+    const streams=streamsFrom(on).slice(0,6);
+    return streams.length?{live:true, streams}:{live:false};
+  }
   if(!l.cname){
     const ch=await piped("/channel/"+encodeURIComponent(cid));
     if(ch&&ch.name){ l.cname=ch.name; saveLinks(); }
