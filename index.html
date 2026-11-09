@@ -1350,11 +1350,13 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
     </span>
     <span class="tabs" id="cbbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabCbbSlate">Slate</button>
+      <button type="button" class="tabbtn" id="tabCbbPoll">Rankings</button>
       <button type="button" class="tabbtn" id="tabCbbStand">Standings</button>
       <button type="button" class="tabbtn" id="tabCbbLead">Leaders</button>
     </span>
     <span class="tabs" id="wcbbTabs" hidden>
       <button type="button" class="tabbtn on" id="tabWcbbSlate">Slate</button>
+      <button type="button" class="tabbtn" id="tabWcbbPoll">Rankings</button>
       <button type="button" class="tabbtn" id="tabWcbbStand">Standings</button>
       <button type="button" class="tabbtn" id="tabWcbbLead">Leaders</button>
     </span>
@@ -9428,13 +9430,49 @@ function hoopTab(lg, which){
   if($("boardPanel")) $("boardPanel").hidden=which==="slate";
   if($("dayTabs")) $("dayTabs").hidden=which!=="slate";
   if($("cbbPills")) $("cbbPills").hidden = !((lg==="cbb"||lg==="wcbb") && which==="slate");
-  const ids=lg==="wcbb"?["tabWcbbSlate","tabWcbbStand","tabWcbbLead"]:["tabCbbSlate","tabCbbStand","tabCbbLead"];
-  ids.forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id.endsWith("Slate")&&which==="slate")||(id.endsWith("Stand")&&which==="stand")||(id.endsWith("Lead")&&which==="lead")); });
+  const ids=lg==="wcbb"?["tabWcbbSlate","tabWcbbPoll","tabWcbbStand","tabWcbbLead"]:["tabCbbSlate","tabCbbPoll","tabCbbStand","tabCbbLead"];
+  ids.forEach(id=>{ const b=$(id); if(b) b.classList.toggle("on", (id.endsWith("Slate")&&which==="slate")||(id.endsWith("Poll")&&which==="polls")||(id.endsWith("Stand")&&which==="stand")||(id.endsWith("Lead")&&which==="lead")); });
+  if(!window.JUST_BACK && which==="polls") openHoopPolls(lg);
   if(!window.JUST_BACK && which==="stand") openHoopStandings(lg);
   if(!window.JUST_BACK && which==="lead") openHoopLeaders(lg);
 }
 function cbbTab(which){ hoopTab("cbb", which); }
 function wcbbTab(which){ hoopTab("wcbb", which); }
+async function openHoopPolls(lg){
+  const meta=hoopMeta(lg);
+  const host=$("boardPanel");
+  host.hidden=false;
+  host.innerHTML="<p class='hint'>Loading "+meta.label+" rankings…</p>";
+  try{
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/basketball/"+meta.slug+"/rankings",{cache:"no-store"});
+    if(!res.ok) throw new Error("unavailable");
+    const d=await res.json();
+    if(LEAGUE!==lg) return;
+    const polls=(d.rankings||[]).filter(p=>{
+      const n=(p.name||"")+" "+(p.shortName||"");
+      return /ap top|ap poll|coaches/i.test(n);
+    });
+    const list=polls.length?polls:(d.rankings||[]).slice(0,2);
+    if(!list.length) throw new Error("No poll posted yet");
+    const when=p=>{ const t=pollStamp(p); return t?new Date(t).toLocaleDateString("en-US",{month:"short",day:"numeric",timeZone:"America/Chicago"}):""; };
+    const col=p=>{
+      const rows=(p.ranks||[]).slice(0,25).map(r=>{
+        const t=r.team||{};
+        const logo=(t.logos&&t.logos[0]&&t.logos[0].href)||(t.id?("https://a.espncdn.com/i/teamlogos/ncaa/500/"+t.id+".png"):"");
+        const rec=r.recordSummary||"";
+        const tr=r.trend!=null && r.trend!=="-" ? r.trend : "";
+        const name=t.displayName||[t.location,t.name].filter(Boolean).join(" ")||t.nickname||"";
+        return `<div class="pollrow" data-tid="${t.id||""}" data-tname="${String(name).replace(/"/g,"")}"><b class="rk">${r.current||""}</b><img alt="" src="${logo}"/><div class="pollwho"><b>${name}</b><em>${rec}</em></div><em>${tr}</em></div>`;
+      }).join("");
+      return `<div class="pollcol"><h3>${p.name||p.shortName}</h3>${rows}</div>`;
+    };
+    const label=list.map(p=>(p.shortName||p.name||"Poll")+(when(p)?(" "+when(p)):"")).join(" · ");
+    host.innerHTML=`<p class="hint">${label} · tap a team</p><div class="pollgrid">${list.map(col).join("")}</div>`;
+    host.querySelectorAll("[data-tid]").forEach(b=>b.onclick=()=>openHoopTeam(lg, b.dataset.tid, b.dataset.tname||"Team"));
+  }catch(e){
+    if(LEAGUE===lg) host.innerHTML="<p class='hint'>"+meta.label+" rankings did not load. "+(e.message||"")+"</p>";
+  }
+}
 async function openHoopStandings(lg){
   const meta=hoopMeta(lg);
   const host=$("boardPanel");
@@ -9617,9 +9655,11 @@ async function openHoopTeam(lg, tid, name){
 function openCbbTeam(tid, name){ return openHoopTeam("cbb", tid, name); }
 function openWcbbTeam(tid, name){ return openHoopTeam("wcbb", tid, name); }
 $("tabCbbSlate") && ($("tabCbbSlate").onclick=()=>cbbTab("slate"));
+$("tabCbbPoll") && ($("tabCbbPoll").onclick=()=>cbbTab("polls"));
 $("tabCbbStand") && ($("tabCbbStand").onclick=()=>cbbTab("stand"));
 $("tabCbbLead") && ($("tabCbbLead").onclick=()=>cbbTab("lead"));
 $("tabWcbbSlate") && ($("tabWcbbSlate").onclick=()=>wcbbTab("slate"));
+$("tabWcbbPoll") && ($("tabWcbbPoll").onclick=()=>wcbbTab("polls"));
 $("tabWcbbStand") && ($("tabWcbbStand").onclick=()=>wcbbTab("stand"));
 $("tabWcbbLead") && ($("tabWcbbLead").onclick=()=>wcbbTab("lead"));
 
