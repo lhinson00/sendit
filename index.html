@@ -2692,6 +2692,7 @@ function tnLiveStatus(d){
 async function refreshTnFromSource(why){
   if(window._tnPull && Date.now()-window._tnPull<30000) return;
   window._tnPull=Date.now();
+  if(typeof loadTnBracketFile==="function") await loadTnBracketFile(true);
   const day=fridaySelDate();
   const liveUrl="https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid=1&selDate="+encodeURIComponent(day)+"&bust="+Date.now();
   try{
@@ -3073,14 +3074,14 @@ function parseTnBracket(html){
   games.sort((a,b)=>Number((a.label.match(/(\d+)/)||[])[1]||0)-Number((b.label.match(/(\d+)/)||[])[1]||0));
   return games;
 }
-async function loadTnBracketFile(){
-  if(window.TN_BRACKETS) return;
-  window.TN_BRACKETS={};
+async function loadTnBracketFile(force){
+  if(window.TN_BRACKETS && !force) return;
+  window.TN_BRACKETS=window.TN_BRACKETS||{};
   try{
-    const r=await fetch("/data/tssaa-brackets.json",{cache:"no-store"});
+    const r=await fetch("/data/tssaa-brackets.json?ts="+Date.now(),{cache:"no-store"});
     if(!r.ok) return;
     const d=await r.json();
-    (d.classes||[]).forEach(c=>{ window.TN_BRACKETS[c.id]=c.games||[]; });
+    (d.classes||[]).forEach(c=>{ if(c&&c.id) window.TN_BRACKETS[c.id]=c.games||[]; });
     stampTnBracket();
   }catch(e){}
 }
@@ -3171,12 +3172,11 @@ function paintTnBrackets(){
   });
 }
 async function openTnBrackets(){
-  await loadTnBracketFile();
+  await loadTnBracketFile(true);
+  if(window.TN_TAB!=="brack") return;
+  if(typeof refreshTnFromSource==="function") await refreshTnFromSource("brack");
   if(window.TN_TAB!=="brack") return;
   paintTnBrackets();
-  const id=window.TN_BRACK||"20260101";
-  const ok=await refreshTnBracket(id);
-  if(ok && window.TN_TAB==="brack" && window.TN_BRACK===id) paintTnBrackets();
 }
 function tnPlace(){
   return {tab:window.TN_TAB||"pick", bbq:window.TN_BB_Q||"", bbid:window.TN_BB_ID||"", gbq:window.TN_GB_Q||"", gbid:window.TN_GB_ID||"", brack:window.TN_BRACK||""};
