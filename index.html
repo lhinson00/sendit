@@ -2635,15 +2635,16 @@ function advanceTnBracket(){
         if(!slot) return;
         const win=tnWinner(item.g);
         if(!win){
-          if(slot._adv){ slot.name=""; slot.seed=""; slot.rec=""; slot.host=false; slot.score=""; slot._adv=false; }
+          if(slot._adv && !slot.name){ slot.seed=""; slot.rec=""; slot.host=false; slot._adv=false; }
           return;
         }
-        slot.name=win.name;
-        slot.seed=win.seed||"";
-        slot.rec=win.rec||"";
-        slot.host=idx%2===0;
-        slot.score="";
-        slot._adv=true;
+        if(!slot.name || slot._adv){
+          slot.name=win.name;
+          slot.seed=win.seed||slot.seed||"";
+          slot.rec=win.rec||slot.rec||"";
+          slot.host=idx%2===0;
+          slot._adv=true;
+        }
       });
     }
   });
