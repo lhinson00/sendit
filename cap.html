@@ -324,7 +324,16 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:24px}
 .seat span{display:block;color:#9b9288;font-size:12px;font-weight:600}
 .meter{height:6px;border-radius:99px;background:#241e18;margin-top:6px;overflow:hidden}
 .meter i{display:block;height:100%;background:linear-gradient(90deg,#3ee0a0,#ff7a18)}
-.rec{font-family:"Bebas Neue",sans-serif;font-size:28px;color:#fff}
+.lboard{width:100%;border:0;background:#101218;color:inherit;display:grid;grid-template-columns:28px 40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;text-align:left;border-bottom:1px solid #221e18}
+.lboard .rk{font-family:"Bebas Neue",sans-serif;font-size:26px;color:var(--orange)}
+.lboard img{width:40px;height:40px;object-fit:cover;border-radius:10px;background:#1a1c22}
+.lboard .who b{font-size:15px}
+.lboard .pts{font-family:"Bebas Neue",sans-serif;font-size:32px;line-height:.85;color:#fff}
+.lboard.live{box-shadow:inset 3px 0 0 #3ee0a0}
+.lboard.mine{background:#1a140e}
+.leadpos{display:flex;gap:8px;overflow:auto;margin:0 0 12px}
+.leadpos button{border:1px solid #2a241c;background:#101218;color:#c9c2b8;border-radius:999px;padding:8px 12px;font-weight:800;font-size:12px}
+.leadpos button.on{border-color:var(--orange);background:#1a120c;color:var(--ember)}
 #tab-live{padding-top:8px}
 .backbar{display:flex;align-items:center;gap:12px;padding:12px;background:#1b140e;border-bottom:2px solid var(--orange);border-radius:12px;margin:0 0 12px}
 .backbar button{border:0;background:var(--orange);color:#140800;font-weight:800;padding:10px 14px;border-radius:999px}
@@ -337,6 +346,7 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:24px}
 <div class="tools">
   <nav class="tabs">
     <button type="button" class="on" data-tab="build">Lineup</button>
+    <button type="button" data-tab="lead">Leaders</button>
     <button type="button" data-tab="stand">Board</button>
   </nav>
   <button type="button" id="btnLock" hidden>Lock</button>
@@ -368,6 +378,12 @@ body{width:auto;max-width:1120px;background:#05060a;padding-bottom:24px}
 <section class="panel" id="tab-live" hidden>
   <div class="bigscore"><b id="liveTotal">0.0</b><span id="liveSub">Lock a card to score it live</span></div>
   <div class="livegrid" id="liveGrid"></div>
+</section>
+
+<section class="panel" id="tab-lead" hidden>
+  <div class="leadpos" id="leadPos"></div>
+  <p class="hint" id="leadNote">Highest scores on this week’s slate. Updates while games are on.</p>
+  <div id="leadList"><p class="hint">Loading scores…</p></div>
 </section>
 
 <section class="panel" id="tab-stand" hidden>
@@ -816,7 +832,7 @@ function paintFilters(){
 
 function paintAll(){
   const who=$("whoLine"); if(who) who.textContent=STATE.name||"";
-  paintBudget(); paintSlots(); paintFilters(); paintPool(); paintLive(); paintStand();
+  paintBudget(); paintSlots(); paintFilters(); paintPool(); paintLive(); paintLeaders(); paintStand();
 }
 
 const hist=["build"];
@@ -843,10 +859,12 @@ function tabTo(name, opt){
   const nav=document.querySelector(".tabs"); if(nav) nav.style.display="";
   $("tab-build").hidden = name!=="build";
   $("tab-live").hidden = true;
+  $("tab-lead").hidden = name!=="lead";
   $("tab-stand").hidden = name!=="stand";
   const back=$("navBack"); if(back){ back.hidden=false; document.body.appendChild(back); }
   paintBudget();
-  if(name==="stand" && !(opt&&opt.back)) refreshLive();
+  if(name==="lead" || (name==="stand" && !(opt&&opt.back))) refreshLive();
+  if(name==="lead") paintLeaders();
   if(opt && opt.back){
     const y=window.CAP_Y[name]||0;
     const go=()=>window.scrollTo(0, y);
@@ -1307,18 +1325,38 @@ function dstPtsFromSum(sum, teamId){
   return dstBits(sum, teamId).pts;
 }
 
+async function syncGameStates(){
+  try{
+    const res=await fetch("https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",{cache:"no-store"});
+    if(!res.ok) return;
+    const d=await res.json();
+    (d.events||[]).forEach(ev=>{
+      const g=(STATE.games||[]).find(x=>String(x.eventId)===String(ev.id));
+      const st=ev.status&&ev.status.type&&ev.status.type.state;
+      if(g && st) g.state=st;
+    });
+  }catch(e){}
+}
 async function refreshLive(){
   if(window._capLiveBusy) return window._capLiveBusy;
   let done;
   window._capLiveBusy=new Promise(r=>done=r);
   try{
+  if(STATE.tab==="lead") await syncGameStates();
   const ids = SLOTS.map(k=>STATE.lineup[k]).filter(Boolean);
   const allIds=[...ids];
   (STATE.cards||[]).forEach(c=>SLOTS.forEach(k=>{ if(c.lineup&&c.lineup[k]) allIds.push(c.lineup[k]); }));
   const events=[...new Set(allIds.map(id=>{
     const p=STATE.pool.find(x=>x.id===id); return p&&p.eventId;
-  }).filter(Boolean).concat((STATE.games||[]).filter(g=>g.state==="in").map(g=>g.eventId)))];
-  if(!ids.length && !events.length){ $("liveTotal").textContent="0.0"; $("liveSub").textContent="No locked card yet"; $("liveGrid").innerHTML=""; return; }
+  }).filter(Boolean).concat((STATE.games||[]).filter(g=>{
+    if(g.state==="in") return true;
+    return STATE.tab==="lead" && (g.state==="in"||g.state==="post") && !STATE.live[g.eventId];
+  }).map(g=>g.eventId)))];
+  if(!events.length){
+    if(STATE.tab==="lead") paintLeaders();
+    if(!ids.length){ $("liveTotal").textContent="0.0"; $("liveSub").textContent="No locked card yet"; $("liveGrid").innerHTML=""; }
+    return;
+  }
   await Promise.all(events.map(async eid=>{
     try{
       const r=await fetch("https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event="+eid,{cache:"no-store"});
@@ -1334,6 +1372,7 @@ async function refreshLive(){
   }));
   STATE.liveReady=true;
   paintLive();
+  paintLeaders();
   paintStand();
   if(STATE.breakId && $("drawer").classList.contains("on")) openLiveBreak(STATE.breakId);
   if(STATE.locked) pushCard(false);
@@ -1586,6 +1625,42 @@ function paintLive(){
   $("liveTotal").textContent=tot.toFixed(1);
   const watching=STATE.viewCard;
   $("liveSub").textContent = watching ? (watching.name+(mine?"":" · picks open at kickoff")) : "";
+}
+function paintLeaders(){
+  const host=$("leadList");
+  if(!host) return;
+  const pos=STATE.leadPos||"ALL";
+  const chips=$("leadPos");
+  if(chips && !chips.childElementCount){
+    chips.innerHTML=["ALL","QB","RB","WR","TE","DST"].map(p=>`<button type="button" data-pos="${p}" class="${p===pos?"on":""}">${p==="ALL"?"All":p}</button>`).join("");
+    chips.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      STATE.leadPos=b.dataset.pos;
+      chips.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b));
+      paintLeaders();
+    });
+  }
+  const mine=new Set(SLOTS.map(k=>STATE.lineup[k]).filter(Boolean).map(String));
+  const rows=(STATE.pool||[]).map(p=>{
+    const sc=scorePlayer(p);
+    return {p, pts:sc.pts, status:sc.status};
+  }).filter(r=>{
+    if(pos!=="ALL" && r.p.pos!==pos) return false;
+    return r.pts>0;
+  }).sort((a,b)=>b.pts-a.pts || a.p.name.localeCompare(b.p.name)).slice(0,30);
+  const note=$("leadNote");
+  if(note) note.textContent = rows.length ? "Highest scores on this week’s slate. Tap a player for the breakdown." : "Scores show up as games kick off.";
+  host.innerHTML = rows.length ? rows.map((r,i)=>{
+    const p=r.p;
+    const yours=mine.has(String(p.id));
+    const live=r.status==="LIVE";
+    return `<button type="button" class="lboard${live?" live":""}${yours?" mine":""}" data-break="${p.id}">
+      <b class="rk">${i+1}</b>
+      <img alt="" src="${headUrl(p)}" onerror="this.style.opacity=.25"/>
+      <div class="who"><b>${p.name}</b><span>${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}${yours?" · Yours":""} · ${live?"LIVE":r.status==="Final"?"Final":""}</span></div>
+      <em class="pts">${r.pts.toFixed(1)}</em>
+    </button>`;
+  }).join("") : `<p class="hint">No scores yet this week.</p>`;
+  host.querySelectorAll("[data-break]").forEach(b=>b.onclick=()=>openLiveBreak(b.dataset.break));
 }
 
 
@@ -2029,7 +2104,7 @@ $("btnUnlock").onclick=()=>{
 loadStore();
 try{ history.scrollRestoration="manual"; }catch(e){}
 function capSpot(){
-  const tab=!$("tab-live").hidden?"card":(!$("tab-stand").hidden?"stand":"build");
+  const tab=!$("tab-live").hidden?"card":(!$("tab-lead").hidden?"lead":(!$("tab-stand").hidden?"stand":"build"));
   try{
     sessionStorage.setItem("sauceCap.spot", JSON.stringify({
       tab, card: (STATE.viewCard&&STATE.viewCard.name)||"", y: window.scrollY||document.documentElement.scrollTop||0
@@ -2063,14 +2138,15 @@ window.addEventListener("pagehide", capSpot);
     try{ spot=JSON.parse(sessionStorage.getItem("sauceCap.spot")||"null"); }catch(e){}
     if(spot && spot.tab==="card" && spot.card){
       openCardLive(spot.card);
-      if($("tab-live").hidden) tabTo(spot.tab==="stand"?"stand":"stand", {back:true});
-    } else tabTo(spot&&spot.tab==="stand"?"stand":"build", {back:true});
+      if($("tab-live").hidden) tabTo("stand", {back:true});
+    } else if(spot && spot.tab==="lead") tabTo("lead", {back:true});
+    else tabTo(spot&&spot.tab==="stand"?"stand":"build", {back:true});
     if(spot) stickCap(spot.y||0);
     capSpot();
     startInjuryClock();
     setInterval(()=>{
       const live=STATE.games.some(g=>g.state==="in");
-      const watching=!$("tab-stand").hidden || !$("tab-live").hidden;
+      const watching=!$("tab-stand").hidden || !$("tab-live").hidden || !$("tab-lead").hidden;
       if(live || watching) refreshLive();
     }, 20000);
   }catch(e){
