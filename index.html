@@ -443,7 +443,7 @@ body.away #navBack.navback{display:block !important;visibility:visible !importan
 .srow .clin{color:var(--orange);font-size:11px;font-weight:800}
 button.srow{width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left}
 .playoffbox{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px}
-@media(max-width:560px){.playoffbox{grid-template-columns:1fr}.srow{grid-template-columns:20px 24px 1fr 48px 28px 28px 40px}}
+@media(max-width:560px){.playoffbox{grid-template-columns:1fr}.standwrap .srow,.problock .srow,.problock .shead{grid-template-columns:18px 22px minmax(0,1fr) 40px 34px 30px 30px 30px;gap:3px;font-size:12px}}
 .pollrow{display:grid;grid-template-columns:28px 36px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #221e18;cursor:pointer}
 .pollrow:hover{background:#16120e}
 .oddsdesk{padding:8px 0 0}
@@ -1035,17 +1035,20 @@ table.bx th{color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform
 .steam b{display:block;font-family:"Bebas Neue",sans-serif;font-size:48px;line-height:.85;color:var(--orange);font-weight:400}
 .steam em{font-style:normal;font-size:13px;color:#c9c2b8;font-weight:700;padding-bottom:6px}
 .srank{display:flex;flex-direction:column;gap:8px}
-.srow{display:grid;grid-template-columns:26px 46px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:10px 12px;cursor:pointer}
-.srow .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#6f675e}
-.srow.top .rk{color:var(--orange)}
-.srow img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#1a120c}
-.srow img.miss{visibility:hidden}
-.srow .who{min-width:0}
-.srow .who b{display:block;font-size:16px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.srow .who em{display:block;margin-top:1px;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9b9288;font-weight:800}
-.srow .sbar{display:block;height:4px;margin-top:7px;background:#2a241c;border-radius:99px;overflow:hidden}
-.srow .sbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a18,#ffb15a);border-radius:99px}
-.srow .sn{font-family:"Bebas Neue",sans-serif;font-size:30px;line-height:1;color:#fff}
+.srow.prow{display:grid;grid-template-columns:26px 46px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;color:inherit;font:inherit;background:#101218;border:1px solid #2a241c;border-radius:16px;padding:10px 12px;cursor:pointer}
+.srow.prow .rk{font-family:"Bebas Neue",sans-serif;font-size:22px;color:#6f675e}
+.srow.prow.top .rk{color:var(--orange)}
+.srow.prow img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:#1a120c}
+.srow.prow img.miss{visibility:hidden}
+.srow.prow .who{min-width:0}
+.srow.prow .who b{display:block;font-size:16px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow.prow .who em{display:block;margin-top:1px;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#9b9288;font-weight:800}
+.srow.prow .sbar{display:block;height:4px;margin-top:7px;background:#2a241c;border-radius:99px;overflow:hidden}
+.srow.prow .sbar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a18,#ffb15a);border-radius:99px}
+.srow.prow .sn{font-family:"Bebas Neue",sans-serif;font-size:30px;line-height:1;color:#fff}
+.standwrap .srow span,.problock .srow span,.problock .shead span{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.standwrap .srow span:first-child,.problock .srow span:first-child{text-align:left}
+.problock .shead{display:grid;grid-template-columns:22px 28px minmax(0,1fr) 52px 36px 36px 44px 36px;gap:6px;align-items:center;color:#9b9288;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:6px 0;border:0}
 .sbox{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 12px 18px;border:1px solid #2a241c;border-radius:8px}
 .sbox table{border-collapse:collapse;width:100%;min-width:680px}
 .sbox table.tight{min-width:0}
