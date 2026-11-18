@@ -1,1 +1,12 @@
-PLACEHOLDER
+{
+  "asOf": "2026-11-17T19:39:19.483051-06:00",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {"id": "g1", "date": "11-17-2026", "status": "Final", "away": "Dobyns-Bennett", "home": "Asheville (NC)", "as": 87, "hs": 37}
+    ]
+  },
+  "boys": {
+    "games": []
+  }
+}
