@@ -206,7 +206,18 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .bbrow em{font-style:normal;color:#ffc46b;font-weight:800;font-size:12px}
 .bbrow small{grid-column:2 / -1;color:#9b9288;font-size:11px}
 .bbhit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#101218;border:1px solid #2a241c;color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
-.bbhit em{font-style:normal;color:#9b9288;font-size:12px}
+.hpills{display:flex;gap:6px;overflow:auto;margin:0 0 10px;padding-bottom:2px}
+.hpills button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#c9c2b8;border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px}
+.hpills button.on{border-color:#ff7a18;background:#1a120c;color:#ffc46b}
+.hsec{margin:16px 0 4px;font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em;color:#ff7a18}
+.hgame{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #241e18;color:inherit;padding:8px 0;cursor:pointer}
+.hgame div{display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:750}
+.hgame em{font-style:normal;font-variant-numeric:tabular-nums;min-width:28px;text-align:right}
+.hgame .win{color:#fff}
+.hgame small{display:block;color:#9b9288;font-size:11px;margin-top:2px}
+.hrow{display:grid;grid-template-columns:22px minmax(0,1fr) 48px 48px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #241e18;font-size:14px;font-weight:700}
+.hrow.head{color:#9b9288;font-size:10px;letter-spacing:.08em;font-weight:800}
+.hrow span:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums}
 .bbroster{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .bbplayer{background:#101218;border:1px solid #241e18;border-radius:10px;padding:8px 10px}
 .bbplayer b{display:block;font-size:14px}
@@ -3209,8 +3220,8 @@ function paintTnPick(){
   if($("liveMeta")) $("liveMeta").textContent="TSSAA";
   host.innerHTML=`<div class="tnpick">
     <button type="button" data-tnpick="fb" style="--bar:#ff7a18"><b>Football</b><span>Scores, standings, and the playoff bracket</span></button>
-    <button type="button" data-tnpick="bb" style="--bar:#1a4fff"><b>Boys Basketball</b><span>Schedules and rosters</span></button>
-    <button type="button" data-tnpick="gb" style="--bar:#9b6dff"><b>Girls Basketball</b><span>Schedules and rosters</span></button>
+    <button type="button" data-tnpick="bb" style="--bar:#1a4fff"><b>Boys Basketball</b><span>Scores and standings by class and district</span></button>
+    <button type="button" data-tnpick="gb" style="--bar:#9b6dff"><b>Girls Basketball</b><span>Scores and standings by class and district</span></button>
   </div>`;
   host.querySelectorAll("[data-tnpick]").forEach(b=>b.onclick=()=>{
     tnPush();
@@ -3218,64 +3229,216 @@ function paintTnPick(){
     else tssaaTab(b.dataset.tnpick);
   });
 }
+function tnIso(mdy){
+  const p=String(mdy||"").split("-");
+  return p.length===3 ? (p[2]+"-"+p[0]+"-"+p[1]) : "";
+}
+function hoopPack(){ return window.TNHOOP||{games:[],schools:{}}; }
+function hoopMeta(sport, id){
+  if(!id) return null;
+  return (hoopPack().schools||{})[sport+":"+id]||null;
+}
+function hoopFinal(g){
+  if(g.as===""||g.hs===""||g.as==null||g.hs==null) return false;
+  if(/\b(am|pm)\b/i.test(g.status||"")) return false;
+  return /final/i.test(g.status||"");
+}
+function hoopPlace(g){
+  const h=hoopMeta(g.sport, g.homeId)||hoopMeta(g.sport, g.awayId)||{};
+  const div=h.division||((g.group||"").includes("II")?"II":"");
+  return {div, klass:h.klass||"", region:h.region||"", district:h.district||"", group:g.group||""};
+}
+function hoopBucket(p){
+  if(p.klass){
+    const bits=["Division "+(p.div||"I"), "Class "+p.klass];
+    if(p.region) bits.push("Region "+p.region);
+    if(p.district) bits.push("District "+p.district);
+    return bits.join(" · ");
+  }
+  return p.group||"Other";
+}
+async function refreshTnHoops(){
+  if(window._hoopPull && Date.now()-window._hoopPull<25000) return;
+  window._hoopPull=Date.now();
+  try{
+    const r=await fetch("/data/tssaa-hoops.json?ts="+Date.now(),{cache:"no-store"});
+    if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=d; }
+  }catch(e){}
+  const day=chiToday();
+  const iso=tnIso(day);
+  for(const sportid of [3,2]){
+    try{
+      const r=await fetch("https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid="+sportid+"&selDate="+encodeURIComponent(day)+"&bust="+Date.now(),{cache:"no-store"});
+      if(!r.ok) continue;
+      const data=await r.json();
+      if(!Array.isArray(data)||!data.length) continue;
+      const sport=sportid===2?"girls":"boys";
+      const pack=hoopPack();
+      pack.games=pack.games||[];
+      data.forEach(d=>{
+        const id=String(d.eventid||"");
+        if(!id) return;
+        let g=pack.games.find(x=>String(x.id)===id);
+        const status=tnLiveStatus(d);
+        const as=String(d.visitingscore==null?"":d.visitingscore).trim();
+        const hs=String(d.hostscore==null?"":d.hostscore).trim();
+        if(!g){
+          g={id, date:iso, sport, group:"", status, away:String(d.visitingname||"").trim(), home:String(d.hostname||"").trim(), awayId:"", homeId:"", as, hs};
+          pack.games.push(g);
+        } else {
+          if(as!=="") g.as=as;
+          if(hs!=="") g.hs=hs;
+          if(status && status!=="Tonight") g.status=status;
+        }
+      });
+      window.TNHOOP=pack;
+    }catch(e){}
+  }
+  if(window.TN_TAB==="bb"||window.TN_TAB==="gb") paintTnHoop(window.TN_TAB);
+}
+function tnHoopHour(){
+  const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"2-digit",hour12:false}).formatToParts(new Date());
+  const h=Number(parts.find(x=>x.type==="hour").value);
+  return h>=16 && h<=23;
+}
+function startTnHoopClock(){
+  const tick=async()=>{
+    if(tnHoopHour()) await refreshTnHoops();
+    setTimeout(tick, tnHoopHour()?60000:10*60*1000);
+  };
+  refreshTnHoops();
+  setTimeout(tick, 8000);
+}
 function paintTnHoop(kind){
   const host=$("liveList");
   if(!host) return;
   const girls=kind==="gb";
-  const pack=girls?(window.TNGB||{}):(window.TNBB||{});
-  const schools=pack.schools||[];
+  const sport=girls?"girls":"boys";
   const label=girls?"Girls basketball":"Boys basketball";
-  if($("liveMeta")) $("liveMeta").textContent = schools.length ? ("TSSAA · "+label+" · "+schools.length+" schools") : ("TSSAA · "+label);
-  if(!schools.length){
-    if(window.TN_HOOP_DONE){
-      host.innerHTML="<p class='hint' style='padding:14px'>Schedules didn't load. Leave and open boys basketball again.</p>";
-      return;
-    }
-    host.innerHTML="<p class='hint' style='padding:14px'>Loading "+label.toLowerCase()+" schedules…</p>";
-    if(!window.TN_HOOP_WAIT && typeof loadTnPack==="function"){
-      window.TN_HOOP_WAIT=1;
-      loadTnPack().finally(()=>{
-        window.TN_HOOP_WAIT=0;
-        window.TN_HOOP_DONE=1;
-        if((window.TN_TAB==="bb"||window.TN_TAB==="gb") && !( (window.TN_TAB==="gb"?window.TNGB:window.TNBB)||{} ).schools) paintTnHoop(window.TN_TAB);
-        else if(window.TN_TAB==="bb"||window.TN_TAB==="gb") paintTnHoop(window.TN_TAB);
-      });
-    }
-    return;
-  }
+  const pack=hoopPack();
+  const games=(pack.games||[]).filter(g=>g.sport===sport);
+  const viewKey=girls?"TN_GB_VIEW":"TN_BB_VIEW";
+  const dayKey=girls?"TN_GB_DAY":"TN_BB_DAY";
+  const clsKey=girls?"TN_GB_CLS":"TN_BB_CLS";
   const qKey=girls?"TN_GB_Q":"TN_BB_Q";
   const idKey=girls?"TN_GB_ID":"TN_BB_ID";
-  const raw=String(window[qKey]||"");
-  const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
-  const open=schools.find(s=>String(s.id)===String(window[idKey]||""));
-  if(open){
-    const games=open.games||[];
-    const roster=open.roster||[];
-    const rows=games.map(g=>{
-      const side=g.away?"at":"vs";
-      const mark=g.region?" *":"";
-      const note=g.note?` · ${esc(g.note)}`:"";
-      return `<div class="bbrow"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA")+mark)}</span><em>${esc(g.result||"")}</em>${note?`<small>${note}</small>`:""}</div>`;
-    }).join("") || "<p class='hint'>No games posted.</p>";
-    const players=roster.map(p=>{
-      const bits=[p.c,p.p,p.h].filter(Boolean).join(" · ");
-      return `<div class="bbplayer"><b>${esc(p.n||"")}</b>${bits?`<span>${esc(bits)}</span>`:""}</div>`;
-    }).join("") || "<p class='hint'>Roster not posted.</p>";
-    host.innerHTML=`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div><p class="hint">* region or district game</p>`;
-    const back=$("bbBack");
-    if(back) back.onclick=()=>{ if(!tnBack()){ window[idKey]=""; paintTnHoop(kind); } };
+  if(!window[viewKey]) window[viewKey]="scores";
+  const view=window[viewKey];
+  if($("liveMeta")) $("liveMeta").textContent="TSSAA · "+label+(pack.asOf?(" · "+new Date(pack.asOf).toLocaleString("en-US",{timeZone:"America/Chicago",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" CT"):"");
+  const tabs=`<div class="hpills" id="hoopViews">
+    <button type="button" data-hv="scores" class="${view==="scores"?"on":""}">Scores</button>
+    <button type="button" data-hv="stand" class="${view==="stand"?"on":""}">Standings</button>
+    <button type="button" data-hv="schools" class="${view==="schools"?"on":""}">Schools</button>
+  </div>`;
+  const bindViews=()=>{
+    host.querySelectorAll("[data-hv]").forEach(b=>b.onclick=()=>{ window[viewKey]=b.dataset.hv; if(b.dataset.hv!=="schools") window[idKey]=""; paintTnHoop(kind); });
+  };
+  if(!games.length && view!=="schools"){
+    host.innerHTML=tabs+"<p class='hint' style='padding:8px 0'>Loading scores…</p>";
+    bindViews();
+    if(!window._hoopAsked){ window._hoopAsked=1; refreshTnHoops(); }
     return;
   }
-  const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
-  host.innerHTML=`<input class="yq" id="bbq" placeholder="School — Summertown, Lawrence, Lewis County" value="${esc(raw)}" autocomplete="off"/>`+(q.length<2?"<p class='hint' style='padding:8px 0'>Type a school. Summertown, Lawrence County, Lewis County.</p>":(hits.length?hits.map(s=>`<button type="button" class="bbhit" data-bb="${esc(s.id)}"><b>${esc(s.name)}</b><em>${(s.games||[]).length} games · ${(s.roster||[]).length} players</em></button>`).join(""):"<p class='hint'>No school matched.</p>"));
-  const box=$("bbq");
-  if(box){
-    box.focus();
-    const end=box.value.length;
-    try{ box.setSelectionRange(end,end); }catch(e){}
-    box.oninput=()=>{ window[qKey]=box.value; paintTnHoop(kind); };
+  if(view==="schools"){
+    const schools=(girls?(window.TNGB||{}):(window.TNBB||{})).schools||[];
+    if(!schools.length){
+      host.innerHTML=tabs+"<p class='hint' style='padding:8px 0'>Loading schools…</p>";
+      bindViews();
+      return;
+    }
+    const raw=String(window[qKey]||"");
+    const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
+    const open=schools.find(s=>String(s.id)===String(window[idKey]||""));
+    if(open){
+      const rows=(open.games||[]).map(g=>{
+        const side=g.away?"at":"vs";
+        return `<div class="bbrow"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA")+(g.region?" *":""))}</span><em>${esc(g.result||"")}</em></div>`;
+      }).join("")||"<p class='hint'>No games posted.</p>";
+      const players=(open.roster||[]).map(p=>`<div class="bbplayer"><b>${esc(p.n||"")}</b><span>${esc([p.c,p.p,p.h].filter(Boolean).join(" · "))}</span></div>`).join("")||"<p class='hint'>Roster not posted.</p>";
+      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
+      bindViews();
+      const back=$("bbBack");
+      if(back) back.onclick=()=>{ window[idKey]=""; paintTnHoop(kind); };
+      return;
+    }
+    const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
+    host.innerHTML=tabs+`<input class="yq" id="bbq" placeholder="School — Summertown, Lewis County" value="${esc(raw)}" autocomplete="off"/>`+(q.length<2?"<p class='hint' style='padding:8px 0'>Type a school.</p>":(hits.length?hits.map(s=>`<button type="button" class="bbhit" data-bb="${esc(s.id)}"><b>${esc(s.name)}</b></button>`).join(""):"<p class='hint'>No school matched.</p>"));
+    bindViews();
+    const box=$("bbq");
+    if(box) box.oninput=()=>{ window[qKey]=box.value; paintTnHoop(kind); };
+    host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window[idKey]=b.dataset.bb; paintTnHoop(kind); });
+    return;
   }
-  host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ tnPush(); window[idKey]=b.dataset.bb; paintTnHoop(kind); });
+  const classes=["all"].concat([...new Set(games.map(g=>{ const p=hoopPlace(g); return p.klass?(p.div+"|"+p.klass):""; }).filter(Boolean))].sort());
+  if(!window[clsKey]) window[clsKey]="all";
+  const cls=classes.includes(window[clsKey])?window[clsKey]:"all";
+  const clsPills=`<div class="hpills" id="hoopCls">${classes.map(c=>{
+    const lab=c==="all"?"All":("D"+c.split("|")[0]+" "+c.split("|")[1]);
+    return `<button type="button" data-hc="${c}" class="${c===cls?"on":""}">${lab}</button>`;
+  }).join("")}</div>`;
+  const picked=games.filter(g=>cls==="all"||(hoopPlace(g).div+"|"+hoopPlace(g).klass)===cls);
+  if(view==="stand"){
+    const table={};
+    picked.forEach(g=>{
+      if(!hoopFinal(g)) return;
+      const as=Number(g.as), hs=Number(g.hs);
+      if(!Number.isFinite(as)||!Number.isFinite(hs)||as===hs) return;
+      [[g.away,g.awayId,as>hs],[g.home,g.homeId,hs>as]].forEach(([name,id,win])=>{
+        if(!name) return;
+        const meta=hoopMeta(sport, id)||{};
+        const key=(id||name);
+        const row=table[key]||{name, id, div:meta.division||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0};
+        row.w+=win?1:0; row.l+=win?0:1;
+        const same=g.group && /district/i.test(g.group);
+        const am=hoopMeta(sport, g.awayId), hm=hoopMeta(sport, g.homeId);
+        const distGame=same && am && hm && am.klass===hm.klass && am.district && am.district===hm.district;
+        if(distGame){ row.dw+=win?1:0; row.dl+=win?0:1; }
+        table[key]=row;
+      });
+    });
+    const rows=Object.values(table);
+    const groups={};
+    rows.forEach(r=>{
+      const lab=r.klass?`Division ${r.div||"I"} · Class ${r.klass}${r.region?" · Region "+r.region:""}${r.district?" · District "+r.district:""}`:"Other";
+      (groups[lab]=groups[lab]||[]).push(r);
+    });
+    const html=Object.keys(groups).sort().map(lab=>{
+      const list=groups[lab].sort((a,b)=>(b.dw-b.dl)-(a.dw-a.dl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name));
+      return `<h3 class="hsec">${esc(lab)}</h3><div class="hrow head"><span>#</span><span>Team</span><span>Dist</span><span>All</span></div>`+list.map((r,i)=>`<div class="hrow"><span>${i+1}</span><span>${esc(r.name)}</span><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></div>`).join("");
+    }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
+    host.innerHTML=tabs+clsPills+html;
+    bindViews();
+    host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
+    return;
+  }
+  const dates=[...new Set(picked.map(g=>g.date))].sort();
+  const today=tnIso(chiToday());
+  if(!window[dayKey] || !dates.includes(window[dayKey])) window[dayKey]=dates.includes(today)?today:(dates[dates.length-1]||"");
+  const day=window[dayKey];
+  const dayPills=`<div class="hpills" id="hoopDays">${dates.slice(-10).map(d=>{
+    const lab=d.slice(5).replace("-","/");
+    return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${lab}</button>`;
+  }).join("")}</div>`;
+  const todays=picked.filter(g=>g.date===day);
+  const groups={};
+  todays.forEach(g=>{
+    const lab=hoopBucket(hoopPlace(g));
+    (groups[lab]=groups[lab]||[]).push(g);
+  });
+  const html=Object.keys(groups).sort().map(lab=>{
+    const list=groups[lab];
+    return `<h3 class="hsec">${esc(lab)}</h3>`+list.map(g=>{
+      const af=hoopFinal(g);
+      const asN=Number(g.as), hsN=Number(g.hs);
+      const aWin=af && asN>hsN, hWin=af && hsN>asN;
+      const mark=af||g.as||g.hs ? (g.status||"Final") : (g.status||"");
+      return `<div class="hgame"><div class="${aWin?"win":""}"><b>${esc(g.away||"TBA")}</b><em>${g.as===""||g.as==null?"—":esc(g.as)}</em></div><div class="${hWin?"win":""}"><b>${esc(g.home||"TBA")}</b><em>${g.hs===""||g.hs==null?"—":esc(g.hs)}</em></div><small>${esc(mark)}</small></div>`;
+    }).join("");
+  }).join("")||"<p class='hint'>No games on this day.</p>";
+  host.innerHTML=tabs+clsPills+dayPills+html;
+  bindViews();
+  host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
+  host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
 }
 function tssaaTab(which){
   window.TN_TAB=which;
@@ -3305,6 +3468,7 @@ function tssaaTab(which){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     if(!window.JUST_BACK) paintTnHoop(which);
+    if(typeof refreshTnHoops==="function") refreshTnHoops();
     return;
   }
   if(which==="stand"){
@@ -10614,9 +10778,14 @@ async function loadTnPack(){
     const r=await fetch("/data/tssaa-gbball.json",{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d){ window.TNGB=d; if(window.TN_TAB==="gb" && typeof paintTnHoop==="function") paintTnHoop("gb"); } }
   }catch(e){}
+  try{
+    const r=await fetch("/data/tssaa-hoops.json",{cache:"no-store"});
+    if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)){ window.TNHOOP=d; if((window.TN_TAB==="bb"||window.TN_TAB==="gb") && typeof paintTnHoop==="function") paintTnHoop(window.TN_TAB); } }
+  }catch(e){}
 }
 loadTnPack();
 startTnFridayClock();
+startTnHoopClock();
 (function(){ const b=document.getElementById("navBack"); if(b){ b.hidden=false; document.body.appendChild(b); } })();
 </script>
 </body>
