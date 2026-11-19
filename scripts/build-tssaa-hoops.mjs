@@ -77,7 +77,7 @@ function parseFacts(html){
   const dm = rest.match(/District\s+(\d+)/i);
   const district = dm ? dm[1] : "";
   rest = rest.replace(/,?\s*District\s+\d+/i,"");
-  const region = rest.replace(/^Region\s+/i,"").replace(/\s+Region$/i,"").replace(/,/g,"").trim();
+  const region = rest.replace(/^Region\s+/i,"").replace(/\s+Region\b/i,"").replace(/\s+District\b/i,"").replace(/,/g,"").trim();
   if(!region && !district) return null;
   return {division:m[1], klass:m[2].toUpperCase(), region, district};
 }

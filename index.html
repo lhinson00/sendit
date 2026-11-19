@@ -3256,15 +3256,38 @@ function hoopFinal(g){
   if(/\b(am|pm)\b/i.test(g.status||"")) return false;
   return /final/i.test(g.status||"");
 }
+function hoopClean(m, group){
+  const src=m||{};
+  const div=src.division||((group||"").includes("II")?"II":"");
+  const region=String(src.region||"").replace(/\s*district\s*$/i,"").replace(/\s*region\s*$/i,"").replace(/^region\s+/i,"").trim();
+  return {div, klass:src.klass||"", region, district:String(src.district||""), group:group||""};
+}
 function hoopPlace(g){
   const h=hoopMeta(g.sport, g.homeId)||hoopMeta(g.sport, g.awayId)||{};
-  const div=h.division||((g.group||"").includes("II")?"II":"");
-  return {div, klass:h.klass||"", region:h.region||"", district:h.district||"", group:g.group||""};
+  return hoopClean(h, g.group||"");
+}
+function hoopSides(g){
+  return [hoopMeta(g.sport, g.homeId), hoopMeta(g.sport, g.awayId)].filter(Boolean).map(m=>hoopClean(m, g.group||""));
+}
+function hoopBoard(cls){
+  if(!cls || cls==="all") return [];
+  const [div, klass]=cls.split("|");
+  if(div==="I") return [1,2,3,4,5,6,7,8].map(n=>({region:String(n), districts:[String(n*2-1), String(n*2)]}));
+  if(div==="II" && klass==="1A") return [{region:"East", districts:["1","2"]},{region:"Middle", districts:["3","4"]},{region:"West", districts:["5","6"]}];
+  if(div==="II") return ["East","Middle","West"].map(region=>({region, districts:[]}));
+  return [];
+}
+function hoopHit(p, cls, reg, dist){
+  if(!p || !p.klass) return false;
+  if(cls!=="all" && (p.div+"|"+p.klass)!==cls) return false;
+  if(reg!=="all" && p.region!==reg) return false;
+  if(dist!=="all" && p.district!==dist) return false;
+  return true;
 }
 function hoopBucket(p){
   if(p.klass){
     const bits=["Class "+p.klass];
-    if(p.region) bits.push("Region "+p.region);
+    if(p.region) bits.push(/^\d+$/.test(p.region)?"Region "+p.region:p.region+" Region");
     if(p.district) bits.push("District "+p.district);
     return {title:bits.join(" · "), sub:"Division "+(p.div||"I")};
   }
@@ -3370,6 +3393,8 @@ function paintTnHoop(kind){
   const viewKey=girls?"TN_GB_VIEW":"TN_BB_VIEW";
   const dayKey=girls?"TN_GB_DAY":"TN_BB_DAY";
   const clsKey=girls?"TN_GB_CLS":"TN_BB_CLS";
+  const regKey=girls?"TN_GB_REG":"TN_BB_REG";
+  const distKey=girls?"TN_GB_DIST":"TN_BB_DIST";
   const qKey=girls?"TN_GB_Q":"TN_BB_Q";
   const idKey=girls?"TN_GB_ID":"TN_BB_ID";
   if(!window[viewKey]) window[viewKey]="scores";
@@ -3430,29 +3455,46 @@ function paintTnHoop(kind){
     host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window[idKey]=b.dataset.bb; paintTnHoop(kind); });
     return;
   }
-  const classes=["all"].concat([...new Set(games.map(g=>{ const p=hoopPlace(g); return p.klass?(p.div+"|"+p.klass):""; }).filter(Boolean))].sort());
-  if(!window[clsKey]) window[clsKey]="all";
-  const cls=classes.includes(window[clsKey])?window[clsKey]:"all";
+  const classes=["all"].concat([...new Set(games.map(g=>hoopSides(g).map(p=>p.klass?p.div+"|"+p.klass:"")).flat().filter(Boolean))].sort());
+  if(!window[clsKey] || !classes.includes(window[clsKey])) window[clsKey]="all";
+  const cls=window[clsKey];
+  const board=hoopBoard(cls);
+  const regions=board.map(b=>b.region);
+  if(!window[regKey] || (window[regKey]!=="all" && !regions.includes(window[regKey]))) window[regKey]="all";
+  const reg=cls==="all"?"all":window[regKey];
+  const districts=(board.find(b=>b.region===reg)||{}).districts||[];
+  if(!window[distKey] || (window[distKey]!=="all" && !districts.includes(window[distKey]))) window[distKey]="all";
+  const dist=reg==="all"?"all":window[distKey];
   const clsPills=`<div class="bbnav" id="hoopCls">${classes.map(c=>{
-    const lab=c==="all"?"All":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
+    const lab=c==="all"?"All classes":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
     return `<button type="button" data-hc="${c}" class="${c===cls?"on":""}">${lab}</button>`;
   }).join("")}</div>`;
-  const picked=games.filter(g=>cls==="all"||(hoopPlace(g).div+"|"+hoopPlace(g).klass)===cls);
+  const regPills=cls==="all"?"":`<div class="bbnav" id="hoopReg"><button type="button" data-hr="all" class="${reg==="all"?"on":""}">All regions</button>${regions.map(r=>`<button type="button" data-hr="${esc(r)}" class="${r===reg?"on":""}">${/^\d+$/.test(r)?"R"+r:esc(r)}</button>`).join("")}</div>`;
+  const distPills=reg==="all"||!districts.length?"":`<div class="bbnav" id="hoopDist"><button type="button" data-hd2="all" class="${dist==="all"?"on":""}">All districts</button>${districts.map(n=>`<button type="button" data-hd2="${n}" class="${n===dist?"on":""}">D${n}</button>`).join("")}</div>`;
+  const picks=clsPills+regPills+distPills;
+  const bindPicks=()=>{
+    host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; window[regKey]="all"; window[distKey]="all"; paintTnHoop(kind); });
+    host.querySelectorAll("[data-hr]").forEach(b=>b.onclick=()=>{ window[regKey]=b.dataset.hr; window[distKey]="all"; paintTnHoop(kind); });
+    host.querySelectorAll("[data-hd2]").forEach(b=>b.onclick=()=>{ window[distKey]=b.dataset.hd2; paintTnHoop(kind); });
+  };
+  const matchGame=g=>cls==="all"||hoopSides(g).some(p=>hoopHit(p, cls, reg, dist));
+  const picked=games.filter(matchGame);
   if(view==="stand"){
     const table={};
-    picked.forEach(g=>{
+    games.forEach(g=>{
       if(!hoopFinal(g)) return;
       const as=Number(g.as), hs=Number(g.hs);
       if(!Number.isFinite(as)||!Number.isFinite(hs)||as===hs) return;
       [[g.away,g.awayId,as>hs],[g.home,g.homeId,hs>as]].forEach(([name,id,win])=>{
         if(!name) return;
-        const meta=hoopMeta(sport, id)||{};
+        const meta=hoopClean(hoopMeta(sport, id)||{}, "");
+        if(cls!=="all" && !hoopHit(meta, cls, reg, dist)) return;
         const key=(id||name);
-        const row=table[key]||{name, id, div:meta.division||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0};
+        const row=table[key]||{name, id, div:meta.div||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0};
         row.w+=win?1:0; row.l+=win?0:1;
-        const same=g.group && /district/i.test(g.group);
-        const am=hoopMeta(sport, g.awayId), hm=hoopMeta(sport, g.homeId);
-        const distGame=same && am && hm && am.klass===hm.klass && am.district && am.district===hm.district;
+        const am=hoopClean(hoopMeta(sport, g.awayId)||{}, "");
+        const hm=hoopClean(hoopMeta(sport, g.homeId)||{}, "");
+        const distGame=am.klass && hm.klass && am.klass===hm.klass && am.div===hm.div && am.district && am.district===hm.district;
         if(distGame){ row.dw+=win?1:0; row.dl+=win?0:1; }
         table[key]=row;
       });
@@ -3461,44 +3503,49 @@ function paintTnHoop(kind){
     const groups={};
     rows.forEach(r=>{
       const bucket=hoopBucket(r);
-      const lab=bucket.title+"|"+bucket.sub;
+      const lab=dist!=="all"?("Standings|"+bucket.sub):bucket.title+"|"+bucket.sub;
       (groups[lab]=groups[lab]||[]).push(r);
     });
     const html=Object.keys(groups).sort((a,b)=>hoopSortKey(groups[a][0])-hoopSortKey(groups[b][0])).map(lab=>{
       const [title,sub]=lab.split("|");
       const list=groups[lab].sort((a,b)=>(b.dw-b.dl)-(a.dw-a.dl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name));
-      return `<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div><button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
+      const head=dist==="all"?`<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`:"";
+      return head+`<button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
     }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
-    host.innerHTML=tabs+clsPills+html;
+    host.innerHTML=tabs+picks+html;
     bindViews();
-    host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
+    bindPicks();
     host.querySelectorAll(".bbstand[data-sn]").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
     return;
   }
-  const dates=[...new Set(picked.map(g=>g.date))].sort();
+  const dates=[...new Set(games.map(g=>g.date))].sort();
   const today=tnIso(chiToday());
-  const finals=dates.filter(d=>picked.some(g=>g.date===d && hoopFinal(g)));
+  const finals=dates.filter(d=>games.some(g=>g.date===d && hoopFinal(g)));
   if(!window[dayKey] || !dates.includes(window[dayKey])){
-    const liveToday=dates.includes(today) && picked.some(g=>g.date===today && (hoopFinal(g)||/qt|half|ot/i.test(g.status||"")));
+    const liveToday=dates.includes(today) && games.some(g=>g.date===today && (hoopFinal(g)||/qt|half|ot/i.test(g.status||"")));
     window[dayKey]=liveToday?today:(finals[finals.length-1]||dates[dates.length-1]||"");
   }
   const day=window[dayKey];
   const dayPills=`<div class="bbnav" id="hoopDays">${dates.slice(-10).map(d=>{
     const [yy,mm,dd]=d.split("-");
-    const lab=mm+"/"+dd;
-    return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${d===today?"Today":lab}</button>`;
+    return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${d===today?"Today":mm+"/"+dd}</button>`;
   }).join("")}</div>`;
   const todays=picked.filter(g=>g.date===day);
   const groups={};
   todays.forEach(g=>{
-    const bucket=hoopBucket(hoopPlace(g));
-    const lab=bucket.title+"\n"+bucket.sub;
+    const p=hoopPlace(g);
+    let title="", sub="";
+    if(dist==="all" && reg!=="all") title=p.district?("District "+p.district):"Other";
+    else if(dist==="all" && cls!=="all") title=(p.region?(/^\d+$/.test(p.region)?"Region "+p.region:p.region):"Other")+(p.district?" · District "+p.district:"");
+    else if(cls==="all"){ const b=hoopBucket(p); title=b.title; sub=b.sub; }
+    const lab=(title||"Games")+"\n"+sub;
     (groups[lab]=groups[lab]||[]).push(g);
   });
   const html=Object.keys(groups).sort((a,b)=>hoopSortKey(hoopPlace(groups[a][0]))-hoopSortKey(hoopPlace(groups[b][0]))).map(lab=>{
     const [title,sub]=lab.split("\n");
     const list=groups[lab];
-    return `<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`+list.map(g=>{
+    const head=dist!=="all"?"":`<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`;
+    return head+list.map(g=>{
       const af=hoopFinal(g);
       const asN=Number(g.as), hsN=Number(g.hs);
       const aWin=af && asN>hsN, hWin=af && hsN>asN;
@@ -3508,10 +3555,10 @@ function paintTnHoop(kind){
       const row=(name, id, score, win)=>`<button type="button" class="bbteam${af&&!win?" lose":""}" data-sid="${esc(id||"")}" data-sn="${esc(name)}"><b>${esc(name)}</b><em>${score===""||score==null?"–":esc(score)}</em></button>`;
       return `<article class="bbcard"><header><span class="bbfin${live?" live":""}">${esc(mark)}</span></header>${row(nm(g.away),g.awayId,g.as,aWin)}${row(nm(g.home),g.homeId,g.hs,hWin)}</article>`;
     }).join("");
-  }).join("")||"<p class='hint'>No games on this day.</p>";
-  host.innerHTML=tabs+clsPills+dayPills+html;
+  }).join("")||"<p class='hint'>No games for that class and district on this day.</p>";
+  host.innerHTML=tabs+dayPills+picks+html;
   bindViews();
-  host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
+  bindPicks();
   host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
   host.querySelectorAll(".bbteam").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
 }
