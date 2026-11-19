@@ -206,7 +206,9 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .bbrow em{font-style:normal;color:#ffc46b;font-weight:800;font-size:12px}
 .bbrow small{grid-column:2 / -1;color:#9b9288;font-size:11px}
 .bbhit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#101218;border:1px solid #2a241c;color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
-.bbnav{display:flex;gap:6px;overflow:auto;margin:0 0 8px;padding-bottom:2px}
+.bbstick{position:sticky;top:0;z-index:8;background:#05060a;padding:6px 0 8px}
+.bblab{margin:8px 0 4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18;font-weight:800}
+.bbnav{display:flex;gap:6px;overflow:auto;margin:0 0 2px;padding-bottom:2px}
 .bbnav button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#cfc6b8;border-radius:999px;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
 .bbnav button.on{background:#ff7a18;color:#140800;border-color:#ff7a18}
 .bbsec{margin:16px 0 8px}
@@ -3205,13 +3207,28 @@ async function openTnBrackets(){
   paintTnBrackets();
 }
 function tnPlace(){
-  return {tab:window.TN_TAB||"pick", bbq:window.TN_BB_Q||"", bbid:window.TN_BB_ID||"", gbq:window.TN_GB_Q||"", gbid:window.TN_GB_ID||"", brack:window.TN_BRACK||""};
+  return {
+    tab:window.TN_TAB||"pick",
+    bbq:window.TN_BB_Q||"", bbid:window.TN_BB_ID||"",
+    gbq:window.TN_GB_Q||"", gbid:window.TN_GB_ID||"",
+    brack:window.TN_BRACK||"",
+    bbview:window.TN_BB_VIEW||"scores", gbview:window.TN_GB_VIEW||"scores",
+    bbday:window.TN_BB_DAY||"", gbday:window.TN_GB_DAY||"",
+    bbcls:window.TN_BB_CLS||"all", gbcls:window.TN_GB_CLS||"all",
+    bbreg:window.TN_BB_REG||"all", gbreg:window.TN_GB_REG||"all",
+    bbdist:window.TN_BB_DIST||"all", gbdist:window.TN_GB_DIST||"all",
+    y:window.scrollY||0
+  };
+}
+function tnSame(a,b){
+  if(!a||!b) return false;
+  return ["tab","bbid","gbid","bbview","gbview","bbcls","gbcls","bbreg","gbreg","bbdist","gbdist","bbday","gbday","brack"].every(k=>String(a[k]||"")===String(b[k]||""));
 }
 function tnPush(){
   window.TN_STACK=window.TN_STACK||[];
   const snap=tnPlace();
   const prev=window.TN_STACK[window.TN_STACK.length-1];
-  if(prev && prev.tab===snap.tab && prev.bbid===snap.bbid && prev.gbid===snap.gbid && prev.bbq===snap.bbq && prev.gbq===snap.gbq && prev.brack===snap.brack) return;
+  if(tnSame(prev, snap)) return;
   window.TN_STACK.push(snap);
   if(window.TN_STACK.length>24) window.TN_STACK.shift();
 }
@@ -3220,9 +3237,16 @@ function tnBack(){
   if(!s) return false;
   window.TN_BB_Q=s.bbq||""; window.TN_BB_ID=s.bbid||"";
   window.TN_GB_Q=s.gbq||""; window.TN_GB_ID=s.gbid||"";
+  window.TN_BB_VIEW=s.bbview||"scores"; window.TN_GB_VIEW=s.gbview||"scores";
+  window.TN_BB_DAY=s.bbday||""; window.TN_GB_DAY=s.gbday||"";
+  window.TN_BB_CLS=s.bbcls||"all"; window.TN_GB_CLS=s.gbcls||"all";
+  window.TN_BB_REG=s.bbreg||"all"; window.TN_GB_REG=s.gbreg||"all";
+  window.TN_BB_DIST=s.bbdist||"all"; window.TN_GB_DIST=s.gbdist||"all";
   if(s.brack) window.TN_BRACK=s.brack;
   tssaaTab(s.tab||"pick");
-  window.scrollTo(0,0);
+  const y=Number(s.y)||0;
+  requestAnimationFrame(()=>window.scrollTo(0, y));
+  setTimeout(()=>window.scrollTo(0, y), 60);
   return true;
 }
 function paintTnPick(){
@@ -3323,6 +3347,7 @@ function hoopGamesFor(sport, id, name){
 function openHoopSchool(kind, id, name){
   const school=hoopFindSchool(kind, id, name);
   if(!school) return;
+  tnPush();
   const idKey=kind==="gb"?"TN_GB_ID":"TN_BB_ID";
   const viewKey=kind==="gb"?"TN_GB_VIEW":"TN_BB_VIEW";
   window[viewKey]="schools";
@@ -3441,10 +3466,10 @@ function paintTnHoop(kind){
         return `<div class="bbsked"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA"))}</span><em>${esc(result)}</em></div>`;
       }).join("")||"<p class='hint'>No games posted.</p>";
       const players=(open.roster||[]).map(p=>`<div class="bbplayer"><b>${esc(p.n||"")}</b><span>${esc([p.c,p.p,p.h].filter(Boolean).join(" · "))}</span></div>`).join("")||"<p class='hint'>Roster not posted.</p>";
-      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">Scores</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
+      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">Back</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
       bindViews();
       const back=$("bbBack");
-      if(back) back.onclick=()=>{ window[idKey]=""; window[viewKey]="scores"; paintTnHoop(kind); };
+      if(back) back.onclick=()=>{ if(!tnBack()){ window[idKey]=""; window[viewKey]="scores"; paintTnHoop(kind); } };
       return;
     }
     const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
@@ -3455,8 +3480,8 @@ function paintTnHoop(kind){
     host.querySelectorAll("[data-bb]").forEach(b=>b.onclick=()=>{ window[idKey]=b.dataset.bb; paintTnHoop(kind); });
     return;
   }
-  const classes=["all"].concat([...new Set(games.map(g=>hoopSides(g).map(p=>p.klass?p.div+"|"+p.klass:"")).flat().filter(Boolean))].sort());
-  if(!window[clsKey] || !classes.includes(window[clsKey])) window[clsKey]="all";
+  const classes=["all","I|1A","I|2A","I|3A","I|4A","II|1A","II|2A"];
+  if(!classes.includes(window[clsKey])) window[clsKey]="all";
   const cls=window[clsKey];
   const board=hoopBoard(cls);
   const regions=board.map(b=>b.region);
@@ -3465,12 +3490,17 @@ function paintTnHoop(kind){
   const districts=(board.find(b=>b.region===reg)||{}).districts||[];
   if(!window[distKey] || (window[distKey]!=="all" && !districts.includes(window[distKey]))) window[distKey]="all";
   const dist=reg==="all"?"all":window[distKey];
-  const clsPills=`<div class="bbnav" id="hoopCls">${classes.map(c=>{
-    const lab=c==="all"?"All classes":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
+  const clsPills=`<div class="bblab">Class</div><div class="bbnav" id="hoopCls">${classes.map(c=>{
+    const lab=c==="all"?"All":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
     return `<button type="button" data-hc="${c}" class="${c===cls?"on":""}">${lab}</button>`;
   }).join("")}</div>`;
-  const regPills=cls==="all"?"":`<div class="bbnav" id="hoopReg"><button type="button" data-hr="all" class="${reg==="all"?"on":""}">All regions</button>${regions.map(r=>`<button type="button" data-hr="${esc(r)}" class="${r===reg?"on":""}">${/^\d+$/.test(r)?"R"+r:esc(r)}</button>`).join("")}</div>`;
-  const distPills=reg==="all"||!districts.length?"":`<div class="bbnav" id="hoopDist"><button type="button" data-hd2="all" class="${dist==="all"?"on":""}">All districts</button>${districts.map(n=>`<button type="button" data-hd2="${n}" class="${n===dist?"on":""}">D${n}</button>`).join("")}</div>`;
+  const regPills=`<div class="bblab">Region</div>`+(cls==="all"?"<p class='hint' style='margin:0 0 4px'>Choose a class.</p>":`<div class="bbnav" id="hoopReg"><button type="button" data-hr="all" class="${reg==="all"?"on":""}">All</button>${regions.map(r=>`<button type="button" data-hr="${esc(r)}" class="${r===reg?"on":""}">${/^\d+$/.test(r)?"R"+r:esc(r)}</button>`).join("")}</div>`);
+  const distPills=(()=>{
+    if(cls==="all") return `<div class="bblab">District</div><p class="hint" style="margin:0 0 4px">Choose a class, then a region.</p>`;
+    if(reg==="all") return `<div class="bblab">District</div><p class="hint" style="margin:0 0 4px">Choose a region.</p>`;
+    if(!districts.length) return "";
+    return `<div class="bblab">District</div><div class="bbnav" id="hoopDist"><button type="button" data-hd2="all" class="${dist==="all"?"on":""}">All</button>${districts.map(n=>`<button type="button" data-hd2="${n}" class="${n===dist?"on":""}">D${n}</button>`).join("")}</div>`;
+  })();
   const picks=clsPills+regPills+distPills;
   const bindPicks=()=>{
     host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; window[regKey]="all"; window[distKey]="all"; paintTnHoop(kind); });
@@ -3512,7 +3542,7 @@ function paintTnHoop(kind){
       const head=dist==="all"?`<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`:"";
       return head+`<button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
     }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
-    host.innerHTML=tabs+picks+html;
+    host.innerHTML=`<div class="bbstick">${tabs}${picks}</div>`+html;
     bindViews();
     bindPicks();
     host.querySelectorAll(".bbstand[data-sn]").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
@@ -3556,7 +3586,7 @@ function paintTnHoop(kind){
       return `<article class="bbcard"><header><span class="bbfin${live?" live":""}">${esc(mark)}</span></header>${row(nm(g.away),g.awayId,g.as,aWin)}${row(nm(g.home),g.homeId,g.hs,hWin)}</article>`;
     }).join("");
   }).join("")||"<p class='hint'>No games for that class and district on this day.</p>";
-  host.innerHTML=tabs+dayPills+picks+html;
+  host.innerHTML=`<div class="bbstick">${tabs}${dayPills}${picks}</div>`+html;
   bindViews();
   bindPicks();
   host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
