@@ -206,18 +206,29 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .bbrow em{font-style:normal;color:#ffc46b;font-weight:800;font-size:12px}
 .bbrow small{grid-column:2 / -1;color:#9b9288;font-size:11px}
 .bbhit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#101218;border:1px solid #2a241c;color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
-.hpills{display:flex;gap:6px;overflow:auto;margin:0 0 10px;padding-bottom:2px}
-.hpills button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#c9c2b8;border-radius:999px;padding:7px 11px;font-weight:800;font-size:12px}
-.hpills button.on{border-color:#ff7a18;background:#1a120c;color:#ffc46b}
-.hsec{margin:16px 0 4px;font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em;color:#ff7a18}
-.hgame{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #241e18;color:inherit;padding:8px 0;cursor:pointer}
-.hgame div{display:flex;justify-content:space-between;gap:10px;font-size:14px;font-weight:750}
-.hgame em{font-style:normal;font-variant-numeric:tabular-nums;min-width:28px;text-align:right}
-.hgame .win{color:#fff}
-.hgame small{display:block;color:#9b9288;font-size:11px;margin-top:2px}
-.hrow{display:grid;grid-template-columns:22px minmax(0,1fr) 48px 48px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #241e18;font-size:14px;font-weight:700}
-.hrow.head{color:#9b9288;font-size:10px;letter-spacing:.08em;font-weight:800}
-.hrow span:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums}
+.bbnav{display:flex;gap:6px;overflow:auto;margin:0 0 8px;padding-bottom:2px}
+.bbnav button{flex:0 0 auto;border:1px solid #2a241c;background:#101218;color:#cfc6b8;border-radius:999px;padding:7px 12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.bbnav button.on{background:#ff7a18;color:#140800;border-color:#ff7a18}
+.bbsec{margin:16px 0 8px}
+.bbsec h3{margin:0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:.95;color:#ff7a18}
+.bbsec p{margin:3px 0 0;color:#8d867c;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.bbcard{background:#12141c;border:1px solid #2c261e;border-radius:16px;padding:8px 12px 4px;margin:8px 0}
+.bbcard header{display:flex;justify-content:space-between;align-items:center;min-height:16px}
+.bbfin{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#ff7a18}
+.bbfin.live{color:#3ee0a0}
+.bbteam{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:transparent;border:0;border-top:1px solid #241e18;color:#fff;padding:10px 0;text-align:left;cursor:pointer}
+.bbteam b{font-size:16px;font-weight:750;line-height:1.15;min-width:0}
+.bbteam em{flex:none;font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:30px;line-height:.85;min-width:36px;text-align:right}
+.bbteam.lose{color:#8d867c}
+.bbteam.lose em{color:#8d867c}
+.bbstand{display:grid;grid-template-columns:28px minmax(0,1fr) 54px 54px;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #241e18;color:#fff;padding:11px 0;cursor:pointer;font:inherit}
+.bbstand.head{color:#8d867c;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;cursor:default}
+.bbstand b{font-size:15px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bbstand span{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
+.bbsked{display:flex;align-items:baseline;gap:10px;padding:11px 0;border-bottom:1px solid #241e18}
+.bbsked b{width:78px;flex:none;color:#9b9288;font-size:12px;font-weight:700}
+.bbsked span{flex:1;min-width:0;font-size:15px;font-weight:750}
+.bbsked em{flex:none;font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:22px;color:#ffc46b}
 .bbroster{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .bbplayer{background:#101218;border:1px solid #241e18;border-radius:10px;padding:8px 10px}
 .bbplayer b{display:block;font-size:14px}
@@ -3236,7 +3247,9 @@ function tnIso(mdy){
 function hoopPack(){ return window.TNHOOP||{games:[],schools:{}}; }
 function hoopMeta(sport, id){
   if(!id) return null;
-  return (hoopPack().schools||{})[sport+":"+id]||null;
+  const hit=(hoopPack().schools||{})[sport+":"+id];
+  if(!hit || hit.miss || !hit.klass) return null;
+  return hit;
 }
 function hoopFinal(g){
   if(g.as===""||g.hs===""||g.as==null||g.hs==null) return false;
@@ -3250,12 +3263,49 @@ function hoopPlace(g){
 }
 function hoopBucket(p){
   if(p.klass){
-    const bits=["Division "+(p.div||"I"), "Class "+p.klass];
+    const bits=["Class "+p.klass];
     if(p.region) bits.push("Region "+p.region);
     if(p.district) bits.push("District "+p.district);
-    return bits.join(" · ");
+    return {title:bits.join(" · "), sub:"Division "+(p.div||"I")};
   }
-  return p.group||"Other";
+  const raw=p.group||"Other";
+  return {title:raw.replace(/\s*·\s*/g," · "), sub:""};
+}
+function hoopSortKey(p){
+  const div=p.div==="II"?2:1;
+  const klass={"1A":1,"2A":2,"3A":3,"4A":4}[p.klass]||9;
+  const region=p.region==="East"?1:p.region==="Middle"?2:p.region==="West"?3:(parseInt(p.region,10)||50);
+  const dist=parseInt(p.district,10)||90;
+  return div*100000+klass*10000+region*100+dist;
+}
+function hoopFindSchool(kind, id, name){
+  const schools=((kind==="gb"?window.TNGB:window.TNBB)||{}).schools||[];
+  if(id){
+    const hit=schools.find(s=>String(s.id)===String(id));
+    if(hit) return hit;
+  }
+  const key=tnAlignKey(name||"");
+  if(!key) return null;
+  return schools.find(s=>tnAlignKey(s.name)===key) || schools.find(s=>tnAlignKey(s.name).startsWith(key) || key.startsWith(tnAlignKey(s.name))) || null;
+}
+function hoopGamesFor(sport, id, name){
+  const key=tnAlignKey(name||"");
+  return (hoopPack().games||[]).filter(g=>{
+    if(g.sport!==sport) return false;
+    if(id && (String(g.awayId)===String(id)||String(g.homeId)===String(id))) return true;
+    if(!key) return false;
+    return tnAlignKey(g.away)===key || tnAlignKey(g.home)===key;
+  });
+}
+function openHoopSchool(kind, id, name){
+  const school=hoopFindSchool(kind, id, name);
+  if(!school) return;
+  const idKey=kind==="gb"?"TN_GB_ID":"TN_BB_ID";
+  const viewKey=kind==="gb"?"TN_GB_VIEW":"TN_BB_VIEW";
+  window[viewKey]="schools";
+  window[idKey]=school.id;
+  paintTnHoop(kind);
+  window.scrollTo(0,0);
 }
 async function refreshTnHoops(){
   if(window._hoopPull && Date.now()-window._hoopPull<25000) return;
@@ -3325,7 +3375,7 @@ function paintTnHoop(kind){
   if(!window[viewKey]) window[viewKey]="scores";
   const view=window[viewKey];
   if($("liveMeta")) $("liveMeta").textContent="TSSAA · "+label+(pack.asOf?(" · "+new Date(pack.asOf).toLocaleString("en-US",{timeZone:"America/Chicago",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" CT"):"");
-  const tabs=`<div class="hpills" id="hoopViews">
+  const tabs=`<div class="bbnav" id="hoopViews">
     <button type="button" data-hv="scores" class="${view==="scores"?"on":""}">Scores</button>
     <button type="button" data-hv="stand" class="${view==="stand"?"on":""}">Standings</button>
     <button type="button" data-hv="schools" class="${view==="schools"?"on":""}">Schools</button>
@@ -3350,15 +3400,26 @@ function paintTnHoop(kind){
     const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
     const open=schools.find(s=>String(s.id)===String(window[idKey]||""));
     if(open){
+      const meta=hoopMeta(sport, open.id)||{};
+      const tag=[meta.klass?("Class "+meta.klass):"", meta.region?("Region "+meta.region):"", meta.district?("District "+meta.district):""].filter(Boolean).join(" · ");
+      const scored=hoopGamesFor(sport, open.id, open.name);
       const rows=(open.games||[]).map(g=>{
         const side=g.away?"at":"vs";
-        return `<div class="bbrow"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA")+(g.region?" *":""))}</span><em>${esc(g.result||"")}</em></div>`;
+        const hit=scored.find(x=>tnAlignKey(x.away)===tnAlignKey(g.opp)||tnAlignKey(x.home)===tnAlignKey(g.opp));
+        let result=g.result||"";
+        if(hit && hit.as!=="" && hit.hs!=="" && !/\b(am|pm)\b/i.test(hit.status||"")){
+          const mine=String(hit.homeId)===String(open.id)||tnAlignKey(hit.home)===tnAlignKey(open.name);
+          const us=mine?hit.hs:hit.as, them=mine?hit.as:hit.hs;
+          const mark=Number(us)>Number(them)?"W":"L";
+          result=mark+" "+us+"–"+them;
+        }
+        return `<div class="bbsked"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA"))}</span><em>${esc(result)}</em></div>`;
       }).join("")||"<p class='hint'>No games posted.</p>";
       const players=(open.roster||[]).map(p=>`<div class="bbplayer"><b>${esc(p.n||"")}</b><span>${esc([p.c,p.p,p.h].filter(Boolean).join(" · "))}</span></div>`).join("")||"<p class='hint'>Roster not posted.</p>";
-      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">All schools</button><h2 class="bbschool">${esc(open.name||"")}</h2><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
+      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">Scores</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
       bindViews();
       const back=$("bbBack");
-      if(back) back.onclick=()=>{ window[idKey]=""; paintTnHoop(kind); };
+      if(back) back.onclick=()=>{ window[idKey]=""; window[viewKey]="scores"; paintTnHoop(kind); };
       return;
     }
     const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
@@ -3372,8 +3433,8 @@ function paintTnHoop(kind){
   const classes=["all"].concat([...new Set(games.map(g=>{ const p=hoopPlace(g); return p.klass?(p.div+"|"+p.klass):""; }).filter(Boolean))].sort());
   if(!window[clsKey]) window[clsKey]="all";
   const cls=classes.includes(window[clsKey])?window[clsKey]:"all";
-  const clsPills=`<div class="hpills" id="hoopCls">${classes.map(c=>{
-    const lab=c==="all"?"All":("D"+c.split("|")[0]+" "+c.split("|")[1]);
+  const clsPills=`<div class="bbnav" id="hoopCls">${classes.map(c=>{
+    const lab=c==="all"?"All":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
     return `<button type="button" data-hc="${c}" class="${c===cls?"on":""}">${lab}</button>`;
   }).join("")}</div>`;
   const picked=games.filter(g=>cls==="all"||(hoopPlace(g).div+"|"+hoopPlace(g).klass)===cls);
@@ -3399,46 +3460,60 @@ function paintTnHoop(kind){
     const rows=Object.values(table);
     const groups={};
     rows.forEach(r=>{
-      const lab=r.klass?`Division ${r.div||"I"} · Class ${r.klass}${r.region?" · Region "+r.region:""}${r.district?" · District "+r.district:""}`:"Other";
+      const bucket=hoopBucket(r);
+      const lab=bucket.title+"|"+bucket.sub;
       (groups[lab]=groups[lab]||[]).push(r);
     });
-    const html=Object.keys(groups).sort().map(lab=>{
+    const html=Object.keys(groups).sort((a,b)=>hoopSortKey(groups[a][0])-hoopSortKey(groups[b][0])).map(lab=>{
+      const [title,sub]=lab.split("|");
       const list=groups[lab].sort((a,b)=>(b.dw-b.dl)-(a.dw-a.dl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name));
-      return `<h3 class="hsec">${esc(lab)}</h3><div class="hrow head"><span>#</span><span>Team</span><span>Dist</span><span>All</span></div>`+list.map((r,i)=>`<div class="hrow"><span>${i+1}</span><span>${esc(r.name)}</span><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></div>`).join("");
+      return `<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div><button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
     }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
     host.innerHTML=tabs+clsPills+html;
     bindViews();
     host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
+    host.querySelectorAll(".bbstand[data-sn]").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
     return;
   }
   const dates=[...new Set(picked.map(g=>g.date))].sort();
   const today=tnIso(chiToday());
-  if(!window[dayKey] || !dates.includes(window[dayKey])) window[dayKey]=dates.includes(today)?today:(dates[dates.length-1]||"");
+  const finals=dates.filter(d=>picked.some(g=>g.date===d && hoopFinal(g)));
+  if(!window[dayKey] || !dates.includes(window[dayKey])){
+    const liveToday=dates.includes(today) && picked.some(g=>g.date===today && (hoopFinal(g)||/qt|half|ot/i.test(g.status||"")));
+    window[dayKey]=liveToday?today:(finals[finals.length-1]||dates[dates.length-1]||"");
+  }
   const day=window[dayKey];
-  const dayPills=`<div class="hpills" id="hoopDays">${dates.slice(-10).map(d=>{
-    const lab=d.slice(5).replace("-","/");
-    return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${lab}</button>`;
+  const dayPills=`<div class="bbnav" id="hoopDays">${dates.slice(-10).map(d=>{
+    const [yy,mm,dd]=d.split("-");
+    const lab=mm+"/"+dd;
+    return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${d===today?"Today":lab}</button>`;
   }).join("")}</div>`;
   const todays=picked.filter(g=>g.date===day);
   const groups={};
   todays.forEach(g=>{
-    const lab=hoopBucket(hoopPlace(g));
+    const bucket=hoopBucket(hoopPlace(g));
+    const lab=bucket.title+"\n"+bucket.sub;
     (groups[lab]=groups[lab]||[]).push(g);
   });
-  const html=Object.keys(groups).sort().map(lab=>{
+  const html=Object.keys(groups).sort((a,b)=>hoopSortKey(hoopPlace(groups[a][0]))-hoopSortKey(hoopPlace(groups[b][0]))).map(lab=>{
+    const [title,sub]=lab.split("\n");
     const list=groups[lab];
-    return `<h3 class="hsec">${esc(lab)}</h3>`+list.map(g=>{
+    return `<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`+list.map(g=>{
       const af=hoopFinal(g);
       const asN=Number(g.as), hsN=Number(g.hs);
       const aWin=af && asN>hsN, hWin=af && hsN>asN;
-      const mark=af||g.as||g.hs ? (g.status||"Final") : (g.status||"");
-      return `<div class="hgame"><div class="${aWin?"win":""}"><b>${esc(g.away||"TBA")}</b><em>${g.as===""||g.as==null?"—":esc(g.as)}</em></div><div class="${hWin?"win":""}"><b>${esc(g.home||"TBA")}</b><em>${g.hs===""||g.hs==null?"—":esc(g.hs)}</em></div><small>${esc(mark)}</small></div>`;
+      const live=/qt|half|ot/i.test(g.status||"");
+      const mark=af?"Final":(live?(g.status||"Live"):(g.status||"Scheduled"));
+      const nm=s=>String(s||"TBA").replace(/^>\s*/,"").trim()||"TBA";
+      const row=(name, id, score, win)=>`<button type="button" class="bbteam${af&&!win?" lose":""}" data-sid="${esc(id||"")}" data-sn="${esc(name)}"><b>${esc(name)}</b><em>${score===""||score==null?"–":esc(score)}</em></button>`;
+      return `<article class="bbcard"><header><span class="bbfin${live?" live":""}">${esc(mark)}</span></header>${row(nm(g.away),g.awayId,g.as,aWin)}${row(nm(g.home),g.homeId,g.hs,hWin)}</article>`;
     }).join("");
   }).join("")||"<p class='hint'>No games on this day.</p>";
   host.innerHTML=tabs+clsPills+dayPills+html;
   bindViews();
   host.querySelectorAll("[data-hc]").forEach(b=>b.onclick=()=>{ window[clsKey]=b.dataset.hc; paintTnHoop(kind); });
   host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
+  host.querySelectorAll(".bbteam").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
 }
 function tssaaTab(which){
   window.TN_TAB=which;

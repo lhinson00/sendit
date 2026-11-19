@@ -45,9 +45,12 @@ function parseBoard(html, iso){
     if(!/basketball/i.test(mark.sport||"")) continue;
     const chunk = html.slice(mark.index, marks[i+1]?marks[i+1].index:mark.index+5000);
     const side = (label)=>{
-      const nm = chunk.match(new RegExp(label+"name[\\s\\S]{0,500}?schoolid=(\\d+)[^\"']*\"[^>]*>([^<]+)"));
-      const sc = chunk.match(new RegExp(label+"score[^>]*>([\\s\\d]*)"));
-      return {id:nm?nm[1]:"", name:nm?clean(nm[2]):"", score:sc?clean(sc[1]):""};
+      const box = chunk.match(new RegExp('class="name '+label+'name"([\\s\\S]{0,350}?)</span>'));
+      const block = box ? box[1] : "";
+      const linked = block.match(/schoolid=(\d+)[^"']*"[^>]*>([^<]+)/);
+      const score = chunk.match(new RegExp(label+'score[^>]*>([\\s\\d]*)'));
+      const name = (linked ? clean(linked[2]) : clean(block)).replace(/^>\s*/,"");
+      return {id:linked?linked[1]:"", name, score:score?clean(score[1]):""};
     };
     const away = side("visiting");
     const home = side("host");
@@ -124,7 +127,7 @@ await mapPool(need, 8, async (s)=>{
   try{
     const html = await get(`https://www.coacht.com/tennessee/inside/team.cfm?sportid=${sportid}&schoolid=${s.id}`);
     const facts = parseFacts(html);
-    if(facts) schools[s.sport+":"+s.id] = facts;
+    schools[s.sport+":"+s.id] = facts || {miss:true};
   }catch(e){}
 });
 
