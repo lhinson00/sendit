@@ -20,10 +20,29 @@
         "home": "Dobyns-Bennett",
         "as": "45",
         "hs": "47"
+      },
+      {
+        "id": "volunteer-elizabethton-11192026",
+        "date": "11-19-2026",
+        "status": "6:30 PM",
+        "away": "Volunteer",
+        "home": "Elizabethton",
+        "as": "",
+        "hs": ""
       }
     ]
   },
   "boys": {
-    "games": []
+    "games": [
+      {
+        "id": "clinton-daniel-boone-11192026",
+        "date": "11-19-2026",
+        "status": "Scheduled",
+        "away": "Clinton",
+        "home": "Daniel Boone",
+        "as": "",
+        "hs": ""
+      }
+    ]
   }
 }
