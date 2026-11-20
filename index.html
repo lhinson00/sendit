@@ -3355,6 +3355,30 @@ function openHoopSchool(kind, id, name){
   paintTnHoop(kind);
   window.scrollTo(0,0);
 }
+function hoopRemember(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("tnhoop-live")||"{}");
+    (hoopPack().games||[]).forEach(g=>{
+      if(g.as===""||g.as==null||g.hs===""||g.hs==null) return;
+      if(/\b(am|pm)\b/i.test(g.status||"") && !/qt|half|final|ot/i.test(g.status||"")) return;
+      saved[g.id]={as:String(g.as), hs:String(g.hs), status:g.status||""};
+    });
+    localStorage.setItem("tnhoop-live", JSON.stringify(saved));
+  }catch(e){}
+}
+function hoopRecall(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("tnhoop-live")||"{}");
+    (hoopPack().games||[]).forEach(g=>{
+      const s=saved[g.id];
+      if(!s) return;
+      const stale=g.as===""||g.as==null||/\b(am|pm)\b/i.test(g.status||"");
+      if(!stale) return;
+      g.as=s.as; g.hs=s.hs;
+      if(s.status) g.status=s.status;
+    });
+  }catch(e){}
+}
 async function refreshTnHoops(){
   if(window._hoopPull && Date.now()-window._hoopPull<25000) return;
   window._hoopPull=Date.now();
@@ -3362,6 +3386,7 @@ async function refreshTnHoops(){
     const r=await fetch("/data/tssaa-hoops.json?ts="+Date.now(),{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=d; }
   }catch(e){}
+  hoopRecall();
   const day=chiToday();
   const iso=tnIso(day);
   for(const sportid of [3,2]){
@@ -3392,12 +3417,13 @@ async function refreshTnHoops(){
       window.TNHOOP=pack;
     }catch(e){}
   }
+  hoopRemember();
   if(window.TN_TAB==="bb"||window.TN_TAB==="gb") paintTnHoop(window.TN_TAB);
 }
 function tnHoopHour(){
   const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"2-digit",hour12:false}).formatToParts(new Date());
   const h=Number(parts.find(x=>x.type==="hour").value);
-  return h>=16 && h<=23;
+  return h>=15 && h<=23;
 }
 function startTnHoopClock(){
   const tick=async()=>{

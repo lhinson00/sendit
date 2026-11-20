@@ -45,6 +45,62 @@ async function get(url){
   throw new Error(last);
 }
 
+function normName(s){
+  return clean(s).toLowerCase()
+    .replace(/\bcounty\b/g,"co")
+    .replace(/\b(high school|academy|christian|school|the|hamblen)\b/g,"")
+    .replace(/[^a-z0-9]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function nameFit(team, name){
+  if(!team || !name) return false;
+  if(team===name) return true;
+  if(name.length<5 || team.length<5) return false;
+  return team.startsWith(name) || name.startsWith(team);
+}
+async function maxpreps(sport, iso){
+  const [y,m,d] = iso.split("-");
+  const date = Number(m)+"/"+Number(d)+"/"+y;
+  const url = sport==="girls"
+    ? "https://www.maxpreps.com/tn/tennessee/basketball/girls/scores/?date="+encodeURIComponent(date)
+    : "https://www.maxpreps.com/tn/tennessee/basketball/scores/?date="+encodeURIComponent(date);
+  const res = await fetch(url, {headers:UA, redirect:"follow"});
+  if(!res.ok) throw new Error(res.status+" maxpreps");
+  const html = await res.text();
+  const rows = [];
+  const re = /<ul class="teams"\s*>([\s\S]*?)<\/ul>\s*<div class="details"\s*>([^<]*)/g;
+  let hit;
+  while((hit = re.exec(html))){
+    const chunk = hit[1];
+    if(/junior-varsity|freshman|\/jv-/i.test(chunk)) continue;
+    const sides = [...chunk.matchAll(/<div class="score"\s*>([^<]*)<\/div>[\s\S]*?<div class="name"\s*>([^<]+)/g)];
+    if(sides.length<2) continue;
+    rows.push({n1:clean(sides[0][2]), s1:clean(sides[0][1]), n2:clean(sides[1][2]), s2:clean(sides[1][1]), status:clean(hit[2])});
+  }
+  return rows;
+}
+function applyMax(all, rows, iso, sport){
+  let n = 0;
+  const pool = all.filter(g=>g.date===iso && g.sport===sport);
+  for(const row of rows){
+    const n1 = normName(row.n1), n2 = normName(row.n2);
+    const g = pool.find(x=> (nameFit(normName(x.away), n1) && nameFit(normName(x.home), n2)) || (nameFit(normName(x.away), n2) && nameFit(normName(x.home), n1)));
+    if(!g) continue;
+    const away = normName(g.away);
+    const firstAway = nameFit(away, n1);
+    const as = firstAway ? row.s1 : row.s2;
+    const hs = firstAway ? row.s2 : row.s1;
+    const have = String(g.as||"").trim()!=="" && String(g.hs||"").trim()!=="" && /final/i.test(g.status||"");
+    if(have) continue;
+    if(as) g.as = as;
+    if(hs) g.hs = hs;
+    if(row.status) g.status = row.status;
+    n++;
+  }
+  return n;
+}
+
 function parseBoard(html, iso){
   const games = [];
   let group = "";
@@ -115,7 +171,9 @@ const from = START < addDays(today,-10) ? addDays(today,-10) : START;
 const dates = daysFrom(from, today).filter(d=>d>=START && d<=today);
 const games = [];
 const okDates = new Set();
+let coachBlocked = false;
 for(const iso of dates){
+  if(coachBlocked) break;
   try{
     const html = await get("https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+mdy(iso));
     const rows = parseBoard(html, iso);
@@ -123,12 +181,10 @@ for(const iso of dates){
     okDates.add(iso);
     console.log(iso, rows.length);
   }catch(e){
-    console.log("skip", iso, e.message);
+    const msg = String(e && e.message || e);
+    console.log("skip", iso, msg.slice(0,160));
+    if(/403/.test(msg)) coachBlocked = true;
   }
-}
-if(!okDates.size){
-  console.log("no scoreboard reached");
-  process.exit(0);
 }
 const byId = new Map();
 for(const g of (prev.games||[])) if(!okDates.has(g.date)) byId.set(g.id, g);
@@ -142,6 +198,17 @@ for(const g of games){
   byId.set(g.id, g);
 }
 const all = [...byId.values()];
+let filled = okDates.size;
+for(const iso of dates){
+  for(const sport of ["boys","girls"]){
+    try{
+      const rows = await maxpreps(sport, iso);
+      const n = applyMax(all, rows, iso, sport);
+      console.log("maxpreps", iso, sport, rows.length, "matched", n);
+      if(n) filled++;
+    }catch(e){ console.log("maxpreps skip", iso, sport, String(e && e.message || e).slice(0,120)); }
+  }
+}
 const day = mdy(today);
 for(const [sportid, sport] of [[3,"boys"],[2,"girls"]]){
   try{
@@ -157,9 +224,14 @@ for(const [sportid, sport] of [[3,"boys"],[2,"girls"]]){
       if(vs) g.as=vs;
       if(hs) g.hs=hs;
       if(row.period) g.status=String(row.period).trim();
+      filled++;
     }
     console.log("live", sport, rows.length);
   }catch(e){ console.log("live skip", sport, String(e).slice(0,80)); }
+}
+if(!filled){
+  console.log("no scoreboard reached");
+  process.exit(0);
 }
 
 const need = [];
