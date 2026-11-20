@@ -1,1 +1,29 @@
-PLACEHOLDER_WILL_REPLACE
+{
+  "asOf": "2026-11-19 7:33 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {
+        "id": "morristown-east-david-crockett-11192026",
+        "date": "11-19-2026",
+        "status": "7:00 PM",
+        "away": "Morristown East",
+        "home": "David Crockett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "tennessee-dobynsbennett-11192026",
+        "date": "11-19-2026",
+        "status": "Final",
+        "away": "Tennessee",
+        "home": "Dobyns-Bennett",
+        "as": "45",
+        "hs": "47"
+      }
+    ]
+  },
+  "boys": {
+    "games": []
+  }
+}
