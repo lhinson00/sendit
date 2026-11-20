@@ -2,7 +2,7 @@ import {readFileSync, writeFileSync, existsSync} from "node:fs";
 
 const START = "2026-11-16";
 const OUT = "data/tssaa-hoops.json";
-const UA = {"user-agent":"SportsSauce/1.0"};
+const UA = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36","accept":"text/html,application/xhtml+xml"};
 
 function chiToday(){
   const parts = new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
@@ -27,9 +27,22 @@ function clean(s){
   return String(s||"").replace(/<[^>]+>/g," ").replace(/&middot;/g,"·").replace(/&/g,"&").replace(/&nbsp;/g," ").replace(/&#39;/g,"'").replace(/\s+/g," ").trim();
 }
 async function get(url){
-  const res = await fetch(url, {headers:UA});
-  if(!res.ok) throw new Error(res.status+" "+url);
-  return res.text();
+  const tries = [
+    url,
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(url),
+    "https://corsproxy.io/?"+encodeURIComponent(url)
+  ];
+  let last = url;
+  for(const u of tries){
+    try{
+      const res = await fetch(u, {headers:UA, redirect:"follow"});
+      if(!res.ok){ last = res.status+" "+u; continue; }
+      const text = await res.text();
+      if(/eventRow|Quick Facts|Division/.test(text)) return text;
+      last = "unreadable "+u;
+    }catch(e){ last = String(e); }
+  }
+  throw new Error(last);
 }
 
 function parseBoard(html, iso){
@@ -101,16 +114,53 @@ const today = chiToday();
 const from = START < addDays(today,-10) ? addDays(today,-10) : START;
 const dates = daysFrom(from, today).filter(d=>d>=START && d<=today);
 const games = [];
+const okDates = new Set();
 for(const iso of dates){
-  const html = await get("https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+mdy(iso));
-  const rows = parseBoard(html, iso);
-  games.push(...rows);
-  console.log(iso, rows.length);
+  try{
+    const html = await get("https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+mdy(iso));
+    const rows = parseBoard(html, iso);
+    games.push(...rows);
+    okDates.add(iso);
+    console.log(iso, rows.length);
+  }catch(e){
+    console.log("skip", iso, e.message);
+  }
+}
+if(!okDates.size){
+  console.log("no scoreboard reached");
+  process.exit(0);
 }
 const byId = new Map();
-for(const g of (prev.games||[])) if(g.date<from) byId.set(g.id, g);
-for(const g of games) byId.set(g.id, g);
+for(const g of (prev.games||[])) if(!okDates.has(g.date)) byId.set(g.id, g);
+for(const g of games){
+  const old = (prev.games||[]).find(x=>x.id===g.id);
+  if(old){
+    if((g.as===""||g.as==null) && old.as) g.as=old.as;
+    if((g.hs===""||g.hs==null) && old.hs) g.hs=old.hs;
+    if((!g.status || /\b(am|pm)\b/i.test(g.status)) && old.status && !/\b(am|pm)\b/i.test(old.status)) g.status=old.status;
+  }
+  byId.set(g.id, g);
+}
 const all = [...byId.values()];
+const day = mdy(today);
+for(const [sportid, sport] of [[3,"boys"],[2,"girls"]]){
+  try{
+    const res = await fetch("https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid="+sportid+"&selDate="+encodeURIComponent(day)+"&bust="+Date.now(), {headers:UA});
+    if(!res.ok) continue;
+    const rows = await res.json();
+    if(!Array.isArray(rows)) continue;
+    for(const row of rows){
+      const g = all.find(x=>x.id===String(row.eventid||""));
+      if(!g) continue;
+      const vs=String(row.visitingscore??"").trim();
+      const hs=String(row.hostscore??"").trim();
+      if(vs) g.as=vs;
+      if(hs) g.hs=hs;
+      if(row.period) g.status=String(row.period).trim();
+    }
+    console.log("live", sport, rows.length);
+  }catch(e){ console.log("live skip", sport, String(e).slice(0,80)); }
+}
 
 const need = [];
 const seen = new Set();
