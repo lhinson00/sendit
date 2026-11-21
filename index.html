@@ -2390,15 +2390,18 @@ function paintDayTabs(lg){
 async function pullDayBoard(lg){
   const base=URLS[lg];
   const off=LEAGUE===lg?Number(slateOff(lg))||0:0;
+  const extra=(lg==="cbb"||lg==="wcbb")?"&groups=50&limit=400":"";
+  const dated=base+(base.includes("?")?"&":"?")+"dates="+chiStamp(off)+extra;
   try{
-    const res=await fetch(base+"?dates="+chiStamp(off),{cache:"no-store"});
+    const res=await fetch(dated,{cache:"no-store"});
     if(res.ok){
       const evs=(await res.json()).events||[];
       if(evs.length || off) return evs;
     }
   }catch(e){}
   if(off) return [];
-  const res=await fetch(base,{cache:"no-store"});
+  const plain=extra?base+(base.includes("?")?"&":"?")+extra.slice(1):base;
+  const res=await fetch(plain,{cache:"no-store"});
   if(!res.ok) throw new Error("unavailable");
   return (await res.json()).events||[];
 }
