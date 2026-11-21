@@ -80,7 +80,7 @@ async function maxpreps(sport, iso){
   }
   return rows;
 }
-function applyMax(all, rows, iso, sport){
+function applyMax(all, rows, iso, sport, allowInsert){
   let n = 0;
   const real = all.filter(g=>g.date===iso && g.sport===sport && !String(g.id).startsWith("mp"));
   const same = (g, n1, n2)=> (nameFit(normName(g.away), n1) && nameFit(normName(g.home), n2)) || (nameFit(normName(g.away), n2) && nameFit(normName(g.home), n1));
@@ -101,6 +101,7 @@ function applyMax(all, rows, iso, sport){
       continue;
     }
     if(!row.s1 && !row.s2) continue;
+    if(!allowInsert) continue;
     const id = "mp-"+sport+"-"+iso+"-"+n1.slice(0,18)+"-"+n2.slice(0,18);
     if(all.some(x=>x.id===id)) continue;
     all.push({id, date:iso, sport, group:"", status:row.status||(row.s1||row.s2?"Final":""), away:row.n1, awayId:"", as:row.s1||"", home:row.n2, homeId:"", hs:row.s2||""});
@@ -200,7 +201,7 @@ for(const iso of dates){
   }
 }
 const byId = new Map();
-for(const g of (prev.games||[])) if(!okDates.has(g.date)) byId.set(g.id, g);
+for(const g of (prev.games||[])) if(!okDates.has(g.date) && !(String(g.id).startsWith("mp") && g.date!==today)) byId.set(g.id, g);
 for(const g of games){
   const old = (prev.games||[]).find(x=>x.id===g.id);
   if(old){
@@ -216,7 +217,7 @@ for(const iso of dates){
   for(const sport of ["boys","girls"]){
     try{
       const rows = await maxpreps(sport, iso);
-      const n = applyMax(all, rows, iso, sport);
+      const n = applyMax(all, rows, iso, sport, iso===today);
       console.log("maxpreps", iso, sport, rows.length, "matched", n);
       if(n) filled++;
     }catch(e){ console.log("maxpreps skip", iso, sport, String(e && e.message || e).slice(0,120)); }
