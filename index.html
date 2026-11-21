@@ -2549,6 +2549,44 @@ function chiToday(){
   const g=k=>parts.find(x=>x.type===k).value;
   return g("month")+"-"+g("day")+"-"+g("year");
 }
+function tnShiftDay(mdy, delta){
+  const p=String(mdy||"").split("-").map(Number);
+  if(p.length<3) return mdy;
+  const dt=new Date(Date.UTC(p[2], p[0]-1, p[1]+delta));
+  const mm=String(dt.getUTCMonth()+1).padStart(2,"0");
+  const dd=String(dt.getUTCDate()).padStart(2,"0");
+  return mm+"-"+dd+"-"+dt.getUTCFullYear();
+}
+function tnResultDays(){
+  const t=chiToday();
+  return [...new Set([t, tnShiftDay(t,-1), fridaySelDate()])];
+}
+function tnTakeFile(d){
+  if(!d || !Array.isArray(d.games) || d.games.length<100) return;
+  const pack=window.TNFB||{games:[],standings:[]};
+  pack.games=pack.games||[];
+  const by=new Map(pack.games.map(g=>[String(g.id), g]));
+  d.games.forEach(g=>{
+    const old=by.get(String(g.id));
+    if(!old){ pack.games.push(g); by.set(String(g.id), g); return; }
+    const oldFinal=/final/i.test(old.status||"") && old.as!=="" && old.as!=null && old.hs!=="" && old.hs!=null;
+    const incomingFinal=/final/i.test(g.status||"") && g.as!=="" && g.as!=null && g.hs!=="" && g.hs!=null;
+    if(incomingFinal || !oldFinal){
+      if(g.as!=="" && g.as!=null) old.as=g.as;
+      if(g.hs!=="" && g.hs!=null) old.hs=g.hs;
+      if(g.status) old.status=g.status;
+    }
+    if(g.region) old.region=g.region;
+    if(g.ar) old.ar=g.ar;
+    if(g.hr) old.hr=g.hr;
+    if(g.aid) old.aid=g.aid;
+    if(g.hid) old.hid=g.hid;
+    if(g.date) old.date=g.date;
+  });
+  pack.asOf=d.asOf||pack.asOf;
+  window.TNFB=pack;
+  window.TN_IDS=new Set(pack.games.map(g=>String(g.id)));
+}
 function rosterSheet(groups){
   return (groups||[]).filter(g=>g.rows&&g.rows.length).map(g=>`<div class="sgrp"><h3>${g.title}</h3><div class="rsheet"><div class="rhead"><span>#</span><span>Player</span><span>Pos</span></div>${g.rows.map(p=>`<button type="button" class="rline prow" data-pid="${p.id||""}" data-pname="${String(p.name||"").replace(/"/g,"")}"><span class="rno">${p.no||""}</span><span class="rname">${p.name||""}</span><span class="rpos">${p.pos||""}</span></button>`).join("")}</div></div>`).join("");
 }
@@ -2757,62 +2795,38 @@ function tnLiveStatus(d){
   return left ? (period+" "+left) : period;
 }
 async function refreshTnFromSource(why){
-  if(window._tnPull && Date.now()-window._tnPull<30000) return;
+  if(window._tnPull && Date.now()-window._tnPull<20000) return;
   window._tnPull=Date.now();
   if(typeof loadTnBracketFile==="function") await loadTnBracketFile(true);
-  const day=fridaySelDate();
-  const liveUrl="https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid=1&selDate="+encodeURIComponent(day)+"&bust="+Date.now();
   try{
-    const r=await fetch(liveUrl,{cache:"no-store"});
+    const r=await fetch("/data/tssaa.json?ts="+Date.now(),{cache:"no-store"});
     if(r.ok){
-      const data=await r.json();
-      if(Array.isArray(data) && data.length){
-        const rows=data.map(d=>({
-          id:String(d.eventid||""),
-          sport:"Football",
-          status:tnLiveStatus(d),
-          away:String(d.visitingname||"").trim(),
-          home:String(d.hostname||"").trim(),
-          as:String(d.visitingscore==null?"":d.visitingscore).trim(),
-          hs:String(d.hostscore==null?"":d.hostscore).trim()
-        })).filter(x=>x.id&&x.away&&x.home);
-        if(rows.length){
-          const n=applyTnScores(rows, day);
-          window.TN_WEEK=day;
-          if(typeof stampTnPins==="function") stampTnPins();
-          if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
-          else if(window.VIEW_NOW==="home" && typeof paintYours==="function") paintYours(true);
-          const line=$("liveMeta");
-          if(line && LEAGUE==="tssaa") line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
-          return;
-        }
-      }
+      const text=await r.text();
+      if(text.trim().startsWith("{")) tnTakeFile(JSON.parse(text));
     }
   }catch(e){}
-  const src="https://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day;
-  const proxies=[
-    "https://api.allorigins.win/raw?url="+encodeURIComponent(src),
-    "https://r.jina.ai/http://www.coacht.com/tennessee/scoreboard/index.cfm?selDate="+day
-  ];
-  for(const u of proxies){
-    const ctl=new AbortController();
-    const timer=setTimeout(()=>ctl.abort(), 25000);
+  for(const day of tnResultDays()){
+    const liveUrl="https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid=1&selDate="+encodeURIComponent(day)+"&bust="+Date.now();
     try{
-      const r=await fetch(u,{cache:"no-store", signal:ctl.signal});
+      const r=await fetch(liveUrl,{cache:"no-store"});
       if(!r.ok) continue;
-      const html=await r.text();
-      const rows=parseTnBoard(html);
-      if(!rows.length) continue;
-      const n=applyTnScores(rows, day);
-      window.TN_WEEK=day;
-      if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
-      const line=$("liveMeta");
-      if(line) line.textContent="TSSAA · Football · "+((window.TNFB||{}).asOf||"")+" · "+n+" games";
-      return;
+      const data=await r.json();
+      if(!Array.isArray(data) || !data.length) continue;
+      const rows=data.map(d=>({
+        id:String(d.eventid||""),
+        sport:"Football",
+        status:tnLiveStatus(d),
+        away:String(d.visitingname||"").trim(),
+        home:String(d.hostname||"").trim(),
+        as:String(d.visitingscore==null?"":d.visitingscore).trim(),
+        hs:String(d.hostscore==null?"":d.hostscore).trim()
+      })).filter(x=>x.id&&x.away&&x.home);
+      if(rows.length) applyTnScores(rows, day);
     }catch(e){}
-    finally{ clearTimeout(timer); }
   }
   if(LEAGUE==="tssaa" && window.TN_TAB==="fb") paintTnSlate();
+  else if(window.VIEW_NOW==="home" && typeof paintYours==="function") paintYours(true);
+  if(window.TN_TAB==="brack" && typeof patchOpenBracket==="function") patchOpenBracket();
 }
 function msToNextFriNightPull(){
   const now=new Date();
@@ -2835,11 +2849,10 @@ function tnLiveHour(){
 }
 function startTnFridayClock(){
   const tick=async()=>{
-    if(tnLiveHour()) await refreshTnFromSource("clock");
-    setTimeout(tick, tnLiveHour()?45000:Math.min(msToNextFriNightPull(), 15*60*1000));
+    await refreshTnFromSource("clock");
+    setTimeout(tick, tnLiveHour()?45000:120000);
   };
-  if(tnLiveHour()) refreshTnFromSource("boot");
-  setTimeout(tick, tnLiveHour()?45000:4000);
+  setTimeout(tick, 4000);
 }
 window.startTnFridayClock = startTnFridayClock;
 
@@ -3426,43 +3439,64 @@ function hoopRecall(){
     });
   }catch(e){}
 }
+function hoopKeep(next){
+  const prev=hoopPack();
+  const live=new Map();
+  (prev.games||[]).forEach(g=>{
+    if(g.as===""||g.as==null||g.hs===""||g.hs==null) return;
+    if(/\b(am|pm)\b/i.test(g.status||"") && !/qt|half|final|ot/i.test(g.status||"")) return;
+    live.set(String(g.id), g);
+  });
+  next.games=next.games||[];
+  next.games.forEach(g=>{
+    const old=live.get(String(g.id));
+    if(!old) return;
+    const blank=g.as===""||g.as==null||/\b(am|pm)\b/i.test(g.status||"");
+    if(blank){ g.as=old.as; g.hs=old.hs; if(old.status) g.status=old.status; }
+  });
+  const ids=new Set(next.games.map(g=>String(g.id)));
+  live.forEach((g,id)=>{ if(!ids.has(id)) next.games.push(g); });
+  if(!next.schools && prev.schools) next.schools=prev.schools;
+  return next;
+}
 async function refreshTnHoops(){
-  if(window._hoopPull && Date.now()-window._hoopPull<25000) return;
+  if(window._hoopPull && Date.now()-window._hoopPull<20000) return;
   window._hoopPull=Date.now();
   try{
-    const r=await fetch("/data/tssaa-hoops.json?v=1120b&ts="+Date.now(),{cache:"no-store"});
-    if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=d; }
+    const r=await fetch("/data/tssaa-hoops.json?ts="+Date.now(),{cache:"no-store"});
+    if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=hoopKeep(d); }
   }catch(e){}
   hoopRecall();
-  const day=chiToday();
-  const iso=tnIso(day);
-  for(const sportid of [3,2]){
-    try{
-      const r=await fetch("https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid="+sportid+"&selDate="+encodeURIComponent(day)+"&bust="+Date.now(),{cache:"no-store"});
-      if(!r.ok) continue;
-      const data=await r.json();
-      if(!Array.isArray(data)||!data.length) continue;
-      const sport=sportid===2?"girls":"boys";
-      const pack=hoopPack();
-      pack.games=pack.games||[];
-      data.forEach(d=>{
-        const id=String(d.eventid||"");
-        if(!id) return;
-        let g=pack.games.find(x=>String(x.id)===id);
-        const status=tnLiveStatus(d);
-        const as=String(d.visitingscore==null?"":d.visitingscore).trim();
-        const hs=String(d.hostscore==null?"":d.hostscore).trim();
-        if(!g){
-          g={id, date:iso, sport, group:"", status, away:String(d.visitingname||"").trim(), home:String(d.hostname||"").trim(), awayId:"", homeId:"", as, hs};
-          pack.games.push(g);
-        } else {
-          if(as!=="") g.as=as;
-          if(hs!=="") g.hs=hs;
-          if(status && status!=="Tonight") g.status=status;
-        }
-      });
-      window.TNHOOP=pack;
-    }catch(e){}
+  for(const day of tnResultDays()){
+    const iso=tnIso(day);
+    for(const sportid of [3,2]){
+      try{
+        const r=await fetch("https://www.coacht.com/tennessee/scoreboard/updates_init.cfm?sportid="+sportid+"&selDate="+encodeURIComponent(day)+"&bust="+Date.now(),{cache:"no-store"});
+        if(!r.ok) continue;
+        const data=await r.json();
+        if(!Array.isArray(data)||!data.length) continue;
+        const sport=sportid===2?"girls":"boys";
+        const pack=hoopPack();
+        pack.games=pack.games||[];
+        data.forEach(d=>{
+          const id=String(d.eventid||"");
+          if(!id) return;
+          let g=pack.games.find(x=>String(x.id)===id);
+          const status=tnLiveStatus(d);
+          const as=String(d.visitingscore==null?"":d.visitingscore).trim();
+          const hs=String(d.hostscore==null?"":d.hostscore).trim();
+          if(!g){
+            g={id, date:iso, sport, group:"", status, away:String(d.visitingname||"").trim(), home:String(d.hostname||"").trim(), awayId:"", homeId:"", as, hs};
+            pack.games.push(g);
+          } else {
+            if(as!=="") g.as=as;
+            if(hs!=="") g.hs=hs;
+            if(status && status!=="Tonight") g.status=status;
+          }
+        });
+        window.TNHOOP=pack;
+      }catch(e){}
+    }
   }
   hoopRemember();
   if(window.TN_TAB==="bb"||window.TN_TAB==="gb") paintTnHoop(window.TN_TAB);
@@ -3474,8 +3508,8 @@ function tnHoopHour(){
 }
 function startTnHoopClock(){
   const tick=async()=>{
-    if(tnHoopHour()) await refreshTnHoops();
-    setTimeout(tick, tnHoopHour()?60000:10*60*1000);
+    await refreshTnHoops();
+    setTimeout(tick, tnHoopHour()?45000:120000);
   };
   refreshTnHoops();
   setTimeout(tick, 8000);
