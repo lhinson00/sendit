@@ -1,1 +1,200 @@
-PLACEHOLDER
+{
+  "asOf": "2026-11-20 7:30 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {
+        "id": "acts-cloudland-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "ACTS",
+        "home": "Cloudland",
+        "as": "44",
+        "hs": "60"
+      },
+      {
+        "id": "sullivan-east-north-greene-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Sullivan East",
+        "home": "North Greene",
+        "as": "33",
+        "hs": "73"
+      },
+      {
+        "id": "grainger-unicoi-county-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Grainger",
+        "home": "Unicoi County",
+        "as": "72",
+        "hs": "26"
+      },
+      {
+        "id": "union-county-university-high-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Union County",
+        "home": "University High",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "daniel-boone-pigeon-forge-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Daniel Boone",
+        "home": "Pigeon Forge",
+        "as": "44",
+        "hs": "54"
+      },
+      {
+        "id": "morristown-east-karns-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Morristown East",
+        "home": "Karns",
+        "as": "52",
+        "hs": "18"
+      },
+      {
+        "id": "tellico-plains-clinton-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Tellico Plains",
+        "home": "Clinton",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "grundy-county-copper-basin-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Grundy County",
+        "home": "Copper Basin",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "tyner-academy-howard-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Tyner Academy",
+        "home": "Howard",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "warren-county-walker-valley-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Warren County",
+        "home": "Walker Valley",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "cane-ridge-shelbyville-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Cane Ridge",
+        "home": "Shelbyville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "sale-creek-soddy-daisy-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Sale Creek",
+        "home": "Soddy Daisy",
+        "as": "17",
+        "hs": "54"
+      },
+      {
+        "id": "cascade-jackson-county-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Cascade",
+        "home": "Jackson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "wilson-central-dekalb-county-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Wilson Central",
+        "home": "DeKalb County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "antioch-east-nashville-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Antioch",
+        "home": "East Nashville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "mcewen-jo-byrns-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "McEwen",
+        "home": "Jo Byrns",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "franklin-county-fayetteville-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Franklin County",
+        "home": "Fayetteville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "sycamore-summertown-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "Sycamore",
+        "home": "Summertown",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "riverside-christian-hampshire-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Riverside Christian",
+        "home": "Hampshire",
+        "as": "59",
+        "hs": "29"
+      },
+      {
+        "id": "university-school-of-nashville-martin-luther-king-11202026",
+        "date": "11-20-2026",
+        "status": "6:00 PM",
+        "away": "University School of Nashville",
+        "home": "Martin Luther King",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "perry-county-santa-fe-11202026",
+        "date": "11-20-2026",
+        "status": "Final",
+        "away": "Perry County",
+        "home": "Santa Fe",
+        "as": "45",
+        "hs": "51"
+      }
+    ]
+  },
+  "boys": {
+    "games": []
+  }
+}
