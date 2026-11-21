@@ -212,6 +212,7 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .bbnav button{flex:0 0 auto;min-height:36px;border:1px solid #2a241c;background:#101218;color:#cfc6b8;border-radius:999px;padding:8px 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;touch-action:manipulation}
 .bbnav button.on{background:#ff7a18;color:#140800;border-color:#ff7a18}
 .bbcount{margin:8px 0 0;color:#ffc46b;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.tnpull{margin:0 0 8px;color:#9b9288;font-size:11px;letter-spacing:.04em}
 .bbsec{margin:16px 0 8px}
 button.bbsec{display:block;width:100%;text-align:left;background:transparent;border:0;padding:0;color:inherit;cursor:pointer}
 .bbsec h3{margin:0;font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;line-height:.95;color:#ff7a18}
@@ -2583,6 +2584,7 @@ function tnTakeFile(d){
     if(g.hid) old.hid=g.hid;
     if(g.date) old.date=g.date;
   });
+  if(d.pulled) pack.pulled=d.pulled;
   pack.asOf=d.asOf||pack.asOf;
   window.TNFB=pack;
   window.TN_IDS=new Set(pack.games.map(g=>String(g.id)));
@@ -2647,7 +2649,6 @@ function applyTnScores(rows, day){
     if(String(g.region||"").trim()) return true;
     return false;
   });
-pack.asOf=new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
   pack.liveDay=day;
   window.TNFB=pack;
   try{ sessionStorage.setItem("sauceTnLive", JSON.stringify({day:day, games:pack.games.filter(g=>g.date===day), asOf:pack.asOf})); }catch(e){}
@@ -2890,6 +2891,14 @@ function tnGameReg(g, map){
   if(r!=="Independent") return r;
   return (map&& (map[g.home]||map[g.away])) || "Independent";
 }
+function tnPullStamp(pack){
+  const raw=pack&&pack.pulled;
+  if(!raw) return "";
+  const dt=new Date(raw);
+  if(isNaN(dt.getTime())) return "";
+  const s=dt.toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  return `<p class="tnpull">Updated ${s} CT</p>`;
+}
 function paintTnSlate(){
   const pack=window.TNFB||{games:[],standings:[]};
   const horizon=tnDateKey(fridaySelDate());
@@ -2948,7 +2957,7 @@ function paintTnSlate(){
     });
     return `<p class="kicker" style="margin:14px 0 8px">${fmtTnDate(d)} · ${list.length} games</p>`+list.map(card).join("");
   }).join("") || `<p class="hint">No games in this region for that date.</p>`;
-  $("liveList").innerHTML = weekPills + classPills + regPills + body;
+  $("liveList").innerHTML = tnPullStamp(pack) + weekPills + classPills + regPills + body;
   const weeks=$("tnWeeks");
   if(weeks) weeks.onclick=e=>{
     const b=e.target.closest("[data-tnweek]"); if(!b) return;
@@ -3532,6 +3541,7 @@ function paintTnHoop(kind){
   const idKey=girls?"TN_GB_ID":"TN_BB_ID";
   if(!window[viewKey]) window[viewKey]="scores";
   const view=window[viewKey];
+  const pull=tnPullStamp(pack);
   if($("liveMeta")) $("liveMeta").textContent="TSSAA · "+label+(pack.asOf?(" · "+new Date(pack.asOf).toLocaleString("en-US",{timeZone:"America/Chicago",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})+" CT"):"");
   const tabs=`<div class="bbnav" id="hoopViews">
     <button type="button" data-hv="scores" class="${view==="scores"?"on":""}">Scores</button>
@@ -3542,7 +3552,7 @@ function paintTnHoop(kind){
     host.querySelectorAll("[data-hv]").forEach(b=>b.onclick=()=>{ window[viewKey]=b.dataset.hv; if(b.dataset.hv!=="schools") window[idKey]=""; paintTnHoop(kind); });
   };
   if(!games.length && view!=="schools"){
-    host.innerHTML=tabs+"<p class='hint' style='padding:8px 0'>Loading scores…</p>";
+    host.innerHTML=pull+tabs+"<p class='hint' style='padding:8px 0'>Loading scores…</p>";
     bindViews();
     if(!window._hoopAsked){ window._hoopAsked=1; refreshTnHoops(); }
     return;
@@ -3550,7 +3560,7 @@ function paintTnHoop(kind){
   if(view==="schools"){
     const schools=(girls?(window.TNGB||{}):(window.TNBB||{})).schools||[];
     if(!schools.length){
-      host.innerHTML=tabs+"<p class='hint' style='padding:8px 0'>Loading schools…</p>";
+      host.innerHTML=pull+tabs+"<p class='hint' style='padding:8px 0'>Loading schools…</p>";
       bindViews();
       return;
     }
@@ -3574,14 +3584,14 @@ function paintTnHoop(kind){
         return `<div class="bbsked"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA"))}</span><em>${esc(result)}</em></div>`;
       }).join("")||"<p class='hint'>No games posted.</p>";
       const players=(open.roster||[]).map(p=>`<div class="bbplayer"><b>${esc(p.n||"")}</b><span>${esc([p.c,p.p,p.h].filter(Boolean).join(" · "))}</span></div>`).join("")||"<p class='hint'>Roster not posted.</p>";
-      host.innerHTML=tabs+`<button type="button" class="bbback" id="bbBack">Back</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
+      host.innerHTML=pull+tabs+`<button type="button" class="bbback" id="bbBack">Back</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
       bindViews();
       const back=$("bbBack");
       if(back) back.onclick=()=>{ if(!tnBack()){ window[idKey]=""; window[viewKey]="scores"; paintTnHoop(kind); } };
       return;
     }
     const hits=q.length<2?[]:schools.filter(s=>String(s.name||"").toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").includes(q)).slice(0,30);
-    host.innerHTML=tabs+`<input class="yq" id="bbq" placeholder="School — Summertown, Lewis County" value="${esc(raw)}" autocomplete="off"/>`+(q.length<2?"<p class='hint' style='padding:8px 0'>Type a school.</p>":(hits.length?hits.map(s=>`<button type="button" class="bbhit" data-bb="${esc(s.id)}"><b>${esc(s.name)}</b></button>`).join(""):"<p class='hint'>No school matched.</p>"));
+    host.innerHTML=pull+tabs+`<input class="yq" id="bbq" placeholder="School — Summertown, Lewis County" value="${esc(raw)}" autocomplete="off"/>`+(q.length<2?"<p class='hint' style='padding:8px 0'>Type a school.</p>":(hits.length?hits.map(s=>`<button type="button" class="bbhit" data-bb="${esc(s.id)}"><b>${esc(s.name)}</b></button>`).join(""):"<p class='hint'>No school matched.</p>"));
     bindViews();
     const box=$("bbq");
     if(box) box.oninput=()=>{ window[qKey]=box.value; paintTnHoop(kind); };
@@ -3670,7 +3680,7 @@ function paintTnHoop(kind){
       const head=dist==="all"?`<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`:"";
       return head+`<button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
     }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
-    host.innerHTML=`<div class="bbstick">${tabs}${picks}</div>`+html;
+    host.innerHTML=`<div class="bbstick">${pull}${tabs}${picks}</div>`+html;
     bindViews();
     bindPicks();
     host.querySelectorAll(".bbstand[data-sn]").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
@@ -3720,7 +3730,7 @@ function paintTnHoop(kind){
       return `<article class="bbcard"><header><span class="bbfin${live?" live":""}">${esc(mark)}</span></header>${row(nm(g.away),g.awayId,g.as,aWin)}${row(nm(g.home),g.homeId,g.hs,hWin)}</article>`;
     }).join("");
   }).join("")||"<p class='hint'>No games for that class and district on this day.</p>";
-  host.innerHTML=`<div class="bbstick">${tabs}${dayPills}${picks}</div>`+countLine+html;
+  host.innerHTML=`<div class="bbstick">${pull}${tabs}${dayPills}${picks}</div>`+countLine+html;
   bindViews();
   bindPicks();
   host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[lockKey]=1; window[dayKey]=b.dataset.hd; paintTnHoop(kind); });

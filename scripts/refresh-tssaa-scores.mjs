@@ -123,7 +123,8 @@ if(fb && Array.isArray(fb.games) && fb.games.length>100){
       if(!had) n++;
     }
   }
-  fb.asOf = new Date().toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"})+" CT";
+  fb.pulled = new Date().toISOString();
+  fb.asOf = fb.pulled;
   writeFileSync(FB, JSON.stringify(fb));
   console.log("football updates", n, "games", fb.games.length);
 }else{
@@ -156,7 +157,8 @@ if(hoop && Array.isArray(hoop.games)){
       if(!had) n++;
     }
   }
-  hoop.asOf = new Date().toISOString();
+  hoop.pulled = new Date().toISOString();
+  hoop.asOf = hoop.pulled;
   writeFileSync(HOOPS, JSON.stringify(hoop));
   console.log("hoops updates", n, "games", hoop.games.length);
 }
