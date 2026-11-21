@@ -267,6 +267,19 @@ await mapPool(need, 8, async (s)=>{
   }catch(e){}
 });
 
+for(const g of all){
+  const take=id=>{
+    const hit=id && schools[g.sport+":"+id];
+    if(!hit || hit.miss || !hit.klass) return null;
+    return hit;
+  };
+  const h=take(g.homeId), a=take(g.awayId);
+  if(h){ g.hdiv=h.division||""; g.hklass=h.klass; g.hreg=String(h.region||""); g.hdist=String(h.district||""); }
+  else { delete g.hdiv; delete g.hklass; delete g.hreg; delete g.hdist; }
+  if(a){ g.adiv=a.division||""; g.aklass=a.klass; g.areg=String(a.region||""); g.adist=String(a.district||""); }
+  else { delete g.adiv; delete g.aklass; delete g.areg; delete g.adist; }
+}
+
 const gamesOut = all.sort((a,b)=>a.date.localeCompare(b.date)||a.sport.localeCompare(b.sport)||String(a.id).localeCompare(String(b.id)));
 const same = JSON.stringify(prev.games||[])===JSON.stringify(gamesOut) && JSON.stringify(prev.schools||{})===JSON.stringify(schools);
 if(same){

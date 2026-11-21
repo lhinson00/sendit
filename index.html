@@ -3272,8 +3272,10 @@ function tnIso(mdy){
 }
 function hoopPack(){ return window.TNHOOP||{games:[],schools:{}}; }
 function hoopMeta(sport, id){
-  if(!id) return null;
-  const hit=(hoopPack().schools||{})[sport+":"+id];
+  const sid=String(id||"").trim();
+  if(!sid) return null;
+  const schools=hoopPack().schools||{};
+  const hit=schools[sport+":"+sid]||schools[sid];
   if(!hit || hit.miss || !hit.klass) return null;
   return hit;
 }
@@ -3293,7 +3295,13 @@ function hoopPlace(g){
   return hoopClean(h, g.group||"");
 }
 function hoopSides(g){
-  return [hoopMeta(g.sport, g.homeId), hoopMeta(g.sport, g.awayId)].filter(Boolean).map(m=>hoopClean(m, g.group||""));
+  const out=[];
+  const add=m=>{ if(!m) return; const c=hoopClean(m, g.group||""); if(c.klass) out.push(c); };
+  add(hoopMeta(g.sport, g.homeId));
+  add(hoopMeta(g.sport, g.awayId));
+  if(g.hklass) add({division:g.hdiv||"", klass:g.hklass, region:g.hreg, district:g.hdist});
+  if(g.aklass) add({division:g.adiv||"", klass:g.aklass, region:g.areg, district:g.adist});
+  return out;
 }
 function hoopBoard(cls){
   if(!cls || cls==="all") return [];
@@ -3385,7 +3393,7 @@ async function refreshTnHoops(){
   if(window._hoopPull && Date.now()-window._hoopPull<25000) return;
   window._hoopPull=Date.now();
   try{
-    const r=await fetch("/data/tssaa-hoops.json?ts="+Date.now(),{cache:"no-store"});
+    const r=await fetch("/data/tssaa-hoops.json?v=1120b&ts="+Date.now(),{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=d; }
   }catch(e){}
   hoopRecall();
@@ -10986,7 +10994,7 @@ async function loadTnPack(){
     if(r.ok){ const d=await r.json(); if(d){ window.TNGB=d; if(window.TN_TAB==="gb" && typeof paintTnHoop==="function") paintTnHoop("gb"); } }
   }catch(e){}
   try{
-    const r=await fetch("/data/tssaa-hoops.json",{cache:"no-store"});
+    const r=await fetch("/data/tssaa-hoops.json?v=1120b",{cache:"no-store"});
     if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)){ window.TNHOOP=d; if((window.TN_TAB==="bb"||window.TN_TAB==="gb") && typeof paintTnHoop==="function") paintTnHoop(window.TN_TAB); } }
   }catch(e){}
 }
