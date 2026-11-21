@@ -1458,7 +1458,7 @@ button.series{width:100%;text-align:left;color:inherit;font:inherit;cursor:point
 <script>
 const URLS = {
   nfl: "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
-  cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=80",
+  cfb: "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?groups=80&limit=300",
   mlb: "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
   nhl: "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard",
   nba: "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
@@ -2387,10 +2387,46 @@ function paintDayTabs(lg){
     loadLeague(lg);
   });
 }
+function leagueConfIds(lg){
+  const rows=lg==="wcbb"?WCBB_CONF:lg==="cbb"?CBB_CONF:lg==="cfb"?CONF:[];
+  return rows.map(r=>r[0]).filter(id=>id && id!=="all" && id!=="top25");
+}
+function boardUrl(base, params){
+  const q=Object.keys(params||{}).filter(k=>params[k]!=null && params[k]!=="").map(k=>k+"="+encodeURIComponent(params[k])).join("&");
+  if(!q) return base;
+  return base+(base.includes("?")?"&":"?")+q;
+}
+async function fetchEvents(url){
+  try{
+    const res=await fetch(url,{cache:"no-store"});
+    if(!res.ok) return [];
+    return (await res.json()).events||[];
+  }catch(e){ return []; }
+}
+function mergeEvents(lists){
+  const seen=new Set(), out=[];
+  (lists||[]).forEach(list=>{(list||[]).forEach(ev=>{
+    const id=String(ev&&ev.id||"");
+    if(!id || seen.has(id)) return;
+    seen.add(id);
+    out.push(ev);
+  });});
+  return out;
+}
+async function pullGroups(base, groups, params){
+  const lists=await Promise.all(groups.map(g=>fetchEvents(boardUrl(base, Object.assign({groups:g, limit:"300"}, params||{})))));
+  return mergeEvents(lists);
+}
 async function pullDayBoard(lg){
   const base=URLS[lg];
   const off=LEAGUE===lg?Number(slateOff(lg))||0:0;
-  const extra=(lg==="cbb"||lg==="wcbb")?"&groups=50&limit=400":"";
+  if(lg==="cbb"||lg==="wcbb"){
+    const groups=["50"].concat(leagueConfIds(lg));
+    const evs=await pullGroups(base, groups, {dates:chiStamp(off)});
+    if(evs.length || off) return evs;
+    return pullGroups(base, groups, {});
+  }
+  const extra="&limit=200";
   const dated=base+(base.includes("?")?"&":"?")+"dates="+chiStamp(off)+extra;
   try{
     const res=await fetch(dated,{cache:"no-store"});
@@ -2400,25 +2436,23 @@ async function pullDayBoard(lg){
     }
   }catch(e){}
   if(off) return [];
-  const plain=extra?base+(base.includes("?")?"&":"?")+extra.slice(1):base;
-  const res=await fetch(plain,{cache:"no-store"});
+  const res=await fetch(base+(base.includes("?")?"&":"?")+"limit=200",{cache:"no-store"});
   if(!res.ok) throw new Error("unavailable");
   return (await res.json()).events||[];
 }
 async function pullCfbEvents(){
-  const base=URLS.cfb;
-  const res=await fetch(base,{cache:"no-store"});
+  const base="https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard";
+  const groups=["80"].concat(leagueConfIds("cfb"));
+  const res=await fetch(boardUrl(base,{groups:"80",limit:"300"}),{cache:"no-store"});
   if(!res.ok) throw new Error("unavailable");
   const d=await res.json();
   const week=noteWeek("cfb", d);
   const year=Number((d.season&&d.season.year)||2026);
   const st=Number((d.season&&d.season.type)||2);
   const off=LEAGUE==="cfb"?slateOff("cfb"):0;
-  if(off && week-off>=1){
-    const r2=await fetch(base+(base.includes("?")?"&":"?")+"year="+year+"&seasontype="+st+"&week="+(week-off),{cache:"no-store"});
-    if(r2.ok){ const d2=await r2.json(); if((d2.events||[]).length) return d2.events; }
-  }
-  return d.events||[];
+  const params=(off && week-off>=1)?{year:String(year), seasontype:String(st), week:String(week-off)}:{};
+  const evs=await pullGroups(base, groups, params);
+  return evs.length?evs:(d.events||[]);
 }
 async function pullNflEvents(){
   const base=URLS.nfl;
