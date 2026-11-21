@@ -3576,10 +3576,9 @@ function paintTnHoop(kind){
   }
   const dates=[...new Set(games.map(g=>g.date))].sort();
   const today=tnIso(chiToday());
-  const finals=dates.filter(d=>games.some(g=>g.date===d && hoopFinal(g)));
-  if(!window[dayKey] || !dates.includes(window[dayKey])){
-    const liveToday=dates.includes(today) && games.some(g=>g.date===today && (hoopFinal(g)||/qt|half|ot/i.test(g.status||"")));
-    window[dayKey]=liveToday?today:(finals[finals.length-1]||dates[dates.length-1]||"");
+  const lockKey=girls?"TN_GB_DAY_LOCK":"TN_BB_DAY_LOCK";
+  if(!window[dayKey] || !dates.includes(window[dayKey]) || (!window[lockKey] && dates.includes(today))){
+    window[dayKey]=dates.includes(today)?today:(dates[dates.length-1]||"");
   }
   const day=window[dayKey];
   const dayPills=`<div class="bbnav" id="hoopDays">${dates.slice(-10).map(d=>{
@@ -3615,7 +3614,7 @@ function paintTnHoop(kind){
   host.innerHTML=`<div class="bbstick">${tabs}${dayPills}${picks}</div>`+html;
   bindViews();
   bindPicks();
-  host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
+  host.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{ window[lockKey]=1; window[dayKey]=b.dataset.hd; paintTnHoop(kind); });
   host.querySelectorAll(".bbteam").forEach(b=>b.onclick=()=>openHoopSchool(kind, b.dataset.sid, b.dataset.sn));
 }
 function tssaaTab(which){

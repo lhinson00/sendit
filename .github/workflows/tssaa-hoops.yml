@@ -1,10 +1,8 @@
 name: TSSAA basketball
 on:
   schedule:
-    # Every evening in Chicago, CST and CDT. Scores update while games are on, then a morning catch.
-    - cron: "*/15 22-23 * * *"
-    - cron: "*/15 0-5 * * *"
-    - cron: "40 12 * * *"
+    # Every 15 minutes. GitHub often delays the evening window and then skips the runs it missed.
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 permissions:
   contents: write

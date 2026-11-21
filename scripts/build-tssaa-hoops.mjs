@@ -82,21 +82,34 @@ async function maxpreps(sport, iso){
 }
 function applyMax(all, rows, iso, sport){
   let n = 0;
-  const pool = all.filter(g=>g.date===iso && g.sport===sport);
+  const real = all.filter(g=>g.date===iso && g.sport===sport && !String(g.id).startsWith("mp"));
+  const same = (g, n1, n2)=> (nameFit(normName(g.away), n1) && nameFit(normName(g.home), n2)) || (nameFit(normName(g.away), n2) && nameFit(normName(g.home), n1));
   for(const row of rows){
     const n1 = normName(row.n1), n2 = normName(row.n2);
-    const g = pool.find(x=> (nameFit(normName(x.away), n1) && nameFit(normName(x.home), n2)) || (nameFit(normName(x.away), n2) && nameFit(normName(x.home), n1)));
-    if(!g) continue;
-    const away = normName(g.away);
-    const firstAway = nameFit(away, n1);
-    const as = firstAway ? row.s1 : row.s2;
-    const hs = firstAway ? row.s2 : row.s1;
-    const have = String(g.as||"").trim()!=="" && String(g.hs||"").trim()!=="" && /final/i.test(g.status||"");
-    if(have) continue;
-    if(as) g.as = as;
-    if(hs) g.hs = hs;
-    if(row.status) g.status = row.status;
+    if(!n1 || !n2) continue;
+    const g = real.find(x=>same(x, n1, n2));
+    if(g){
+      const firstAway = nameFit(normName(g.away), n1);
+      const as = firstAway ? row.s1 : row.s2;
+      const hs = firstAway ? row.s2 : row.s1;
+      const have = String(g.as||"").trim()!=="" && String(g.hs||"").trim()!=="" && /final/i.test(g.status||"");
+      if(have) continue;
+      if(as) g.as = as;
+      if(hs) g.hs = hs;
+      if(row.status) g.status = row.status;
+      n++;
+      continue;
+    }
+    if(!row.s1 && !row.s2) continue;
+    const id = "mp-"+sport+"-"+iso+"-"+n1.slice(0,18)+"-"+n2.slice(0,18);
+    if(all.some(x=>x.id===id)) continue;
+    all.push({id, date:iso, sport, group:"", status:row.status||(row.s1||row.s2?"Final":""), away:row.n1, awayId:"", as:row.s1||"", home:row.n2, homeId:"", hs:row.s2||""});
     n++;
+  }
+  for(let i=all.length-1;i>=0;i--){
+    const g = all[i];
+    if(!String(g.id).startsWith("mp") || g.date!==iso || g.sport!==sport) continue;
+    if(real.some(x=>same(x, normName(g.away), normName(g.home)))) all.splice(i,1);
   }
   return n;
 }
@@ -253,7 +266,13 @@ await mapPool(need, 8, async (s)=>{
   }catch(e){}
 });
 
-const out = {asOf:new Date().toISOString(), games:all.sort((a,b)=>a.date.localeCompare(b.date)||a.sport.localeCompare(b.sport)), schools};
+const gamesOut = all.sort((a,b)=>a.date.localeCompare(b.date)||a.sport.localeCompare(b.sport)||String(a.id).localeCompare(String(b.id)));
+const same = JSON.stringify(prev.games||[])===JSON.stringify(gamesOut) && JSON.stringify(prev.schools||{})===JSON.stringify(schools);
+if(same){
+  console.log("unchanged");
+  process.exit(0);
+}
+const out = {asOf:new Date().toISOString(), games:gamesOut, schools};
 writeFileSync(OUT, JSON.stringify(out));
 const tagged = all.filter(g=>schools[g.sport+":"+g.homeId]||schools[g.sport+":"+g.awayId]).length;
 console.log("games", all.length, "schools", Object.keys(schools).length, "tagged", tagged);
