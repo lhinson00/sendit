@@ -208,6 +208,11 @@ h1{margin:0;font-family:"Bebas Neue",sans-serif;letter-spacing:.04em}
 .bbhit{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:#101218;border:1px solid #2a241c;color:#fff;border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
 .bbstick{position:sticky;top:0;z-index:8;background:#05060a;padding:6px 0 8px}
 .bblab{margin:8px 0 4px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#ff7a18;font-weight:800}
+.bbfilt{display:grid;grid-template-columns:1.15fr 1fr .9fr;gap:6px;margin:6px 0 0}
+.bbfilt label{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9b9288;font-weight:800}
+.bbfilt select{width:100%;height:36px;border-radius:10px;border:1px solid #2a241c;background:#101218;color:#fff;font-size:16px;font-weight:700;padding:0 4px}
+.bbfilt select:disabled{opacity:.4}
+.bbdays{flex-wrap:nowrap;overflow-x:auto}
 .bbnav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 2px}
 .bbnav button{flex:0 0 auto;min-height:36px;border:1px solid #2a241c;background:#101218;color:#cfc6b8;border-radius:999px;padding:8px 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;touch-action:manipulation}
 .bbnav button.on{background:#ff7a18;color:#140800;border-color:#ff7a18}
@@ -3608,21 +3613,15 @@ function paintTnHoop(kind){
   const districts=(board.find(b=>b.region===reg)||{}).districts||[];
   if(!window[distKey] || (window[distKey]!=="all" && !districts.includes(window[distKey]))) window[distKey]="all";
   const dist=reg==="all"?"all":window[distKey];
-  const clsPills=`<div class="bblab">Class</div><div class="bbnav" id="hoopCls">${classes.map(c=>{
-    const lab=c==="all"?"All":(c.startsWith("II|")?"D-II ":"")+c.split("|").pop();
-    return `<button type="button" data-hcls="${c}" class="${c===cls?"on":""}">${lab}</button>`;
-  }).join("")}</div>`;
-  const regPills=`<div class="bblab">Region</div>`+(cls==="all"?"<p class='hint' style='margin:0 0 4px'>Choose a class.</p>":`<div class="bbnav" id="hoopReg"><button type="button" data-hreg="all" class="${reg==="all"?"on":""}">All</button>${regions.map(r=>`<button type="button" data-hreg="${esc(r)}" class="${r===reg?"on":""}">${/^\d+$/.test(r)?"R"+r:esc(r)}</button>`).join("")}</div>`);
-  const distPills=(()=>{
-    if(cls==="all") return `<div class="bblab">District</div><p class="hint" style="margin:0 0 4px">Choose a class, then a region.</p>`;
-    if(reg==="all") return `<div class="bblab">District</div><p class="hint" style="margin:0 0 4px">Choose a region.</p>`;
-    if(!districts.length) return "";
-    return `<div class="bblab">District</div><div class="bbnav" id="hoopDist"><button type="button" data-hdst="all" class="${dist==="all"?"on":""}">All</button>${districts.map(n=>`<button type="button" data-hdst="${n}" class="${n===dist?"on":""}">D${n}</button>`).join("")}</div>`;
-  })();
-  const picks=clsPills+regPills+distPills;
+  const clsLab=c=>c==="all"?"All":((c.startsWith("II|")?"II ":"")+c.split("|").pop());
+  const picks=`<div class="bbfilt">
+    <label>Class<select data-hf="cls">${classes.map(c=>`<option value="${c}"${c===cls?" selected":""}>${clsLab(c)}</option>`).join("")}</select></label>
+    <label>Region<select data-hf="reg"${cls==="all"?" disabled":""}><option value="all"${reg==="all"?" selected":""}>All</option>${regions.map(r=>`<option value="${esc(r)}"${r===reg?" selected":""}>${/^\d+$/.test(r)?"R"+esc(r):esc(r)}</option>`).join("")}</select></label>
+    <label>District<select data-hf="dst"${reg==="all"||!districts.length?" disabled":""}><option value="all"${dist==="all"?" selected":""}>All</option>${districts.map(n=>`<option value="${n}"${n===dist?" selected":""}>D${n}</option>`).join("")}</select></label>
+  </div>`;
   const bindPicks=()=>{
     host.onclick=e=>{
-      if(e.target.closest(".bbteam,.bbstand,.bbhit,.bbback,[data-hv],[data-hd],[data-bb]")) return;
+      if(e.target.closest(".bbteam,.bbstand,.bbhit,.bbback,select,[data-hv],[data-hd],[data-bb]")) return;
       const clsBtn=e.target.closest("[data-hcls]");
       if(clsBtn){
         window[clsKey]=clsBtn.getAttribute("data-hcls")||"all";
@@ -3644,6 +3643,15 @@ function paintTnHoop(kind){
         paintTnHoop(kind);
       }
     };
+    host.querySelectorAll("select[data-hf]").forEach(sel=>{
+      sel.onchange=()=>{
+        const which=sel.getAttribute("data-hf");
+        if(which==="cls"){ window[clsKey]=sel.value; window[regKey]="all"; window[distKey]="all"; }
+        else if(which==="reg"){ window[regKey]=sel.value; window[distKey]="all"; }
+        else window[distKey]=sel.value;
+        paintTnHoop(kind);
+      };
+    });
   };
   const matchGame=g=>cls==="all"||hoopSides(g).some(p=>hoopHit(p, cls, reg, dist));
   const picked=games.filter(matchGame);
@@ -3693,7 +3701,7 @@ function paintTnHoop(kind){
     window[dayKey]=dates.includes(today)?today:(dates[dates.length-1]||"");
   }
   const day=window[dayKey];
-  const dayPills=`<div class="bbnav" id="hoopDays">${dates.slice(-10).map(d=>{
+  const dayPills=`<div class="bbnav bbdays" id="hoopDays">${dates.slice(-10).map(d=>{
     const [yy,mm,dd]=d.split("-");
     return `<button type="button" data-hd="${d}" class="${d===day?"on":""}">${d===today?"Today":mm+"/"+dd}</button>`;
   }).join("")}</div>`;
