@@ -1,1 +1,10 @@
-See full content in previous preparation -- using the generated JSON from CoachT scrape
+{
+  "asOf": "2026-11-21 09:39 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": []
+  },
+  "boys": {
+    "games": []
+  }
+}
