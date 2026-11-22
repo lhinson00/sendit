@@ -1,1 +1,1137 @@
-PLACEHOLDER_FOR_JSON
+{
+  "asOf": "2026-11-21 07:30 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {
+        "id": "hampton-david-crockett-11212026",
+        "date": "11-21-2026",
+        "status": "12:00 PM",
+        "away": "Hampton",
+        "home": "David Crockett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "cleveland-science-hill-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cleveland",
+        "home": "Science Hill",
+        "as": "54",
+        "hs": "35"
+      },
+      {
+        "id": "stone-memorial-science-hill-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Stone Memorial",
+        "home": "Science Hill",
+        "as": "63",
+        "hs": "52"
+      },
+      {
+        "id": "union-county-university-high-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Union County",
+        "home": "University High",
+        "as": "63",
+        "hs": "40"
+      },
+      {
+        "id": "anderson-county-west-ridge-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Anderson County",
+        "home": "West Ridge",
+        "as": "52",
+        "hs": "68"
+      },
+      {
+        "id": "wartburg-cosby-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Wartburg",
+        "home": "Cosby",
+        "as": "24",
+        "hs": "89"
+      },
+      {
+        "id": "farragut-gatlinburg-pittman-11212026",
+        "date": "11-21-2026",
+        "status": "9:00 PM",
+        "away": "Farragut",
+        "home": "Gatlinburg-Pittman",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "west-greene-jefferson-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "West Greene",
+        "home": "Jefferson County",
+        "as": "55",
+        "hs": "62"
+      },
+      {
+        "id": "stone-memorial-sevier-county-11212026",
+        "date": "11-21-2026",
+        "status": "12:00 PM",
+        "away": "Stone Memorial",
+        "home": "Sevier County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "the-king-s-academy-sevier-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "The King's Academy",
+        "home": "Sevier County",
+        "as": "53",
+        "hs": "46"
+      },
+      {
+        "id": "bearden-austin-east-11212026",
+        "date": "11-21-2026",
+        "status": "3:00 PM",
+        "away": "Bearden",
+        "home": "Austin-East",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "farragut-austin-east-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Farragut",
+        "home": "Austin-East",
+        "as": "28",
+        "hs": "50"
+      },
+      {
+        "id": "eagleton-academy-carter-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Eagleton Academy",
+        "home": "Carter",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "volunteer-knox-central-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Volunteer",
+        "home": "Knox Central",
+        "as": "44",
+        "hs": "46"
+      },
+      {
+        "id": "york-institute-mcminn-central-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "York Institute",
+        "home": "McMinn Central",
+        "as": "45",
+        "hs": "60"
+      },
+      {
+        "id": "concord-christian-meigs-county-11212026",
+        "date": "11-21-2026",
+        "status": "2:00 PM",
+        "away": "Concord Christian",
+        "home": "Meigs County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "annoor-academy-anderson-county-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Annoor Academy",
+        "home": "Anderson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "wartburg-scott-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Wartburg",
+        "home": "Scott",
+        "as": "28",
+        "hs": "60"
+      },
+      {
+        "id": "cosby-scott-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cosby",
+        "home": "Scott",
+        "as": "56",
+        "hs": "76"
+      },
+      {
+        "id": "eagleville-coffee-county-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Eagleville",
+        "home": "Coffee County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "moore-county-coffee-county-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Moore County",
+        "home": "Coffee County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "green-hill-smith-county-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Green Hill",
+        "home": "Smith County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "cookeville-van-buren-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cookeville",
+        "home": "Van Buren County",
+        "as": "59",
+        "hs": "58"
+      },
+      {
+        "id": "sunbright-clarkrange-11212026",
+        "date": "11-21-2026",
+        "status": "8:00 PM",
+        "away": "Sunbright",
+        "home": "Clarkrange",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "clarksville-nw-gallatin-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Clarksville NW",
+        "home": "Gallatin",
+        "as": "42",
+        "hs": "51"
+      },
+      {
+        "id": "portland-gallatin-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Portland",
+        "home": "Gallatin",
+        "as": "32",
+        "hs": "27"
+      },
+      {
+        "id": "oneida-livingston-academy-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Oneida",
+        "home": "Livingston Academy",
+        "as": "20",
+        "hs": "55"
+      },
+      {
+        "id": "gordonsville-upperman-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Gordonsville",
+        "home": "Upperman",
+        "as": "44",
+        "hs": "58"
+      },
+      {
+        "id": "cumberland-county-macon-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cumberland County",
+        "home": "Macon County",
+        "as": "59",
+        "hs": "46"
+      },
+      {
+        "id": "mt--juliet-pearl-cohn-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Mt. Juliet",
+        "home": "Pearl Cohn",
+        "as": "51",
+        "hs": "46"
+      },
+      {
+        "id": "east-robertson-liberty-creek-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "East Robertson",
+        "home": "Liberty Creek",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "girls-preparatory-school-moore-county-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Girls Preparatory School",
+        "home": "Moore County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "clarksville-nw-portland-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Clarksville NW",
+        "home": "Portland",
+        "as": "35",
+        "hs": "52"
+      },
+      {
+        "id": "decatur-county-riverside-collinwood-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Decatur County Riverside",
+        "home": "Collinwood",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "west-carroll-stewart-county-11212026",
+        "date": "11-21-2026",
+        "status": "5:00 PM",
+        "away": "West Carroll",
+        "home": "Stewart County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "loretto-columbia-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Loretto",
+        "home": "Columbia",
+        "as": "78",
+        "hs": "51"
+      },
+      {
+        "id": "trinity-christian-huntingdon-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Trinity Christian",
+        "home": "Huntingdon",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "guntersville--al-page-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Guntersville (AL)",
+        "home": "Page",
+        "as": "76",
+        "hs": "45"
+      },
+      {
+        "id": "clarksburg-bradford-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Clarksburg",
+        "home": "Bradford",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "bartlett-dyersburg-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Bartlett",
+        "home": "Dyersburg",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "jackson-south-side-liberty-11212026",
+        "date": "11-21-2026",
+        "status": "2:00 PM",
+        "away": "Jackson South Side",
+        "home": "Liberty",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "lexington-dresden-11212026",
+        "date": "11-21-2026",
+        "status": "1:30 PM",
+        "away": "Lexington",
+        "home": "Dresden",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "usj-greenfield-11212026",
+        "date": "11-21-2026",
+        "status": "4:30 PM",
+        "away": "USJ",
+        "home": "Greenfield",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "south-gibson-henry-county-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "South Gibson",
+        "home": "Henry County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "ripley-lake-county-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Ripley",
+        "home": "Lake County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "humboldt-union-city-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Humboldt",
+        "home": "Union City",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "houston-collierville-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Houston",
+        "home": "Collierville",
+        "as": "46",
+        "hs": "60"
+      },
+      {
+        "id": "university-high--memphis-collierville-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "University High- Memphis",
+        "home": "Collierville",
+        "as": "47",
+        "hs": "56"
+      },
+      {
+        "id": "germantown-middle-college-11212026",
+        "date": "11-21-2026",
+        "status": "1:00 PM",
+        "away": "Germantown",
+        "home": "Middle College",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "facs-city-university-11212026",
+        "date": "11-21-2026",
+        "status": "2:00 PM",
+        "away": "FACS",
+        "home": "City University",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "rockvale-memphis-overton-11212026",
+        "date": "11-21-2026",
+        "status": "2:00 PM",
+        "away": "Rockvale",
+        "home": "Memphis Overton",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "memphis-east-white-station-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Memphis East",
+        "home": "White Station",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "lavergne-ensworth-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "LaVergne",
+        "home": "Ensworth",
+        "as": "16",
+        "hs": "60"
+      },
+      {
+        "id": "ezell-harding-harpeth-hall-11212026",
+        "date": "11-21-2026",
+        "status": "2:00 PM",
+        "away": "Ezell-Harding",
+        "home": "Harpeth Hall",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "cleveland-the-king-s-academy-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cleveland",
+        "home": "The King's Academy",
+        "as": "57",
+        "hs": "66"
+      },
+      {
+        "id": "mcminn-county-collegedale-academy-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "McMinn County",
+        "home": "Collegedale Academy",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "lead-academy-bga-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "LEAD Academy",
+        "home": "BGA",
+        "as": "26",
+        "hs": "73"
+      },
+      {
+        "id": "franklin-grace-clarksville-academy-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Franklin Grace",
+        "home": "Clarksville Academy",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "columbia-academy-dca-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Columbia Academy",
+        "home": "DCA",
+        "as": "23",
+        "hs": "68"
+      },
+      {
+        "id": "pickett-county-friendship-christian-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Pickett County",
+        "home": "Friendship Christian",
+        "as": "47",
+        "hs": "56"
+      },
+      {
+        "id": "richland-nashville-christian-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Richland",
+        "home": "Nashville Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "chester-county-jackson-christian-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Chester County",
+        "home": "Jackson Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "brighton-northpoint-christian-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Brighton",
+        "home": "Northpoint Christian",
+        "as": "16",
+        "hs": "52"
+      }
+    ]
+  },
+  "boys": {
+    "games": [
+      {
+        "id": "alcoa-david-crockett-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Alcoa",
+        "home": "David Crockett",
+        "as": "59",
+        "hs": "60"
+      },
+      {
+        "id": "west-dobyns-bennett-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "West",
+        "home": "Dobyns-Bennett",
+        "as": "36",
+        "hs": "77"
+      },
+      {
+        "id": "alcoa-dobyns-bennett-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Alcoa",
+        "home": "Dobyns-Bennett",
+        "as": "67",
+        "hs": "89"
+      },
+      {
+        "id": "knox-central-science-hill-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Knox Central",
+        "home": "Science Hill",
+        "as": "55",
+        "hs": "48"
+      },
+      {
+        "id": "south-greene-tennessee-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "South Greene",
+        "home": "Tennessee",
+        "as": "48",
+        "hs": "80"
+      },
+      {
+        "id": "union-county-university-high-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Union County",
+        "home": "University High",
+        "as": "63",
+        "hs": "40"
+      },
+      {
+        "id": "wartburg-cosby-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Wartburg",
+        "home": "Cosby",
+        "as": "65",
+        "hs": "70"
+      },
+      {
+        "id": "south-doyle-grainger-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "South Doyle",
+        "home": "Grainger",
+        "as": "67",
+        "hs": "71"
+      },
+      {
+        "id": "cocke-county-jefferson-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Cocke County",
+        "home": "Jefferson County",
+        "as": "56",
+        "hs": "54"
+      },
+      {
+        "id": "west-ridge-volunteer-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "West Ridge",
+        "home": "Volunteer",
+        "as": "53",
+        "hs": "75"
+      },
+      {
+        "id": "anderson-county-carter-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Anderson County",
+        "home": "Carter",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "york-institute-mcminn-central-11212026",
+        "date": "11-21-2026",
+        "status": "6:30 PM",
+        "away": "York Institute",
+        "home": "McMinn Central",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "concord-christian-meigs-county-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Concord Christian",
+        "home": "Meigs County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "gatlinburg-pittman-anderson-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Gatlinburg-Pittman",
+        "home": "Anderson County",
+        "as": "57",
+        "hs": "74"
+      },
+      {
+        "id": "knox-central-anderson-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Knox Central",
+        "home": "Anderson County",
+        "as": "59",
+        "hs": "68"
+      },
+      {
+        "id": "science-hill-bearden-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Science Hill",
+        "home": "Bearden",
+        "as": "30",
+        "hs": "53"
+      },
+      {
+        "id": "austin-east-bearden-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Austin-East",
+        "home": "Bearden",
+        "as": "36",
+        "hs": "62"
+      },
+      {
+        "id": "stone-memorial-farragut-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Stone Memorial",
+        "home": "Farragut",
+        "as": "48",
+        "hs": "54"
+      },
+      {
+        "id": "annoor-academy-farragut-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Annoor Academy",
+        "home": "Farragut",
+        "as": "6",
+        "hs": "48"
+      },
+      {
+        "id": "fulton-hardin-valley-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Fulton",
+        "home": "Hardin Valley",
+        "as": "67",
+        "hs": "69"
+      },
+      {
+        "id": "wartburg-scott-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Wartburg",
+        "home": "Scott",
+        "as": "65",
+        "hs": "69"
+      },
+      {
+        "id": "cosby-scott-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Cosby",
+        "home": "Scott",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "moore-county-coffee-county-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Moore County",
+        "home": "Coffee County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "eagleville-coffee-county-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Eagleville",
+        "home": "Coffee County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "cookeville-smith-county-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Cookeville",
+        "home": "Smith County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "macon-county-van-buren-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Macon County",
+        "home": "Van Buren County",
+        "as": "66",
+        "hs": "72"
+      },
+      {
+        "id": "oliver-springs-clarkrange-11212026",
+        "date": "11-21-2026",
+        "status": "7:00 PM",
+        "away": "Oliver Springs",
+        "home": "Clarkrange",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "oakland-cumberland-county-11212026",
+        "date": "11-21-2026",
+        "status": "1:30 PM",
+        "away": "Oakland",
+        "home": "Cumberland County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "portland-gallatin-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Portland",
+        "home": "Gallatin",
+        "as": "60",
+        "hs": "54"
+      },
+      {
+        "id": "clarksville-nw-gallatin-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Clarksville NW",
+        "home": "Gallatin",
+        "as": "21",
+        "hs": "69"
+      },
+      {
+        "id": "jellico-jackson-county-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Jellico",
+        "home": "Jackson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "mt--juliet-livingston-academy-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Mt. Juliet",
+        "home": "Livingston Academy",
+        "as": "53",
+        "hs": "52"
+      },
+      {
+        "id": "macon-county-gordonsville-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Macon County",
+        "home": "Gordonsville",
+        "as": "59",
+        "hs": "64"
+      },
+      {
+        "id": "east-robertson-liberty-creek-11212026",
+        "date": "11-21-2026",
+        "status": "7:00 PM",
+        "away": "East Robertson",
+        "home": "Liberty Creek",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "clarksville-nw-portland-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Clarksville NW",
+        "home": "Portland",
+        "as": "30",
+        "hs": "57"
+      },
+      {
+        "id": "webb-school-eagleville-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Webb School",
+        "home": "Eagleville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "decatur-county-riverside-collinwood-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Decatur County Riverside",
+        "home": "Collinwood",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "west-carroll-stewart-county-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "West Carroll",
+        "home": "Stewart County",
+        "as": "30",
+        "hs": "65"
+      },
+      {
+        "id": "dyer-county-camden-central-11212026",
+        "date": "11-21-2026",
+        "status": "10:30 AM",
+        "away": "Dyer County",
+        "home": "Camden Central",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "loretto-columbia-11212026",
+        "date": "11-21-2026",
+        "status": "6:30 PM",
+        "away": "Loretto",
+        "home": "Columbia",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "westview-huntingdon-11212026",
+        "date": "11-21-2026",
+        "status": "12:00 PM",
+        "away": "Westview",
+        "home": "Huntingdon",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "junipero-serra--ca-page-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Junipero Serra (CA)",
+        "home": "Page",
+        "as": "51",
+        "hs": "32"
+      },
+      {
+        "id": "clarksburg-bradford-11212026",
+        "date": "11-21-2026",
+        "status": "7:15 PM",
+        "away": "Clarksburg",
+        "home": "Bradford",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "jackson-south-side-liberty-11212026",
+        "date": "11-21-2026",
+        "status": "3:30 AM",
+        "away": "Jackson South Side",
+        "home": "Liberty",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "usj-greenfield-11212026",
+        "date": "11-21-2026",
+        "status": "3:00 PM",
+        "away": "USJ",
+        "home": "Greenfield",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "south-gibson-henry-county-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "South Gibson",
+        "home": "Henry County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "ripley-lake-county-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Ripley",
+        "home": "Lake County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "humboldt-union-city-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Humboldt",
+        "home": "Union City",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "middle-college-bartlett-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Middle College",
+        "home": "Bartlett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "west-memphis--ar-covington-11212026",
+        "date": "11-21-2026",
+        "status": "5:30 PM",
+        "away": "West Memphis (AR)",
+        "home": "Covington",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "fayette-academy-christian-brothers-high-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Fayette Academy",
+        "home": "Christian Brothers High",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "boyd-buchanan-knoxville-webb-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "Boyd Buchanan",
+        "home": "Knoxville Webb",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "knoxville-catholic-brentwood-academy-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Knoxville Catholic",
+        "home": "Brentwood Academy",
+        "as": "66",
+        "hs": "67"
+      },
+      {
+        "id": "lavergne-ensworth-11212026",
+        "date": "11-21-2026",
+        "status": "2:30 PM",
+        "away": "LaVergne",
+        "home": "Ensworth",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "lead-academy-bga-11212026",
+        "date": "11-21-2026",
+        "status": "Scheduled",
+        "away": "LEAD Academy",
+        "home": "BGA",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "franklin-grace-clarksville-academy-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Franklin Grace",
+        "home": "Clarksville Academy",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "columbia-academy-dca-11212026",
+        "date": "11-21-2026",
+        "status": "Final",
+        "away": "Columbia Academy",
+        "home": "DCA",
+        "as": "57",
+        "hs": "52"
+      },
+      {
+        "id": "pickett-county-friendship-christian-11212026",
+        "date": "11-21-2026",
+        "status": "4:30 PM",
+        "away": "Pickett County",
+        "home": "Friendship Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "richland-nashville-christian-11212026",
+        "date": "11-21-2026",
+        "status": "7:30 PM",
+        "away": "Richland",
+        "home": "Nashville Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "chester-county-jackson-christian-11212026",
+        "date": "11-21-2026",
+        "status": "7:15 PM",
+        "away": "Chester County",
+        "home": "Jackson Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "hickman-county-trinity-christian-11212026",
+        "date": "11-21-2026",
+        "status": "6:00 PM",
+        "away": "Hickman County",
+        "home": "Trinity Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "brighton-northpoint-christian-11212026",
+        "date": "11-21-2026",
+        "status": "3:45 PM",
+        "away": "Brighton",
+        "home": "Northpoint Christian",
+        "as": "",
+        "hs": ""
+      }
+    ]
+  }
+}
