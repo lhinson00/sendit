@@ -107,6 +107,8 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
 .nameask p{margin:0;color:#9b9288;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
 .nameask input{background:#0c0d12;border:1px solid #3a2a18;color:#fff;border-radius:10px;padding:14px;font-size:16px}
 .nameask button{border:0;background:var(--orange);color:#140800;font-weight:800;border-radius:10px;padding:14px}
+.nameask button.ghost{background:transparent;color:#c9c2b8;border:1px solid #3a2a18}
+.nameask b{font-family:"Bebas Neue",sans-serif;font-size:28px;letter-spacing:.03em;font-weight:400;line-height:1}
 </style>
 </head>
 <body>
@@ -135,6 +137,12 @@ body{max-width:1120px;margin:0 auto;min-height:100dvh;background:#05060a}
   <input id="nameAskInput" maxlength="24" placeholder="Your name" autocomplete="nickname"/>
   <button id="nameAskGo" type="button">Lock it</button>
 </form></div>
+<div class="nameask" id="lockAsk"><form onsubmit="return false">
+  <p>All games picked</p>
+  <b id="lockAskText">Lock the card or these picks will not save to the board.</b>
+  <button id="lockAskGo" type="button">Lock</button>
+  <button id="lockAskNo" class="ghost" type="button">Not yet</button>
+</form></div>
 <script>
 const SUPA_URL="https://cgxgyxzyunokiqfedtqp.supabase.co";
 const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNneGd5eHp5dW5va2lxZmVkdHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzQ2OTMsImV4cCI6MjEwNTc1MDY5M30.LBhCjY33GLZZ3BbpLVqoyx8ND20Egow0yH_rkui09pU";
@@ -155,6 +163,12 @@ function show(id, opt){
 function goBack(){
   const ask=$("nameAsk");
   if(ask && ask.classList.contains("on")){ ask.classList.remove("on"); return; }
+  const lockAsk=$("lockAsk");
+  if(lockAsk && lockAsk.classList.contains("on")){ $("lockAskNo").click(); return; }
+  if(screenNow()==="slate" && gamesReady() && !card().locked){ offerLock(leaveBack); return; }
+  leaveBack();
+}
+function leaveBack(){
   if(hist.length<=1){ location.href="/"; return; }
   hist.pop();
   show(hist[hist.length-1], {back:true});
@@ -220,7 +234,7 @@ async function eventsFor(lg){
 function recOf(c){ const r=(c.records||[]).find(x=>x.type==="total")||(c.records||[])[0]; return r?r.summary:""; }
 function mapEv(ev,lg){
   const c=(ev.competitions||[])[0]||{}; const st=((c.status||{}).type)||{}; const comps=c.competitors||[];
-  const away=comps.find(x=>x.homeAway==="away")||comps[0]||{}; const home=comps.find(x=>x.homeAway==="home")||comps[1]||{};
+  const away=comps.find(x=>x.homeAway==="away")||{}; const home=comps.find(x=>x.homeAway==="home")||{};
   const team=x=>{ const t=x.team||{}; return {id:String(t.id||""), ab:t.abbreviation||"", name:t.displayName||t.shortDisplayName||"Team", score:x.score||"", rec:recOf(x), rank:rankOf(x), logo:t.logo||("https://a.espncdn.com/i/teamlogos/"+(lg==="nfl"?"nfl":"ncaa")+"/500/"+t.id+".png")}; };
   const broad=((c.broadcasts||[])[0]||{}).names||[];
   const sit=c.situation||{}; const last=(sit.lastPlay&&(sit.lastPlay.text||sit.lastPlay))||""; const down=[sit.shortDownDistanceText,sit.possessionText].filter(Boolean).join(" · "); return {id:String(ev.id), state:st.state||"pre", detail:st.shortDetail||"", kick:ev.date||"", away:team(away), home:team(home), tv:broad.join(" / "), play:down||last};
@@ -277,6 +291,26 @@ function tbReady(){
   const pick=tbPick();
   if(!pick || started(pick.game)) return true;
   return card().tb!=="" && card().tb!=null && isFinite(Number(card().tb));
+}
+function gamesReady(){
+  const need=state.games.filter(g=>!started(g));
+  return need.length>0 && need.every(g=>card().picks[g.id]);
+}
+let lockAsked=false, lockLeave=null;
+function offerLock(leave){
+  if(card().locked || !gamesReady()){
+    lockAsked=false;
+    if(typeof leave==="function") leave();
+    return;
+  }
+  if($("lockAsk").classList.contains("on")) return;
+  if(!leave && lockAsked) return;
+  lockLeave=typeof leave==="function"?leave:null;
+  $("lockAskText").textContent=tbReady()
+    ? "Lock the card or these picks will not save to the board."
+    : "Enter the tiebreaker, then lock. Unlocked picks never reach the board.";
+  $("lockAsk").classList.add("on");
+  lockAsked=true;
 }
 function dayLabel(iso){ return new Date(iso).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric",timeZone:"America/Chicago"}); }
 function saveLocal(){
@@ -344,6 +378,8 @@ function paint(){
     tbIn.value=n;
     card().tb=n===""?"":Number(n);
     saveLocal();
+    if(n==="") lockAsked=false;
+    offerLock();
   };
   saveLocal();
 }
@@ -451,9 +487,13 @@ async function paintBoard(){
   }).join(""):"<p style='padding:20px;color:#9b9288'>No locked cards in this league.</p>";
   $("boardList").querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>openCard(b.dataset.who));
 }
-async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick))); paint(); }
+async function load(){ state.games=(await eventsFor(state.lg)).map(ev=>mapEv(ev,state.lg)).sort((a,b)=>String(a.kick).localeCompare(String(b.kick))); paint(); if(screenNow()==="slate") offerLock(); }
 function setLg(lg){ state.lg=lg; loadLocal(); show("slate"); document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on", x.dataset.view==="slate")); load(); }
-document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board"){ load().then(paintBoard); } });
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{
+  const go=()=>{ document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("on",x===b)); show(b.dataset.view); if(b.dataset.view==="board"){ load().then(paintBoard); } };
+  if(b.dataset.view==="board" && screenNow()==="slate" && gamesReady() && !card().locked){ offerLock(go); return; }
+  go();
+});
 setInterval(()=>{ if($("board").classList.contains("on")||$("match").classList.contains("on")) load().then(()=>{ if($("board").classList.contains("on")) paintBoard(); if($("match").classList.contains("on")&&state.openName) openCard(state.openName); }); }, 30000);
 function askName(){
   return new Promise(resolve=>{
@@ -469,6 +509,16 @@ function askName(){
     };
   });
 }
+$("lockAskNo").onclick=()=>{
+  $("lockAsk").classList.remove("on");
+  const go=lockLeave; lockLeave=null;
+  if(go) go();
+};
+$("lockAskGo").onclick=()=>{
+  $("lockAsk").classList.remove("on");
+  lockLeave=null;
+  $("lock").click();
+};
 $("lgNfl").onclick=()=>setLg("nfl"); $("lgCfb").onclick=()=>setLg("cfb");
 $("navBack").onclick=goBack;
 $("lock").onclick=async()=>{

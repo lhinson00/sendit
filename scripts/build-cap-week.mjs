@@ -176,8 +176,9 @@ await mapPool(games.flatMap(g=>[[g.awayId,g.awayAb,g],[g.homeId,g.homeAb,g]]), 8
       if(!a||!a.id) return;
       const pos=((a.position&&a.position.abbreviation)||"").toUpperCase();
       if(!/^(QB|RB|WR|TE)$/.test(pos)) return;
-      const opp=String(tid)===String(game.homeId)?game.awayAb:game.homeAb;
-      pool.push({id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when:when(game.start), start:game.start, starter:!!a.starter, depth:chart[String(a.id)]||99, status:(a.status&&(a.status.name||a.status.type))||""});
+      const home=String(tid)===String(game.homeId);
+      const opp=home?game.awayAb:game.homeAb;
+      pool.push({id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, home, eventId:game.eventId, when:when(game.start), start:game.start, starter:!!a.starter, depth:chart[String(a.id)]||99, status:(a.status&&(a.status.name||a.status.type))||""});
     });
   });
 });
@@ -200,8 +201,8 @@ await mapPool(tids, 8, async tid=>{
   TEAMDEF[ab]={pa:grab("opp","scoring","totalPoints"), to:grab("team","miscellaneous","totalTakeaways"), st:grab("team","scoring","returnTouchdowns")+grab("team","defensive","miscTouchdowns"), sacks:grab("team","defensive","sacks"), gp:grab("team","defensive","teamGamesPlayed")||undefined};
 });
 games.forEach(g=>{
-  [ [g.homeId,g.homeAb,g.awayAb], [g.awayId,g.awayAb,g.homeAb] ].forEach(([tid,ab,opp])=>{
-    players.push({id:"DST-"+tid, teamId:String(tid), name:ab+" D/ST", pos:"DST", team:ab, opp, eventId:g.eventId, when:when(g.start), start:g.start, depth:1, starter:true});
+  [ [g.homeId,g.homeAb,g.awayAb,true], [g.awayId,g.awayAb,g.homeAb,false] ].forEach(([tid,ab,opp,home])=>{
+    players.push({id:"DST-"+tid, teamId:String(tid), name:ab+" D/ST", pos:"DST", team:ab, opp, home, eventId:g.eventId, when:when(g.start), start:g.start, depth:1, starter:true});
   });
 });
 

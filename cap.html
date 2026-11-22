@@ -496,6 +496,22 @@ function paintBudget(){
 }
 
 function nflLogo(ab){ return "https://a.espncdn.com/i/teamlogos/nfl/500/"+String(ab||"").toLowerCase()+".png"; }
+function stampVenue(p){
+  if(!p || typeof p.home==="boolean") return p;
+  const g=(STATE.games||[]).find(x=>String(x.eventId)===String(p.eventId));
+  if(!g || !p.team) return p;
+  if(p.team===g.homeAb) p.home=true;
+  else if(p.team===g.awayAb) p.home=false;
+  return p;
+}
+function venueLine(p){
+  if(!p) return "";
+  if(!p.opp) return p.team||"";
+  stampVenue(p);
+  if(p.home===true) return p.team+" vs "+p.opp;
+  if(p.home===false) return p.team+" @ "+p.opp;
+  return p.team+" vs "+p.opp;
+}
 function paintSlots(){
   const filled=SLOTS.filter(k=>STATE.lineup[k]).length;
   const spent=SLOTS.reduce((n,k)=>{ const p=STATE.pool.find(x=>x.id===STATE.lineup[k]); return n+(p?p.sal:0); },0);
@@ -504,7 +520,7 @@ function paintSlots(){
     const p = STATE.pool.find(x=>x.id===STATE.lineup[k]);
     const active = (window.PICK_SLOT||"")===k;
     if(!p) return `<button type="button" class="slot empty${active?" onpick":""}" data-pick="${k}"><div class="posmark">${slotLabel(k)}</div><span class="mark"></span><div class="who"><b>Empty</b><span>Add a ${slotLabel(k)}</span></div><div class="sal"></div><span></span></button>`;
-    return `<div class="slot${active?" onpick":""}"><div class="posmark">${slotLabel(k)}</div><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" vs "+p.opp):""}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">${p.priced?"$"+(p.sal/1000).toFixed(1)+"k":"…"}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
+    return `<div class="slot${active?" onpick":""}"><div class="posmark">${slotLabel(k)}</div><img class="tm" alt="" src="${nflLogo(p.team)}"/><div class="who"><b>${p.name}</b><span>${venueLine(p)}${p.inj?(" · "+p.inj):""}</span></div><div class="sal">${p.priced?"$"+(p.sal/1000).toFixed(1)+"k":"…"}</div>${STATE.locked||slotFrozen(k)?"<span></span>":`<button class="x" data-drop="${k}" aria-label="remove">×</button>`}</div>`;
   }).join("")+`<div class="salbar" title="Salary used"><i style="width:${pct}%"></i></div>`;
   $("slots").querySelectorAll("[data-drop]").forEach(b=>b.onclick=()=>{
     if(slotFrozen(b.dataset.drop)) return toast("That game started — they stay on the card");
@@ -778,7 +794,7 @@ function paintPool(){
     return `<div class="pick${on?" on":""}${hurt?" hurt":""}" data-info="${p.id}">
       <span class="pos">${p.pos}</span>
       <img alt="" src="${nflLogo(p.team)}"/>
-      <div class="who"><b>${p.name}</b><span>${p.team}${p.opp?(" @ "+p.opp):""} · ${leaderLine(p)||""}${tag}</span></div>
+      <div class="who"><b>${p.name}</b><span>${venueLine(p)} · ${leaderLine(p)||""}${tag}</span></div>
       <div class="sal">${p.priced?"$"+(Math.round(p.sal/100)/10)+"k":"…"}</div>
       <button type="button" class="addbtn" data-add="${p.id}" ${(STATE.locked||gameStarted(p)||!p.priced)?"disabled":""}>${on?"IN":"+"}</button>
     </div>`;
@@ -978,19 +994,20 @@ async function loadRoster(tid, ab, game){
     if(!r.ok) return out;
     const d=await r.json();
     const team=(d.team&&(d.team.abbreviation||ab))||ab;
+    const homeSide = String(tid)===String(game.homeId);
+    const opp = homeSide?game.awayAb:game.homeAb;
     (d.athletes||[]).forEach(grp=>{
       (grp.items||grp.athletes||[]).forEach(a=>{
         if(!a||!a.id) return;
         const pos=((a.position&&a.position.abbreviation)||"").toUpperCase();
         if(!/^(QB|RB|WR|TE)$/.test(pos)) return;
-        const opp = String(tid)===String(game.homeId)?game.awayAb:game.homeAb;
         const when = game.start ? new Date(game.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}) : "";
-        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, eventId:game.eventId, when, start:game.start, starter:!!a.starter, depth:depth[String(a.id)]||99, status:(a.status&&(a.status.name||a.status.type))||""};
+        const p={id:String(a.id), name:a.displayName||a.fullName||"", pos, team, opp, home:homeSide, eventId:game.eventId, when, start:game.start, starter:!!a.starter, depth:depth[String(a.id)]||99, status:(a.status&&(a.status.name||a.status.type))||""};
         p.sal=0;
         out.push(p);
       });
     });
-    const dst={id:"DST-"+tid, name:team+" D/ST", pos:"DST", team, opp:String(tid)===String(game.homeId)?game.awayAb:game.homeAb, eventId:game.eventId, teamId:String(tid), start:game.start,
+    const dst={id:"DST-"+tid, name:team+" D/ST", pos:"DST", team, opp, home:homeSide, eventId:game.eventId, teamId:String(tid), start:game.start,
       when:game.start?new Date(game.start).toLocaleString("en-US",{timeZone:"America/Chicago",weekday:"short",hour:"numeric",minute:"2-digit"}):""};
     dst.sal=0;
     out.push(dst);
@@ -1256,6 +1273,7 @@ async function loadPool(){
   if(!book || book.week!==capWeekId().id || !(book.players||[]).length) throw new Error("This week's prices are not posted yet");
   if(book.label) STATE.label=book.label;
   STATE.pool=book.players.map(p=>Object.assign({priced:true, book:true}, p));
+  STATE.pool.forEach(stampVenue);
   $("weekLine").textContent=(STATE.label||"Week")+" · $50,000";
   paintAll();
   loadInjuries().then(()=>{ STATE.pool.forEach(p=>{ p.inj=injOf(p)||p.inj; }); paintAll(); }).catch(()=>{});
@@ -1407,8 +1425,8 @@ function gamePulse(eid){
   const g=STATE.games.find(x=>x.eventId===eid);
   const c=((((sum.header||{}).competitions)||[])[0])||{};
   const comps=c.competitors||[];
-  const home=comps.find(x=>x.homeAway==="home")||comps[0]||{};
-  const away=comps.find(x=>x.homeAway==="away")||comps[1]||{};
+  const home=comps.find(x=>x.homeAway==="home")||{};
+  const away=comps.find(x=>x.homeAway==="away")||{};
   const hab=(home.team&&(home.team.abbreviation||home.team.displayName))||"";
   const aab=(away.team&&(away.team.abbreviation||away.team.displayName))||"";
   const hs=home.score??"—", as=away.score??"—";
@@ -1551,13 +1569,13 @@ function openLiveBreak(id){
       <img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.25"/>
       <div>
         <h3>${p.name}</h3>
-        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        <p class="sub">${p.pos} · ${venueLine(p)}</p>
         <span class="chip ${sc.status==="LIVE"?"live":sc.status==="Final"?"fin":"pre"}">${sc.status==="LIVE"?(gp.sit||"Live"):sc.status}</span>
       </div>
       <div class="tot">${sc.pts.toFixed(1)}<small>FPTS</small></div>
     </div>
     <div class="livestrip">
-      <span>${gp.score|| (p.team+" vs "+(p.opp||""))}</span>
+      <span>${gp.score||venueLine(p)}</span>
       <b>${gp.sit||sc.status}</b>
     </div>
     
@@ -1586,11 +1604,14 @@ function paintLive(){
     if(!mine && !gameStarted(p)) return;
     seen.add(p.eventId);
     const gp=gamePulse(p.eventId);
+    stampVenue(p);
+    const awayAb=gp.aab || (p.home===false?p.team:p.opp) || "";
+    const homeAb=gp.hab || (p.home===true?p.team:(p.home===false?p.opp:"")) || "";
     const live=gp.st==="in";
     strips.push(`<a class="gchip${live?" live":""}" href="${gameHref(p.eventId)}" >
-      <img src="${logoUrl(gp.aab||p.opp)}" alt=""/>
-      <img src="${logoUrl(gp.hab||p.team)}" alt=""/>
-      <div><b>${gp.aab||p.opp||""} ${gp.as} · ${gp.hab||p.team||""} ${gp.hs}</b><span>${live?gp.sit:"Open gamecast"}</span></div>
+      <img src="${logoUrl(awayAb)}" alt=""/>
+      <img src="${logoUrl(homeAb)}" alt=""/>
+      <div><b>${awayAb} ${gp.as!=null?gp.as:""} @ ${homeAb} ${gp.hs!=null?gp.hs:""}</b><span>${live?gp.sit:"Open gamecast"}</span></div>
     </a>`);
   });
   const rows=SLOTS.map(k=>{
@@ -1606,7 +1627,7 @@ function paintLive(){
     const face=(p&&show)?`<div class="face"><img class="head" src="${headUrl(p)}" alt="" onerror="this.style.opacity=.2"/><img class="lg" src="${logoUrl(p.team)}" alt=""/></div>`:`<div class="face"></div>`;
     return `<div class="livep${cls}${bump}" data-break="${p&&show?p.id:""}">
       ${face}
-      <div class="who"><b>${p?(show?p.name:"Covered"):"Empty"}</b><div class="meta">${p&&show?(p.team+(p.opp?(" vs "+p.opp):"")):(p?"Slot locked until kickoff":"Open slot")} ${chip}</div></div>
+      <div class="who"><b>${p?(show?p.name:"Covered"):"Empty"}</b><div class="meta">${p&&show?venueLine(p):(p?"Slot locked until kickoff":"Open slot")} ${chip}</div></div>
       <div class="pts">${show&&p?sc.pts.toFixed(1):"—"}</div>
       <div class="line">${show&&p?(boxLine(p)+(gp?" · "+gp.score:"")):""}</div>
       ${show&&p&&p.eventId?`<button type="button" class="cast" data-cast="${p.eventId}">Open gamecast →</button>`:""}
@@ -1656,7 +1677,7 @@ function paintLeaders(){
     return `<button type="button" class="lboard${live?" live":""}${yours?" mine":""}" data-break="${p.id}">
       <b class="rk">${i+1}</b>
       <img alt="" src="${headUrl(p)}" onerror="this.style.opacity=.25"/>
-      <div class="who"><b>${p.name}</b><span>${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}${yours?" · Yours":""} · ${live?"LIVE":r.status==="Final"?"Final":""}</span></div>
+      <div class="who"><b>${p.name}</b><span>${p.pos} · ${venueLine(p)}${yours?" · Yours":""} · ${live?"LIVE":r.status==="Final"?"Final":""}</span></div>
       <em class="pts">${r.pts.toFixed(1)}</em>
     </button>`;
   }).join("") : `<p class="hint">No scores yet this week.</p>`;
@@ -1939,7 +1960,7 @@ function paintResearchSheet(p, games){
     <div class="sheethead">
       <div>
         <h3>${p.name}</h3>
-        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        <p class="sub">${p.pos} · ${venueLine(p)}</p>
       </div>
       <div class="pay">$${p.sal.toLocaleString()}</div>
       <button class="close" id="shX" type="button">×</button>
@@ -2032,7 +2053,7 @@ function paintDstSheet(p, games){
     <div class="sheethead">
       <div>
         <h3>${p.name}</h3>
-        <p class="sub">${p.pos} · ${p.team}${p.opp?(" vs "+p.opp):""}</p>
+        <p class="sub">${p.pos} · ${venueLine(p)}</p>
       </div>
       <div class="pay">$${p.sal.toLocaleString()}</div>
       <button class="close" id="shX" type="button">×</button>
