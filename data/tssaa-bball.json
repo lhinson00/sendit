@@ -1,1 +1,20 @@
-PLACEHOLDER
+{
+  "asOf": "2026-11-23 09:40 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {
+        "id": "2a2713aee3",
+        "date": "11-23-2026",
+        "status": "Final",
+        "away": "Page",
+        "home": "Blanche Ely (FL)",
+        "as": 45,
+        "hs": 51
+      }
+    ]
+  },
+  "boys": {
+    "games": []
+  }
+}
