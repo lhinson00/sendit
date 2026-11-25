@@ -2,7 +2,7 @@
   "asOf": "2026-11-24 07:30 PM CST",
   "sport": "basketball",
   "girls": {
-    "games": []
+    "games": [{"id": "example", "date": "11-24-2026", "status": "Final", "away": "Example", "home": "Home", "as": 50, "hs": 45}]
   },
   "boys": {
     "games": []
