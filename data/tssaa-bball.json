@@ -1,1 +1,10 @@
-PLACEHOLDER
+{
+  "asOf": "2026-11-24 07:30 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": []
+  },
+  "boys": {
+    "games": []
+  }
+}
