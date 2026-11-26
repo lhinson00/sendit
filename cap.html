@@ -905,7 +905,7 @@ function capWeekId(){
 function slateStamps(){
   const wed=capWeekId().wed;
   const out=[];
-  for(let i=1;i<=5;i++){
+  for(let i=0;i<=5;i++){
     const dt=new Date(wed);
     dt.setUTCDate(wed.getUTCDate()+i);
     out.push(dt.getUTCFullYear()+String(dt.getUTCMonth()+1).padStart(2,"0")+String(dt.getUTCDate()).padStart(2,"0"));
@@ -937,9 +937,13 @@ async function loadSlate(){
   if(!evs.length) throw new Error("Could not load NFL slate");
   STATE.espnWeek = week;
   STATE.week = stamp.id;
-  const thu=slateStamps()[0], mon=slateStamps()[4];
-  const nice=s=>s.slice(4,6)+"/"+s.slice(6);
-  STATE.label = (week?("Week "+week+" · "):"")+"Thu "+nice(thu)+" – Mon "+nice(mon);
+  const daysShown=slateStamps();
+  const nice=s=>{
+    const dt=new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6)));
+    const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getUTCDay()];
+    return wd+" "+s.slice(4,6)+"/"+s.slice(6);
+  };
+  STATE.label = (week?("Week "+week+" · "):"")+nice(daysShown[0])+" – "+nice(daysShown[daysShown.length-1]);
   $("weekLine").textContent = STATE.label+" · $50,000 cap";
   STATE.games = evs.map(ev=>{
     const c=(ev.competitions||[])[0]||{};

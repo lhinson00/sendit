@@ -14,7 +14,7 @@ function capWeekId(now=new Date()){
 }
 function slateStamps(){
   const wed=capWeekId().wed, out=[];
-  for(let i=1;i<=5;i++){
+  for(let i=0;i<=5;i++){
     const dt=new Date(wed);
     dt.setUTCDate(wed.getUTCDate()+i);
     out.push(dt.getUTCFullYear()+String(dt.getUTCMonth()+1).padStart(2,"0")+String(dt.getUTCDate()).padStart(2,"0"));
@@ -334,11 +334,15 @@ const priced=players.map(p=>{
 }).filter(p=>p.sal && show(p)).map(p=>({
   id:p.id, name:p.name, pos:p.pos, team:p.team, opp:p.opp, eventId:p.eventId, teamId:p.teamId||"",
   start:p.start||"", when:p.when||"", depth:p.depth||99, starter:!!p.starter, inj:p.inj||"",
-  sal:p.sal, line:lineOf(p), book:true, priced:true
+  sal:p.sal, line:lineOf(p), book:true, priced:true, home:p.home===true
 }));
-const thu=days[0], mon=days[4];
-const nice=s=>s.slice(4,6)+"/"+s.slice(6);
-const label=(week?("Week "+week+" · "):"")+"Thu "+nice(thu)+" – Mon "+nice(mon);
+const shown=days;
+const nice=s=>{
+  const dt=new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6)));
+  const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getUTCDay()];
+  return wd+" "+s.slice(4,6)+"/"+s.slice(6);
+};
+const label=(week?("Week "+week+" · "):"")+nice(shown[0])+" – "+nice(shown[shown.length-1]);
 const out={week:stamp.id, label, at:Date.now(), players:priced};
 await writeFile(new URL("../data/cap-week.json", import.meta.url), JSON.stringify(out));
 const by={};
