@@ -3335,7 +3335,7 @@ function tnIso(mdy){
   return p.length===3 ? (p[2]+"-"+p[0]+"-"+p[1]) : "";
 }
 function hoopPack(){ return window.TNHOOP||{games:[],schools:{}}; }
-function hoopMeta(sport, id){
+function tnSchool(sport, id){
   const sid=String(id||"").trim();
   if(!sid) return null;
   const schools=hoopPack().schools||{};
@@ -3354,18 +3354,23 @@ function hoopClean(m, group){
   const region=String(src.region||"").replace(/\s*district\s*$/i,"").replace(/\s*region\s*$/i,"").replace(/^region\s+/i,"").trim();
   return {div, klass:src.klass||"", region, district:String(src.district||""), group:group||""};
 }
+function hoopSide(g, home){
+  const id=home?g.homeId:g.awayId;
+  const looked=hoopClean(tnSchool(g.sport, id)||{}, "");
+  if(looked.klass) return looked;
+  return hoopClean({
+    division:home?g.hdiv:g.adiv,
+    klass:home?g.hklass:g.aklass,
+    region:home?g.hreg:g.areg,
+    district:home?g.hdist:g.adist
+  }, g.group||"");
+}
 function hoopPlace(g){
-  const h=hoopMeta(g.sport, g.homeId)||hoopMeta(g.sport, g.awayId)||{};
-  return hoopClean(h, g.group||"");
+  const home=hoopSide(g, true);
+  return home.klass?home:hoopSide(g, false);
 }
 function hoopSides(g){
-  const out=[];
-  const add=m=>{ if(!m) return; const c=hoopClean(m, g.group||""); if(c.klass) out.push(c); };
-  add(hoopMeta(g.sport, g.homeId));
-  add(hoopMeta(g.sport, g.awayId));
-  if(g.hklass) add({division:g.hdiv||"", klass:g.hklass, region:g.hreg, district:g.hdist});
-  if(g.aklass) add({division:g.adiv||"", klass:g.aklass, region:g.areg, district:g.adist});
-  return out;
+  return [false,true].map(home=>hoopSide(g, home)).filter(p=>p.klass);
 }
 function hoopBoard(cls){
   if(!cls || cls==="all") return [];
@@ -3431,7 +3436,6 @@ function hoopScoreHit(sport, schoolId, schoolName, g){
   })||null;
 }
 function hoopTeamRecord(sport, id, name){
-  const mineMeta=hoopClean(hoopMeta(sport, id)||{}, "");
   const rec={w:0,l:0,dw:0,dl:0,rw:0,rl:0};
   hoopGamesFor(sport, id, name).forEach(g=>{
     if(!hoopFinal(g)) return;
@@ -3440,8 +3444,8 @@ function hoopTeamRecord(sport, id, name){
     const mine=String(g.homeId)===String(id)||tnAlignKey(g.home)===tnAlignKey(name);
     const win=(mine?hs:as)>(mine?as:hs);
     rec.w+=win?1:0; rec.l+=win?0:1;
-    const oppId=mine?g.awayId:g.homeId;
-    const om=hoopClean(hoopMeta(sport, oppId)||{}, "");
+    const mineMeta=hoopSide(g, mine);
+    const om=hoopSide(g, !mine);
     const same=mineMeta.klass && om.klass && mineMeta.klass===om.klass && mineMeta.div && mineMeta.div===om.div;
     if(same && mineMeta.region && mineMeta.region===om.region){ rec.rw+=win?1:0; rec.rl+=win?0:1; }
     if(same && mineMeta.district && mineMeta.district===om.district){ rec.dw+=win?1:0; rec.dl+=win?0:1; }
@@ -3625,7 +3629,7 @@ function paintTnHoop(kind){
     const q=raw.trim().toLowerCase().replace(/county/g,"co").replace(/[^a-z0-9]+/g," ").trim();
     const open=schools.find(s=>String(s.id)===String(window[idKey]||""));
     if(open){
-      const meta=hoopMeta(sport, open.id)||{};
+      const meta=tnSchool(sport, open.id)||{};
       const tag=[meta.klass?("Class "+meta.klass):"", meta.region?("Region "+meta.region):"", meta.district?("District "+meta.district):""].filter(Boolean).join(" · ");
       const rec=hoopTeamRecord(sport, open.id, open.name);
       const recLine="District "+rec.dw+"-"+rec.dl+" · Region "+rec.rw+"-"+rec.rl+" · Overall "+rec.w+"-"+rec.l;
@@ -3710,26 +3714,26 @@ function paintTnHoop(kind){
   const picked=games.filter(matchGame);
   if(view==="stand"){
     const table={};
-    const ensure=(name,id)=>{
-      const meta=hoopClean(hoopMeta(sport, id)||{}, "");
+    const ensure=(name,id,meta)=>{
+      meta=meta||{};
       if(cls!=="all" && !hoopHit(meta, cls, reg, dist)) return null;
       if(!name && !id) return null;
       const key=id||name;
       if(!table[key]) table[key]={name:name||"Team", id, div:meta.div||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0, rw:0, rl:0};
+      else if(!table[key].klass && meta.klass){ table[key].div=meta.div||""; table[key].klass=meta.klass; table[key].region=meta.region||""; table[key].district=meta.district||""; }
       return table[key];
     };
-    if(cls!=="all") games.forEach(g=>{ ensure(g.away, g.awayId); ensure(g.home, g.homeId); });
     games.forEach(g=>{
+      const am=hoopSide(g, false), hm=hoopSide(g, true);
+      if(cls!=="all"){ ensure(g.away, g.awayId, am); ensure(g.home, g.homeId, hm); }
       if(!hoopFinal(g)) return;
       const as=Number(g.as), hs=Number(g.hs);
       if(!Number.isFinite(as)||!Number.isFinite(hs)||as===hs) return;
-      const am=hoopClean(hoopMeta(sport, g.awayId)||{}, "");
-      const hm=hoopClean(hoopMeta(sport, g.homeId)||{}, "");
       const same=am.klass && hm.klass && am.klass===hm.klass && am.div && am.div===hm.div;
       const distGame=same && am.district && am.district===hm.district;
       const regGame=same && am.region && am.region===hm.region;
-      [[g.away,g.awayId,as>hs],[g.home,g.homeId,hs>as]].forEach(([name,id,win])=>{
-        const row=ensure(name,id);
+      [[g.away,g.awayId,as>hs,am],[g.home,g.homeId,hs>as,hm]].forEach(([name,id,win,meta])=>{
+        const row=ensure(name,id,meta);
         if(!row) return;
         row.w+=win?1:0; row.l+=win?0:1;
         if(distGame){ row.dw+=win?1:0; row.dl+=win?0:1; }
