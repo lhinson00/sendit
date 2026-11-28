@@ -1,5 +1,5 @@
 {
-  "asOf": "2026-11-27 07:30 PM CST",
+  "asOf": "2026-11-27 09:40 PM CST",
   "sport": "basketball",
   "girls": {
     "games": [
@@ -10,7 +10,10 @@
         "away": "Loretto",
         "home": "Muscle Shoals (AL)",
         "as": "56",
-        "hs": "60"
+        "hs": "60",
+        "ar": "1-3",
+        "aid": "300",
+        "hid": "1735"
       },
       {
         "id": "911985",
@@ -19,7 +22,12 @@
         "away": "University High",
         "home": "Chuckey-Doak",
         "as": "24",
-        "hs": "37"
+        "hs": "37",
+        "ar": "1-2",
+        "hr": "3-1",
+        "aid": "527",
+        "hid": "70",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911168",
@@ -28,7 +36,12 @@
         "away": "Tennessee",
         "home": "Cloudland",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-2",
+        "hr": "3-0",
+        "aid": "504",
+        "hid": "81",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911890",
@@ -37,7 +50,12 @@
         "away": "North Greene",
         "home": "Daniel Boone",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "4-1",
+        "hr": "3-2",
+        "aid": "362",
+        "hid": "104",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911891",
@@ -46,7 +64,12 @@
         "away": "Greeneville",
         "home": "David Crockett",
         "as": "57",
-        "hs": "39"
+        "hs": "39",
+        "ar": "1-4",
+        "hr": "0-6",
+        "aid": "190",
+        "hid": "105",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "899350",
@@ -55,7 +78,12 @@
         "away": "Clinton",
         "home": "Morristown East",
         "as": "54",
-        "hs": "71"
+        "hs": "71",
+        "ar": "3-2",
+        "hr": "4-1",
+        "aid": "80",
+        "hid": "351",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "898972",
@@ -64,7 +92,12 @@
         "away": "Unicoi County",
         "home": "Unaka",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-4",
+        "hr": "1-2",
+        "aid": "524",
+        "hid": "523",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911986",
@@ -73,7 +106,12 @@
         "away": "Powell",
         "home": "Jefferson County",
         "as": "52",
-        "hs": "29"
+        "hs": "29",
+        "ar": "2-0",
+        "hr": "2-0",
+        "aid": "410",
+        "hid": "262",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "900962",
@@ -82,7 +120,12 @@
         "away": "Scott",
         "home": "Carter",
         "as": "68",
-        "hs": "28"
+        "hs": "28",
+        "ar": "5-0",
+        "hr": "1-3",
+        "aid": "440",
+        "hid": "42",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "910662",
@@ -91,7 +134,12 @@
         "away": "Knoxville Halls",
         "home": "Fulton",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-2",
+        "hr": "3-0",
+        "aid": "195",
+        "hid": "159",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "898964",
@@ -100,7 +148,12 @@
         "away": "Maryville",
         "home": "McMinn Central",
         "as": "59",
-        "hs": "48"
+        "hs": "48",
+        "ar": "4-0",
+        "hr": "4-1",
+        "aid": "314",
+        "hid": "53",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "898794",
@@ -109,7 +162,12 @@
         "away": "Oak Ridge",
         "home": "Northview Academy",
         "as": "58",
-        "hs": "40"
+        "hs": "40",
+        "ar": "3-0",
+        "hr": "1-1",
+        "aid": "373",
+        "hid": "369",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "911987",
@@ -118,7 +176,12 @@
         "away": "Heritage",
         "home": "Tellico Plains",
         "as": "64",
-        "hs": "48"
+        "hs": "48",
+        "ar": "4-0",
+        "hr": "0-2",
+        "aid": "228",
+        "hid": "498",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "909820",
@@ -127,7 +190,12 @@
         "away": "Seymour",
         "home": "Anderson County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "0-3",
+        "hr": "1-3",
+        "aid": "447",
+        "hid": "7",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "911660",
@@ -136,16 +204,26 @@
         "away": "Coalfield",
         "home": "Harriman",
         "as": "60",
-        "hs": "39"
+        "hs": "39",
+        "ar": "1-3",
+        "hr": "1-2",
+        "aid": "82",
+        "hid": "216",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "911979",
         "date": "11-27-2026",
-        "status": "7:30 PM",
+        "status": "Final",
         "away": "Cosby",
         "home": "Union County",
-        "as": "",
-        "hs": ""
+        "as": "37",
+        "hs": "61",
+        "ar": "1-4",
+        "hr": "4-2",
+        "aid": "97",
+        "hid": "240",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "897399",
@@ -154,7 +232,12 @@
         "away": "Science Hill",
         "home": "Bradley Central",
         "as": "71",
-        "hs": "60"
+        "hs": "60",
+        "ar": "2-2",
+        "hr": "2-2",
+        "aid": "439",
+        "hid": "31",
+        "region": "DIVISION I · DISTRICT 5"
       },
       {
         "id": "895443",
@@ -163,7 +246,12 @@
         "away": "Macon County",
         "home": "Smith County",
         "as": "0",
-        "hs": "2"
+        "hs": "2",
+        "ar": "0-4",
+        "hr": "4-1",
+        "aid": "303",
+        "hid": "454",
+        "region": "DIVISION I · DISTRICT 6"
       },
       {
         "id": "900570",
@@ -172,7 +260,12 @@
         "away": "Livingston Academy",
         "home": "Jackson County",
         "as": "44",
-        "hs": "54"
+        "hs": "54",
+        "ar": "4-1",
+        "hr": "4-0",
+        "aid": "296",
+        "hid": "259",
+        "region": "DIVISION I · DISTRICT 7"
       },
       {
         "id": "899228",
@@ -181,16 +274,26 @@
         "away": "Knoxville Grace",
         "home": "Pickett County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "2-1",
+        "hr": "0-3",
+        "aid": "187",
+        "hid": "400",
+        "region": "DIVISION I · DISTRICT 7"
       },
       {
         "id": "910901",
         "date": "11-27-2026",
-        "status": "7:30 PM",
+        "status": "Final",
         "away": "BGA",
         "home": "East Nashville",
-        "as": "",
-        "hs": ""
+        "as": "52",
+        "hs": "56",
+        "ar": "2-1",
+        "hr": "1-0",
+        "aid": "16",
+        "hid": "599",
+        "region": "DIVISION I · DISTRICT 8"
       },
       {
         "id": "910899",
@@ -199,7 +302,11 @@
         "away": "Knowledge Academies",
         "home": "Nashville Collegiate Prep",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "0-2",
+        "aid": "279",
+        "hid": "22556",
+        "region": "DIVISION I · DISTRICT 8"
       },
       {
         "id": "911991",
@@ -208,7 +315,12 @@
         "away": "Gatlinburg-Pittman",
         "home": "Lewis County",
         "as": "56",
-        "hs": "26"
+        "hs": "26",
+        "ar": "2-1",
+        "hr": "1-4",
+        "aid": "162",
+        "hid": "289",
+        "region": "DIVISION I · DISTRICT 10"
       },
       {
         "id": "901683",
@@ -217,7 +329,12 @@
         "away": "Antioch",
         "home": "Rockvale",
         "as": "35",
-        "hs": "71"
+        "hs": "71",
+        "ar": "0-1",
+        "hr": "3-3",
+        "aid": "8",
+        "hid": "429",
+        "region": "DIVISION I · DISTRICT 10"
       },
       {
         "id": "910700",
@@ -226,7 +343,12 @@
         "away": "Hutchison School",
         "home": "Dyersburg",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "2-0",
+        "hr": "1-1",
+        "aid": "255",
+        "hid": "121",
+        "region": "DIVISION I · DISTRICT 13"
       },
       {
         "id": "910904",
@@ -235,7 +357,12 @@
         "away": "Independence",
         "home": "Kirkwood",
         "as": "70",
-        "hs": "43"
+        "hs": "43",
+        "ar": "3-0",
+        "hr": "3-1",
+        "aid": "256",
+        "hid": "206405",
+        "region": "DIVISION I · DISTRICT 13"
       },
       {
         "id": "909592",
@@ -244,7 +371,12 @@
         "away": "Clarksburg",
         "home": "Gibson County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "0-2",
+        "hr": "1-3",
+        "aid": "22335",
+        "hid": "170",
+        "region": "DIVISION I · DISTRICT 14"
       },
       {
         "id": "895836",
@@ -253,7 +385,12 @@
         "away": "Haywood",
         "home": "Fayette Ware",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-2",
+        "hr": "2-0",
+        "aid": "222",
+        "hid": "139",
+        "region": "DIVISION I · DISTRICT 15"
       },
       {
         "id": "900152",
@@ -262,7 +399,12 @@
         "away": "Whitehaven",
         "home": "Memphis Overton",
         "as": "42",
-        "hs": "56"
+        "hs": "56",
+        "ar": "3-1",
+        "hr": "3-0",
+        "aid": "559",
+        "hid": "391",
+        "region": "DIVISION I · DISTRICT 16"
       },
       {
         "id": "910897",
@@ -271,7 +413,12 @@
         "away": "Siegel",
         "home": "Pope John Paul II",
         "as": "62",
-        "hs": "43"
+        "hs": "43",
+        "ar": "1-2",
+        "hr": "2-2",
+        "aid": "451",
+        "hid": "404",
+        "region": "DIVISION II · MIDDLE REGION"
       },
       {
         "id": "910895",
@@ -280,7 +427,12 @@
         "away": "John Overton",
         "home": "Columbia Academy",
         "as": "38",
-        "hs": "45"
+        "hs": "45",
+        "ar": "1-1",
+        "hr": "2-1",
+        "aid": "266",
+        "hid": "88",
+        "region": "DIVISION II · DISTRICT 3"
       },
       {
         "id": "909700",
@@ -289,7 +441,12 @@
         "away": "Greenfield",
         "home": "USJ",
         "as": "51",
-        "hs": "46"
+        "hs": "46",
+        "ar": "4-1",
+        "hr": "3-2",
+        "aid": "192",
+        "hid": "583",
+        "region": "DIVISION II · DISTRICT 5"
       },
       {
         "id": "910906",
@@ -298,7 +455,12 @@
         "away": "York Institute",
         "home": "Harding Academy",
         "as": "59",
-        "hs": "31"
+        "hs": "31",
+        "ar": "1-3",
+        "hr": "1-1",
+        "aid": "6",
+        "hid": "212",
+        "region": "DIVISION II · DISTRICT 6"
       }
     ]
   },
@@ -311,16 +473,22 @@
         "away": "Power Center",
         "home": "Forrest City (AR)",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-0",
+        "aid": "411",
+        "hid": "2946"
       },
       {
         "id": "911982",
         "date": "11-27-2026",
-        "status": "6:30 PM",
+        "status": "Final",
         "away": "Loretto",
         "home": "Muscle Shoals (AL)",
-        "as": "",
-        "hs": ""
+        "as": "41",
+        "hs": "75",
+        "ar": "2-5",
+        "aid": "300",
+        "hid": "1735"
       },
       {
         "id": "909679",
@@ -329,7 +497,10 @@
         "away": "Tipton-Rosemark",
         "home": "Olive Branch (MS)",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "2-1",
+        "aid": "508",
+        "hid": "13405"
       },
       {
         "id": "910480",
@@ -338,25 +509,39 @@
         "away": "Ezell-Harding",
         "home": "Mt. Bethel Christian (GA)",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-1",
+        "hr": "1-1",
+        "aid": "133",
+        "hid": "206449"
       },
       {
         "id": "899717",
         "date": "11-27-2026",
-        "status": "",
+        "status": "Final",
         "away": "Unicoi County",
         "home": "David Crockett",
-        "as": "",
-        "hs": ""
+        "as": "47",
+        "hs": "55",
+        "ar": "0-4",
+        "hr": "4-1",
+        "aid": "524",
+        "hid": "105",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "899736",
         "date": "11-27-2026",
-        "status": "",
+        "status": "Final",
         "away": "Clinton",
         "home": "Dobyns-Bennett",
-        "as": "",
-        "hs": ""
+        "as": "44",
+        "hs": "68",
+        "ar": "2-2",
+        "hr": "6-0",
+        "aid": "80",
+        "hid": "114",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "899733",
@@ -365,7 +550,12 @@
         "away": "West Ridge",
         "home": "Hampton",
         "as": "37",
-        "hs": "74"
+        "hs": "74",
+        "ar": "2-3",
+        "hr": "4-1",
+        "aid": "206353",
+        "hid": "205",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "900229",
@@ -374,16 +564,26 @@
         "away": "Northview Academy",
         "home": "Morristown West",
         "as": "32",
-        "hs": "66"
+        "hs": "66",
+        "ar": "0-4",
+        "hr": "4-2",
+        "aid": "369",
+        "hid": "352",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "898348",
         "date": "11-27-2026",
-        "status": "",
+        "status": "Final",
         "away": "Lanier (GA)",
         "home": "Sullivan East",
-        "as": "",
-        "hs": ""
+        "as": "57",
+        "hs": "45",
+        "ar": "1-1",
+        "hr": "3-4",
+        "aid": "200733",
+        "hid": "489",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911990",
@@ -392,7 +592,12 @@
         "away": "Happy Valley",
         "home": "Tennessee",
         "as": "34",
-        "hs": "77"
+        "hs": "77",
+        "ar": "1-3",
+        "hr": "3-2",
+        "aid": "208",
+        "hid": "504",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911584",
@@ -401,16 +606,26 @@
         "away": "KACHEA",
         "home": "University High",
         "as": "45",
-        "hs": "59"
+        "hs": "59",
+        "ar": "0-3",
+        "hr": "3-2",
+        "aid": "206321",
+        "hid": "527",
+        "region": "DIVISION I · DISTRICT 1"
       },
       {
         "id": "911983",
         "date": "11-27-2026",
-        "status": "6:30 PM",
+        "status": "Final",
         "away": "Daniel Boone",
         "home": "Cherokee",
-        "as": "",
-        "hs": ""
+        "as": "83",
+        "hs": "72",
+        "ar": "5-0",
+        "hr": "3-1",
+        "aid": "104",
+        "hid": "64",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "911980",
@@ -419,16 +634,26 @@
         "away": "Cocke County",
         "home": "Cosby",
         "as": "60",
-        "hs": "50"
+        "hs": "50",
+        "ar": "2-2",
+        "hr": "3-3",
+        "aid": "83",
+        "hid": "97",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "911899",
         "date": "11-27-2026",
-        "status": "6:00 PM",
+        "status": "Final",
         "away": "West Greene",
         "home": "Cumberland Gap",
-        "as": "",
-        "hs": ""
+        "as": "65",
+        "hs": "67",
+        "ar": "2-1",
+        "hr": "4-0",
+        "aid": "545",
+        "hid": "95",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "900036",
@@ -437,7 +662,12 @@
         "away": "Apostolic Christian",
         "home": "Gatlinburg-Pittman",
         "as": "80",
-        "hs": "85"
+        "hs": "85",
+        "ar": "0-1",
+        "hr": "1-1",
+        "aid": "206338",
+        "hid": "162",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "899752",
@@ -446,7 +676,12 @@
         "away": "Unaka",
         "home": "Grainger",
         "as": "76",
-        "hs": "65"
+        "hs": "65",
+        "ar": "3-2",
+        "hr": "5-2",
+        "aid": "523",
+        "hid": "435",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "909715",
@@ -455,25 +690,40 @@
         "away": "Morristown East",
         "home": "Grainger",
         "as": "65",
-        "hs": "58"
+        "hs": "58",
+        "ar": "2-4",
+        "hr": "5-2",
+        "aid": "351",
+        "hid": "435",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "900646",
         "date": "11-27-2026",
-        "status": "3:30 PM",
+        "status": "Final",
         "away": "Chuckey-Doak",
         "home": "Hancock County",
-        "as": "",
-        "hs": ""
+        "as": "80",
+        "hs": "83",
+        "ar": "3-1",
+        "hr": "4-1",
+        "aid": "70",
+        "hid": "206",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "911984",
         "date": "11-27-2026",
-        "status": "",
+        "status": "Final",
         "away": "South Greene",
         "home": "Volunteer",
-        "as": "",
-        "hs": ""
+        "as": "69",
+        "hs": "70",
+        "ar": "1-2",
+        "hr": "4-1",
+        "aid": "463",
+        "hid": "533",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "911989",
@@ -482,25 +732,40 @@
         "away": "Knoxville Ambassadors",
         "home": "Washburn",
         "as": "46",
-        "hs": "54"
+        "hs": "54",
+        "ar": "0-3",
+        "hr": "2-1",
+        "aid": "206307",
+        "hid": "538",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "901519",
         "date": "11-27-2026",
-        "status": "11:30 AM",
+        "status": "Final",
         "away": "Scott",
         "home": "William Blount",
-        "as": "",
-        "hs": ""
+        "as": "49",
+        "hs": "76",
+        "ar": "3-1",
+        "hr": "3-1",
+        "aid": "440",
+        "hid": "564",
+        "region": "DIVISION I · DISTRICT 2"
       },
       {
         "id": "910972",
         "date": "11-27-2026",
-        "status": "4:30 PM",
+        "status": "Final",
         "away": "Warren County",
         "home": "McMinn Central",
-        "as": "",
-        "hs": ""
+        "as": "43",
+        "hs": "53",
+        "ar": "1-3",
+        "hr": "3-2",
+        "aid": "535",
+        "hid": "53",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "899812",
@@ -509,7 +774,12 @@
         "away": "Jefferson County",
         "home": "Powell",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "0-3",
+        "hr": "2-1",
+        "aid": "262",
+        "hid": "410",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "911988",
@@ -518,7 +788,12 @@
         "away": "Heritage",
         "home": "Tellico Plains",
         "as": "74",
-        "hs": "33"
+        "hs": "33",
+        "ar": "2-1",
+        "hr": "0-1",
+        "aid": "228",
+        "hid": "498",
+        "region": "DIVISION I · DISTRICT 3"
       },
       {
         "id": "910965",
@@ -527,25 +802,38 @@
         "away": "York Institute",
         "home": "Anderson County",
         "as": "42",
-        "hs": "76"
+        "hs": "76",
+        "ar": "1-4",
+        "hr": "5-0",
+        "aid": "6",
+        "hid": "7",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "911684",
         "date": "11-27-2026",
-        "status": "5:00 PM",
+        "status": "Final",
         "away": "Austin-East",
         "home": "Hardin Valley",
-        "as": "",
-        "hs": ""
+        "as": "42",
+        "hs": "58",
+        "ar": "0-3",
+        "hr": "5-0",
+        "aid": "13",
+        "hid": "210",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "910188",
         "date": "11-27-2026",
-        "status": "",
+        "status": "TBA",
         "away": "",
         "home": "Rhea County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "1-5",
+        "hid": "419",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "900994",
@@ -554,25 +842,36 @@
         "away": "",
         "home": "Scott",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "3-1",
+        "hid": "440",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "911896",
         "date": "11-27-2026",
-        "status": "7:30 PM",
+        "status": "Final",
         "away": "North Greene",
         "home": "Union County",
-        "as": "",
-        "hs": ""
+        "as": "54",
+        "hs": "62",
+        "ar": "2-3",
+        "hr": "4-1",
+        "aid": "362",
+        "hid": "240",
+        "region": "DIVISION I · DISTRICT 4"
       },
       {
         "id": "911634",
         "date": "11-27-2026",
-        "status": "",
+        "status": "TBD",
         "away": "",
         "home": "South Doyle",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "2-2",
+        "hid": "117",
+        "region": "DIVISION I · DISTRICT 5"
       },
       {
         "id": "898006",
@@ -581,7 +880,11 @@
         "away": "Pope John Paul II",
         "home": "Shelbyville",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "3-1",
+        "aid": "404",
+        "hid": "450",
+        "region": "DIVISION I · DISTRICT 6"
       },
       {
         "id": "895444",
@@ -590,7 +893,12 @@
         "away": "Macon County",
         "home": "Smith County",
         "as": "46",
-        "hs": "63"
+        "hs": "63",
+        "ar": "1-4",
+        "hr": "4-1",
+        "aid": "303",
+        "hid": "454",
+        "region": "DIVISION I · DISTRICT 6"
       },
       {
         "id": "909859",
@@ -599,7 +907,12 @@
         "away": "Livingston Academy",
         "home": "Jackson County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "3-1",
+        "hr": "1-3",
+        "aid": "296",
+        "hid": "259",
+        "region": "DIVISION I · DISTRICT 7"
       },
       {
         "id": "900182",
@@ -608,7 +921,12 @@
         "away": "Knoxville Grace",
         "home": "Pickett County",
         "as": "65",
-        "hs": "88"
+        "hs": "88",
+        "ar": "1-2",
+        "hr": "4-0",
+        "aid": "187",
+        "hid": "400",
+        "region": "DIVISION I · DISTRICT 7"
       },
       {
         "id": "910571",
@@ -617,7 +935,12 @@
         "away": "Munford",
         "home": "LEAD Academy",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "0-1",
+        "hr": "0-1",
+        "aid": "358",
+        "hid": "290",
+        "region": "DIVISION I · DISTRICT 8"
       },
       {
         "id": "901872",
@@ -626,7 +949,11 @@
         "away": "Palestine-Wheatley (AR)",
         "home": "Oakland",
         "as": "45",
-        "hs": "56"
+        "hs": "56",
+        "hr": "2-2",
+        "aid": "3069",
+        "hid": "380",
+        "region": "DIVISION I · DISTRICT 10"
       },
       {
         "id": "911904",
@@ -635,7 +962,12 @@
         "away": "Southwind",
         "home": "Columbia",
         "as": "68",
-        "hs": "46"
+        "hs": "46",
+        "ar": "2-0",
+        "hr": "3-3",
+        "aid": "471",
+        "hid": "89",
+        "region": "DIVISION I · DISTRICT 12"
       },
       {
         "id": "909728",
@@ -644,7 +976,12 @@
         "away": "Christian Brothers High",
         "home": "Humboldt",
         "as": "56",
-        "hs": "44"
+        "hs": "44",
+        "ar": "4-0",
+        "hr": "2-1",
+        "aid": "69",
+        "hid": "245",
+        "region": "DIVISION I · DISTRICT 13"
       },
       {
         "id": "909710",
@@ -653,7 +990,12 @@
         "away": "USJ",
         "home": "Gibson County",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-3",
+        "hr": "3-1",
+        "aid": "583",
+        "hid": "170",
+        "region": "DIVISION I · DISTRICT 14"
       },
       {
         "id": "898562",
@@ -662,7 +1004,11 @@
         "away": "Duncanville (TX)",
         "home": "Bartlett",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "hr": "3-0",
+        "aid": "18793",
+        "hid": "15",
+        "region": "DIVISION I · DISTRICT 15"
       },
       {
         "id": "895835",
@@ -671,7 +1017,12 @@
         "away": "Haywood",
         "home": "Fayette Ware",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "2-1",
+        "hr": "2-1",
+        "aid": "222",
+        "hid": "139",
+        "region": "DIVISION I · DISTRICT 15"
       },
       {
         "id": "911056",
@@ -680,16 +1031,25 @@
         "away": "Evangelical Christian",
         "home": "Briarcrest Christian",
         "as": "",
-        "hs": ""
+        "hs": "",
+        "ar": "1-0",
+        "hr": "3-0",
+        "aid": "132",
+        "hid": "38",
+        "region": "DIVISION II · WEST REGION"
       },
       {
         "id": "900204",
         "date": "11-27-2026",
-        "status": "",
-        "away": "Lipscomb Academy",
+        "status": "Final",
+        "away": "Battle Ground (WA)",
         "home": "Tri-Cities Christian",
-        "as": "",
-        "hs": ""
+        "as": "66",
+        "hs": "80",
+        "hr": "4-1",
+        "aid": "20566",
+        "hid": "206318",
+        "region": "INDEPENDENT DIVISION · INDEPENDENT DIVISION"
       }
     ]
   }
