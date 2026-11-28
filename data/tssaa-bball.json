@@ -1,1 +1,696 @@
-PLACEHOLDER
+{
+  "asOf": "2026-11-27 07:30 PM CST",
+  "sport": "basketball",
+  "girls": {
+    "games": [
+      {
+        "id": "911981",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Loretto",
+        "home": "Muscle Shoals (AL)",
+        "as": "56",
+        "hs": "60"
+      },
+      {
+        "id": "911985",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "University High",
+        "home": "Chuckey-Doak",
+        "as": "24",
+        "hs": "37"
+      },
+      {
+        "id": "911168",
+        "date": "11-27-2026",
+        "status": "6:30 PM",
+        "away": "Tennessee",
+        "home": "Cloudland",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911890",
+        "date": "11-27-2026",
+        "status": "1:30 PM",
+        "away": "North Greene",
+        "home": "Daniel Boone",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911891",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Greeneville",
+        "home": "David Crockett",
+        "as": "57",
+        "hs": "39"
+      },
+      {
+        "id": "899350",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Clinton",
+        "home": "Morristown East",
+        "as": "54",
+        "hs": "71"
+      },
+      {
+        "id": "898972",
+        "date": "11-27-2026",
+        "status": "5:00 PM",
+        "away": "Unicoi County",
+        "home": "Unaka",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911986",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Powell",
+        "home": "Jefferson County",
+        "as": "52",
+        "hs": "29"
+      },
+      {
+        "id": "900962",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Scott",
+        "home": "Carter",
+        "as": "68",
+        "hs": "28"
+      },
+      {
+        "id": "910662",
+        "date": "11-27-2026",
+        "status": "6:00 PM",
+        "away": "Knoxville Halls",
+        "home": "Fulton",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "898964",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Maryville",
+        "home": "McMinn Central",
+        "as": "59",
+        "hs": "48"
+      },
+      {
+        "id": "898794",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Oak Ridge",
+        "home": "Northview Academy",
+        "as": "58",
+        "hs": "40"
+      },
+      {
+        "id": "911987",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Heritage",
+        "home": "Tellico Plains",
+        "as": "64",
+        "hs": "48"
+      },
+      {
+        "id": "909820",
+        "date": "11-27-2026",
+        "status": "4:30 PM",
+        "away": "Seymour",
+        "home": "Anderson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911660",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Coalfield",
+        "home": "Harriman",
+        "as": "60",
+        "hs": "39"
+      },
+      {
+        "id": "911979",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "Cosby",
+        "home": "Union County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "897399",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Science Hill",
+        "home": "Bradley Central",
+        "as": "71",
+        "hs": "60"
+      },
+      {
+        "id": "895443",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Macon County",
+        "home": "Smith County",
+        "as": "0",
+        "hs": "2"
+      },
+      {
+        "id": "900570",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Livingston Academy",
+        "home": "Jackson County",
+        "as": "44",
+        "hs": "54"
+      },
+      {
+        "id": "899228",
+        "date": "11-27-2026",
+        "status": "6:00 PM",
+        "away": "Knoxville Grace",
+        "home": "Pickett County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910901",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "BGA",
+        "home": "East Nashville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910899",
+        "date": "11-27-2026",
+        "status": "10:30 AM",
+        "away": "Knowledge Academies",
+        "home": "Nashville Collegiate Prep",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911991",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Gatlinburg-Pittman",
+        "home": "Lewis County",
+        "as": "56",
+        "hs": "26"
+      },
+      {
+        "id": "901683",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Antioch",
+        "home": "Rockvale",
+        "as": "35",
+        "hs": "71"
+      },
+      {
+        "id": "910700",
+        "date": "11-27-2026",
+        "status": "4:30 PM",
+        "away": "Hutchison School",
+        "home": "Dyersburg",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910904",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Independence",
+        "home": "Kirkwood",
+        "as": "70",
+        "hs": "43"
+      },
+      {
+        "id": "909592",
+        "date": "11-27-2026",
+        "status": "7:15 PM",
+        "away": "Clarksburg",
+        "home": "Gibson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "895836",
+        "date": "11-27-2026",
+        "status": "6:00 PM",
+        "away": "Haywood",
+        "home": "Fayette Ware",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "900152",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Whitehaven",
+        "home": "Memphis Overton",
+        "as": "42",
+        "hs": "56"
+      },
+      {
+        "id": "910897",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Siegel",
+        "home": "Pope John Paul II",
+        "as": "62",
+        "hs": "43"
+      },
+      {
+        "id": "910895",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "John Overton",
+        "home": "Columbia Academy",
+        "as": "38",
+        "hs": "45"
+      },
+      {
+        "id": "909700",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Greenfield",
+        "home": "USJ",
+        "as": "51",
+        "hs": "46"
+      },
+      {
+        "id": "910906",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "York Institute",
+        "home": "Harding Academy",
+        "as": "59",
+        "hs": "31"
+      }
+    ]
+  },
+  "boys": {
+    "games": [
+      {
+        "id": "911913",
+        "date": "11-27-2026",
+        "status": "8:00 PM",
+        "away": "Power Center",
+        "home": "Forrest City (AR)",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911982",
+        "date": "11-27-2026",
+        "status": "6:30 PM",
+        "away": "Loretto",
+        "home": "Muscle Shoals (AL)",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "909679",
+        "date": "11-27-2026",
+        "status": "7:15 PM",
+        "away": "Tipton-Rosemark",
+        "home": "Olive Branch (MS)",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910480",
+        "date": "11-27-2026",
+        "status": "3:00 PM",
+        "away": "Ezell-Harding",
+        "home": "Mt. Bethel Christian (GA)",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "899717",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Unicoi County",
+        "home": "David Crockett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "899736",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Clinton",
+        "home": "Dobyns-Bennett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "899733",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "West Ridge",
+        "home": "Hampton",
+        "as": "37",
+        "hs": "74"
+      },
+      {
+        "id": "900229",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Northview Academy",
+        "home": "Morristown West",
+        "as": "32",
+        "hs": "66"
+      },
+      {
+        "id": "898348",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Lanier (GA)",
+        "home": "Sullivan East",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911990",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Happy Valley",
+        "home": "Tennessee",
+        "as": "34",
+        "hs": "77"
+      },
+      {
+        "id": "911584",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "KACHEA",
+        "home": "University High",
+        "as": "45",
+        "hs": "59"
+      },
+      {
+        "id": "911983",
+        "date": "11-27-2026",
+        "status": "6:30 PM",
+        "away": "Daniel Boone",
+        "home": "Cherokee",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911980",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Cocke County",
+        "home": "Cosby",
+        "as": "60",
+        "hs": "50"
+      },
+      {
+        "id": "911899",
+        "date": "11-27-2026",
+        "status": "6:00 PM",
+        "away": "West Greene",
+        "home": "Cumberland Gap",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "900036",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Apostolic Christian",
+        "home": "Gatlinburg-Pittman",
+        "as": "80",
+        "hs": "85"
+      },
+      {
+        "id": "899752",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Unaka",
+        "home": "Grainger",
+        "as": "76",
+        "hs": "65"
+      },
+      {
+        "id": "909715",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Morristown East",
+        "home": "Grainger",
+        "as": "65",
+        "hs": "58"
+      },
+      {
+        "id": "900646",
+        "date": "11-27-2026",
+        "status": "3:30 PM",
+        "away": "Chuckey-Doak",
+        "home": "Hancock County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911984",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "South Greene",
+        "home": "Volunteer",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911989",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Knoxville Ambassadors",
+        "home": "Washburn",
+        "as": "46",
+        "hs": "54"
+      },
+      {
+        "id": "901519",
+        "date": "11-27-2026",
+        "status": "11:30 AM",
+        "away": "Scott",
+        "home": "William Blount",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910972",
+        "date": "11-27-2026",
+        "status": "4:30 PM",
+        "away": "Warren County",
+        "home": "McMinn Central",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "899812",
+        "date": "11-27-2026",
+        "status": "4:00 PM",
+        "away": "Jefferson County",
+        "home": "Powell",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911988",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Heritage",
+        "home": "Tellico Plains",
+        "as": "74",
+        "hs": "33"
+      },
+      {
+        "id": "910965",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "York Institute",
+        "home": "Anderson County",
+        "as": "42",
+        "hs": "76"
+      },
+      {
+        "id": "911684",
+        "date": "11-27-2026",
+        "status": "5:00 PM",
+        "away": "Austin-East",
+        "home": "Hardin Valley",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "910188",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "",
+        "home": "Rhea County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "900994",
+        "date": "11-27-2026",
+        "status": "11:30 PM",
+        "away": "",
+        "home": "Scott",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911896",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "North Greene",
+        "home": "Union County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911634",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "",
+        "home": "South Doyle",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "898006",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "Pope John Paul II",
+        "home": "Shelbyville",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "895444",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Macon County",
+        "home": "Smith County",
+        "as": "46",
+        "hs": "63"
+      },
+      {
+        "id": "909859",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Livingston Academy",
+        "home": "Jackson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "900182",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Knoxville Grace",
+        "home": "Pickett County",
+        "as": "65",
+        "hs": "88"
+      },
+      {
+        "id": "910571",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Munford",
+        "home": "LEAD Academy",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "901872",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Palestine-Wheatley (AR)",
+        "home": "Oakland",
+        "as": "45",
+        "hs": "56"
+      },
+      {
+        "id": "911904",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Southwind",
+        "home": "Columbia",
+        "as": "68",
+        "hs": "46"
+      },
+      {
+        "id": "909728",
+        "date": "11-27-2026",
+        "status": "Final",
+        "away": "Christian Brothers High",
+        "home": "Humboldt",
+        "as": "56",
+        "hs": "44"
+      },
+      {
+        "id": "909710",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "USJ",
+        "home": "Gibson County",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "898562",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Duncanville (TX)",
+        "home": "Bartlett",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "895835",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "Haywood",
+        "home": "Fayette Ware",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "911056",
+        "date": "11-27-2026",
+        "status": "7:30 PM",
+        "away": "Evangelical Christian",
+        "home": "Briarcrest Christian",
+        "as": "",
+        "hs": ""
+      },
+      {
+        "id": "900204",
+        "date": "11-27-2026",
+        "status": "",
+        "away": "Lipscomb Academy",
+        "home": "Tri-Cities Christian",
+        "as": "",
+        "hs": ""
+      }
+    ]
+  }
+}
