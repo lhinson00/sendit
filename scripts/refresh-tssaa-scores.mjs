@@ -82,7 +82,37 @@ function stamp(g, schools){
   if(a){ g.adiv=a.division||""; g.aklass=a.klass; g.areg=String(a.region||""); g.adist=String(a.district||""); }
 }
 
-const days = [-1, 0].map(n=>{ const p=chiParts(n); return {mdy:mdy(p), iso:iso(p)}; });
+function addIso(iso, n){
+  const [y,m,d]=iso.split("-").map(Number);
+  const dt=new Date(Date.UTC(y, m-1, d+n));
+  return dt.toISOString().slice(0,10);
+}
+function partsFromIso(iso){
+  const [y,m,d]=iso.split("-");
+  return {y, m, d, mdy:m+"-"+d+"-"+y, iso};
+}
+const SEASON="2026-11-16";
+const todayIso=iso(chiParts(0));
+const yestIso=iso(chiParts(-1));
+const hoopPreview=readJson(HOOPS);
+const gap=[];
+if(hoopPreview && Array.isArray(hoopPreview.games)){
+  const by={};
+  const quiet=hoopPreview.quiet||{};
+  hoopPreview.games.forEach(g=>{ (by[g.date]=by[g.date]||[]).push(g); });
+  for(let d=SEASON; d<todayIso; d=addIso(d,1)){
+    if((quiet[d]||0)>=2) continue;
+    const rows=by[d]||[];
+    const open=!rows.length || rows.some(g=>{
+      const scored=String(g.as||"").trim() && String(g.hs||"").trim() && /final/i.test(g.status||"");
+      return !scored && (g.miss||0)<2;
+    });
+    if(open) gap.push(d);
+  }
+}
+const daySet=new Set([yestIso, todayIso, ...gap.slice(0,4)]);
+const days=[...daySet].sort().map(partsFromIso);
+console.log("days", days.map(d=>d.iso).join(","));
 const boards = [];
 for(const day of days){
   try{
@@ -156,6 +186,17 @@ if(hoop && Array.isArray(hoop.games)){
       stamp(row, schools);
       if(!had) n++;
     }
+    if(board.iso>=todayIso) continue;
+    const hoopRows=board.rows.filter(g=>g.kind!=="football");
+    hoop.quiet=hoop.quiet||{};
+    if(!hoopRows.length) hoop.quiet[board.iso]=(hoop.quiet[board.iso]||0)+1;
+    else delete hoop.quiet[board.iso];
+    const scored = g => String(g.as||"").trim() && String(g.hs||"").trim() && /final/i.test(g.status||"");
+    hoop.games.forEach(row=>{
+      if(row.date!==board.iso) return;
+      if(scored(row)) delete row.miss;
+      else row.miss=(row.miss||0)+1;
+    });
   }
   hoop.pulled = new Date().toISOString();
   hoop.asOf = hoop.pulled;

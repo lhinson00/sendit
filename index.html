@@ -231,7 +231,7 @@ button.bbsec{display:block;width:100%;text-align:left;background:transparent;bor
 .bbteam em{flex:none;font-style:normal;font-family:"Bebas Neue",sans-serif;font-size:30px;line-height:.85;min-width:36px;text-align:right}
 .bbteam.lose{color:#8d867c}
 .bbteam.lose em{color:#8d867c}
-.bbstand{display:grid;grid-template-columns:28px minmax(0,1fr) 54px 54px;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #241e18;color:#fff;padding:11px 0;cursor:pointer;font:inherit}
+.bbstand{display:grid;grid-template-columns:28px minmax(0,1fr) 44px 44px 44px;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #241e18;color:#fff;padding:11px 0;cursor:pointer;font:inherit}
 .bbstand.head{color:#8d867c;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;cursor:default}
 .bbstand b{font-size:15px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bbstand span{text-align:right;font-variant-numeric:tabular-nums;font-weight:800}
@@ -3409,6 +3409,45 @@ function hoopFindSchool(kind, id, name){
   if(!key) return null;
   return schools.find(s=>tnAlignKey(s.name)===key) || schools.find(s=>tnAlignKey(s.name).startsWith(key) || key.startsWith(tnAlignKey(s.name))) || null;
 }
+function hoopDateKey(s){
+  const raw=String(s||"").trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const mon={jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12"};
+  const m=raw.match(/([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})/);
+  if(!m) return "";
+  const mm=mon[m[1].slice(0,3).toLowerCase()];
+  if(!mm) return "";
+  return m[3]+"-"+mm+"-"+String(Number(m[2])).padStart(2,"0");
+}
+function hoopScoreHit(sport, schoolId, schoolName, g){
+  const day=hoopDateKey(g&&g.date);
+  if(!day) return null;
+  const opp=tnAlignKey(g.opp||"");
+  return hoopGamesFor(sport, schoolId, schoolName).find(x=>{
+    if(hoopDateKey(x.date)!==day) return false;
+    if(g.oppId && (String(x.awayId)===String(g.oppId)||String(x.homeId)===String(g.oppId))) return true;
+    if(!opp) return false;
+    return tnAlignKey(x.away)===opp || tnAlignKey(x.home)===opp;
+  })||null;
+}
+function hoopTeamRecord(sport, id, name){
+  const mineMeta=hoopClean(hoopMeta(sport, id)||{}, "");
+  const rec={w:0,l:0,dw:0,dl:0,rw:0,rl:0};
+  hoopGamesFor(sport, id, name).forEach(g=>{
+    if(!hoopFinal(g)) return;
+    const as=Number(g.as), hs=Number(g.hs);
+    if(!Number.isFinite(as)||!Number.isFinite(hs)||as===hs) return;
+    const mine=String(g.homeId)===String(id)||tnAlignKey(g.home)===tnAlignKey(name);
+    const win=(mine?hs:as)>(mine?as:hs);
+    rec.w+=win?1:0; rec.l+=win?0:1;
+    const oppId=mine?g.awayId:g.homeId;
+    const om=hoopClean(hoopMeta(sport, oppId)||{}, "");
+    const same=mineMeta.klass && om.klass && mineMeta.klass===om.klass && mineMeta.div && mineMeta.div===om.div;
+    if(same && mineMeta.region && mineMeta.region===om.region){ rec.rw+=win?1:0; rec.rl+=win?0:1; }
+    if(same && mineMeta.district && mineMeta.district===om.district){ rec.dw+=win?1:0; rec.dl+=win?0:1; }
+  });
+  return rec;
+}
 function hoopGamesFor(sport, id, name){
   const key=tnAlignKey(name||"");
   return (hoopPack().games||[]).filter(g=>{
@@ -3473,7 +3512,20 @@ function hoopKeep(next){
   if(!next.schools && prev.schools) next.schools=prev.schools;
   return next;
 }
-async function refreshTnHoops(){
+function hoopBackfillDays(){
+  const today=tnIso(chiToday());
+  const open=new Set();
+  (hoopPack().games||[]).forEach(g=>{
+    if(!g.date || g.date>=today || open.has(g.date)) return;
+    const scored=g.as!=="" && g.as!=null && g.hs!=="" && g.hs!=null && /final/i.test(g.status||"");
+    if(!scored) open.add(g.date);
+  });
+  return [...open].sort().slice(0,4).map(iso=>{
+    const p=iso.split("-");
+    return p[1]+"-"+p[2]+"-"+p[0];
+  });
+}
+async function refreshTnHoops(full){
   if(window._hoopPull && Date.now()-window._hoopPull<20000) return;
   window._hoopPull=Date.now();
   try{
@@ -3481,7 +3533,8 @@ async function refreshTnHoops(){
     if(r.ok){ const d=await r.json(); if(d&&Array.isArray(d.games)) window.TNHOOP=hoopKeep(d); }
   }catch(e){}
   hoopRecall();
-  for(const day of tnResultDays()){
+  const days=[...new Set(tnResultDays().concat(full?hoopBackfillDays():[]))];
+  for(const day of days){
     const iso=tnIso(day);
     for(const sportid of [3,2]){
       try{
@@ -3521,12 +3574,11 @@ function tnHoopHour(){
   return h>=15 && h<=23;
 }
 function startTnHoopClock(){
-  const tick=async()=>{
-    await refreshTnHoops();
-    setTimeout(tick, tnHoopHour()?45000:120000);
+  const tick=async(full)=>{
+    await refreshTnHoops(!!full);
+    setTimeout(()=>tick(false), tnHoopHour()?45000:120000);
   };
-  refreshTnHoops();
-  setTimeout(tick, 8000);
+  tick(true);
 }
 function paintTnHoop(kind){
   const host=$("liveList");
@@ -3575,21 +3627,22 @@ function paintTnHoop(kind){
     if(open){
       const meta=hoopMeta(sport, open.id)||{};
       const tag=[meta.klass?("Class "+meta.klass):"", meta.region?("Region "+meta.region):"", meta.district?("District "+meta.district):""].filter(Boolean).join(" · ");
-      const scored=hoopGamesFor(sport, open.id, open.name);
+      const rec=hoopTeamRecord(sport, open.id, open.name);
+      const recLine="District "+rec.dw+"-"+rec.dl+" · Region "+rec.rw+"-"+rec.rl+" · Overall "+rec.w+"-"+rec.l;
       const rows=(open.games||[]).map(g=>{
         const side=g.away?"at":"vs";
-        const hit=scored.find(x=>tnAlignKey(x.away)===tnAlignKey(g.opp)||tnAlignKey(x.home)===tnAlignKey(g.opp));
+        const hit=hoopScoreHit(sport, open.id, open.name, g);
         let result=g.result||"";
         if(hit && hit.as!=="" && hit.hs!=="" && !/\b(am|pm)\b/i.test(hit.status||"")){
           const mine=String(hit.homeId)===String(open.id)||tnAlignKey(hit.home)===tnAlignKey(open.name);
           const us=mine?hit.hs:hit.as, them=mine?hit.as:hit.hs;
-          const mark=Number(us)>Number(them)?"W":"L";
+          const mark=Number(us)>Number(them)?"W":(Number(us)<Number(them)?"L":"T");
           result=mark+" "+us+"–"+them;
         }
         return `<div class="bbsked"><b>${esc(g.date||"")}</b><span>${esc(side+" "+(g.opp||"TBA"))}</span><em>${esc(result)}</em></div>`;
       }).join("")||"<p class='hint'>No games posted.</p>";
       const players=(open.roster||[]).map(p=>`<div class="bbplayer"><b>${esc(p.n||"")}</b><span>${esc([p.c,p.p,p.h].filter(Boolean).join(" · "))}</span></div>`).join("")||"<p class='hint'>Roster not posted.</p>";
-      host.innerHTML=pull+tabs+`<button type="button" class="bbback" id="bbBack">Back</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
+      host.innerHTML=pull+tabs+`<button type="button" class="bbback" id="bbBack">Back</button><h2 class="bbschool">${esc(open.name||"")}</h2>${tag?`<p class="kicker">${esc(tag)}</p>`:""}<p class="kicker">${esc(recLine)}</p><p class="kicker">Schedule</p>${rows}<p class="kicker" style="margin-top:16px">Roster</p><div class="bbroster">${players}</div>`;
       bindViews();
       const back=$("bbBack");
       if(back) back.onclick=()=>{ if(!tnBack()){ window[idKey]=""; window[viewKey]="scores"; paintTnHoop(kind); } };
@@ -3657,22 +3710,30 @@ function paintTnHoop(kind){
   const picked=games.filter(matchGame);
   if(view==="stand"){
     const table={};
+    const ensure=(name,id)=>{
+      const meta=hoopClean(hoopMeta(sport, id)||{}, "");
+      if(cls!=="all" && !hoopHit(meta, cls, reg, dist)) return null;
+      if(!name && !id) return null;
+      const key=id||name;
+      if(!table[key]) table[key]={name:name||"Team", id, div:meta.div||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0, rw:0, rl:0};
+      return table[key];
+    };
+    if(cls!=="all") games.forEach(g=>{ ensure(g.away, g.awayId); ensure(g.home, g.homeId); });
     games.forEach(g=>{
       if(!hoopFinal(g)) return;
       const as=Number(g.as), hs=Number(g.hs);
       if(!Number.isFinite(as)||!Number.isFinite(hs)||as===hs) return;
+      const am=hoopClean(hoopMeta(sport, g.awayId)||{}, "");
+      const hm=hoopClean(hoopMeta(sport, g.homeId)||{}, "");
+      const same=am.klass && hm.klass && am.klass===hm.klass && am.div && am.div===hm.div;
+      const distGame=same && am.district && am.district===hm.district;
+      const regGame=same && am.region && am.region===hm.region;
       [[g.away,g.awayId,as>hs],[g.home,g.homeId,hs>as]].forEach(([name,id,win])=>{
-        if(!name) return;
-        const meta=hoopClean(hoopMeta(sport, id)||{}, "");
-        if(cls!=="all" && !hoopHit(meta, cls, reg, dist)) return;
-        const key=(id||name);
-        const row=table[key]||{name, id, div:meta.div||"", klass:meta.klass||"", region:meta.region||"", district:meta.district||"", w:0, l:0, dw:0, dl:0};
+        const row=ensure(name,id);
+        if(!row) return;
         row.w+=win?1:0; row.l+=win?0:1;
-        const am=hoopClean(hoopMeta(sport, g.awayId)||{}, "");
-        const hm=hoopClean(hoopMeta(sport, g.homeId)||{}, "");
-        const distGame=am.klass && hm.klass && am.klass===hm.klass && am.div===hm.div && am.district && am.district===hm.district;
         if(distGame){ row.dw+=win?1:0; row.dl+=win?0:1; }
-        table[key]=row;
+        if(regGame){ row.rw+=win?1:0; row.rl+=win?0:1; }
       });
     });
     const rows=Object.values(table);
@@ -3684,9 +3745,13 @@ function paintTnHoop(kind){
     });
     const html=Object.keys(groups).sort((a,b)=>hoopSortKey(groups[a][0])-hoopSortKey(groups[b][0])).map(lab=>{
       const [title,sub]=lab.split("|");
-      const list=groups[lab].sort((a,b)=>(b.dw-b.dl)-(a.dw-a.dl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name));
+      const list=groups[lab].sort((a,b)=>{
+        if(dist!=="all") return (b.dw-b.dl)-(a.dw-a.dl)||(b.rw-b.rl)-(a.rw-a.rl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name);
+        if(reg!=="all") return (b.rw-b.rl)-(a.rw-a.rl)||(b.w-b.l)-(a.w-a.l)||a.name.localeCompare(b.name);
+        return (b.w-b.l)-(a.w-a.l)||(b.rw-b.rl)-(a.rw-a.rl)||a.name.localeCompare(b.name);
+      });
       const head=dist==="all"?`<div class="bbsec"><h3>${esc(title)}</h3>${sub?`<p>${esc(sub)}</p>`:""}</div>`:"";
-      return head+`<button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.w}-${r.l}</span></button>`).join("");
+      return head+`<button type="button" class="bbstand head"><span>#</span><b>Team</b><span>Dist</span><span>Reg</span><span>All</span></button>`+list.map((r,i)=>`<button type="button" class="bbstand" data-sid="${esc(r.id||"")}" data-sn="${esc(r.name)}"><span>${i+1}</span><b>${esc(r.name)}</b><span>${r.dw}-${r.dl}</span><span>${r.rw}-${r.rl}</span><span>${r.w}-${r.l}</span></button>`).join("");
     }).join("")||"<p class='hint'>No final scores in this class yet.</p>";
     host.innerHTML=`<div class="bbstick">${pull}${tabs}${picks}</div>`+html;
     bindViews();
@@ -3772,7 +3837,7 @@ function tssaaTab(which){
     if($("boardPanel")) $("boardPanel").hidden=true;
     if($("liveList")) $("liveList").hidden=false;
     if(!window.JUST_BACK) paintTnHoop(which);
-    if(typeof refreshTnHoops==="function") refreshTnHoops();
+    if(typeof refreshTnHoops==="function") refreshTnHoops(true);
     return;
   }
   if(which==="stand"){
